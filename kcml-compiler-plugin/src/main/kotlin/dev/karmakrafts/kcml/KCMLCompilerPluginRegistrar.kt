@@ -17,7 +17,8 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
-import dev.karmakrafts.kcml.loader.Loader
+import dev.karmakrafts.kcml.plugin.PluginLoader
+import dev.karmakrafts.kcml.util.AgentInjector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -26,8 +27,15 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
+    companion object {
+        init {
+            AgentInjector.inject()
+        }
+    }
+
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        with(Loader) { loadAndInvoke(configuration) }
+        with(PluginLoader) { loadAndInvoke(configuration) }
+        registerDisposable(AgentInjector::cleanup)
     }
 
     override val supportsK2: Boolean = true

@@ -22,6 +22,9 @@ final class ASMTypes {
     // Hooks class defined in the loader runtime
     public static final Type COMPILER_HOOKS = Type.getObjectType("dev/karmakrafts/kcml/CompilerHooks");
 
-    public static final Type ARGUMENTS_PIPELINE_ARTIFACT = Type.getObjectType("org/jetbrains/kotlin/cli/pipeline/ArgumentsPipelineArtifact");
-    public static final Type COMPILER_CONFIGURATION = Type.getObjectType("org/jetbrains/kotlin/config/CompilerConfiguration");
+    public static final Type FUNCTION_GENERATION_CONTEXT = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm/FunctionGenerationContext");
+    public static final Type LLVM_CALLABLE = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm");
+    public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");
+    public static final Type C_POINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
+    public static final Type LIST = Type.getObjectType("java/util/List");
 }

@@ -38,9 +38,7 @@ tasks {
     shadowJar {
         entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar
         archiveClassifier = ""
-        relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm") {
-            exclude("META-INF/**")
-        }
+        relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")
         manifest {
             attributes["Agent-Class"] = "${rootProject.group}.agent.AgentMain"
             attributes["Can-Redefine-Classes"] = true

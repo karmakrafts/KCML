@@ -23,6 +23,7 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.shadow)
     `maven-publish`
 }
 
@@ -32,16 +33,27 @@ java {
     withSourcesJar()
 }
 
+val shadeImplementation by configurations.creating { isTransitive = false }
+val shadeApi by configurations.creating { isTransitive = false }
+
+configurations {
+    implementation { extendsFrom(shadeImplementation) }
+    api { extendsFrom(shadeApi) }
+}
+
 dependencies {
-    compileOnly(libs.kotlin.compiler.embeddable)
+    api(libs.kotlin.compiler.embeddable)
+    api(libs.kotlin.native.compiler.embeddable)
+    shadeApi(libs.semver)
     compileOnly(libs.autoService)
     compileOnly(libs.kotlin.reflect)
-    implementation(libs.kotlinGraphs)
-    implementation(libs.semver)
-    implementation(libs.kotlinx.serialization.core)
-    implementation(libs.kotlinx.serialization.json)
+    shadeImplementation(libs.kotlinGraphs)
+    shadeImplementation(libs.kotlinx.serialization.core)
+    shadeImplementation(libs.kotlinx.serialization.json)
     kapt(libs.autoService)
 
+    testImplementation(libs.kotlin.compiler.embeddable)
+    testImplementation(libs.kotlin.native.compiler.embeddable)
     testImplementation(libs.kotlin.reflect)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.iridium)
@@ -76,8 +88,13 @@ val dokkaJar by tasks.registering(Jar::class) {
 val agentJarTask = project(":kcml-agent").tasks.named("shadowJar")
 
 tasks {
-    jar {
+    shadowJar {
+        configurations = setOf(shadeImplementation, shadeApi)
+        archiveClassifier = ""
         dependsOn(agentJarTask)
+        relocate("io.github.z4kn4fein.semver", "${rootProject.group}.shaded.io.github.z4kn4fein.semver")
+        relocate("io.github.alexandrepiveteau.graphs", "${rootProject.group}.shaded.io.github.alexandrepiveteau.graphs")
+        relocate("kotlinx.serialization", "${rootProject.group}.shaded.kotlinx.serialization")
         from(agentJarTask) {
             rename { "kcml-agent.jar" }
         }

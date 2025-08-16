@@ -16,32 +16,20 @@
 
 package dev.karmakrafts.kcml;
 
-import org.jetbrains.kotlin.cli.pipeline.ArgumentsPipelineArtifact;
-import org.jetbrains.kotlin.config.CompilerConfiguration;
-import org.jetbrains.kotlin.config.CompilerConfigurationKey;
+import dev.karmakrafts.kcml.extension.LLVMIntrinsicsExtension;
+import kotlinx.cinterop.CPointer;
+import llvm.LLVMOpaqueValue;
+import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable;
+import org.jetbrains.kotlin.ir.expressions.IrCall;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.List;
 
 @SuppressWarnings("unused") // Functions invoked by modified compiler code
 public final class CompilerHooks {
-    public static final CompilerConfigurationKey<String[]> PLUGIN_CLASSPATHS = new CompilerConfigurationKey<>(
-        "kcml_plugin_classpaths");
-
-    // Steal plugin classpaths from artifact and insert into compiler config so we can access it for our own CL
-    public static void onLoadCompilerPlugins(final ArgumentsPipelineArtifact<?> artifact,
-                                             final CompilerConfiguration configuration) {
-        try {
-            Files.writeString(Path.of("/home/fux/Schreibtisch/HELLOU.txt"), "HELLOU, SCHEISE GAYN");
-        }
-        catch (Throwable error) {
-            // ---
-        }
-        var classpaths = artifact.getArguments().getPluginClasspaths();
-        if (classpaths == null) {
-            // Ensure the array is never null
-            classpaths = new String[0];
-        }
-        configuration.put(PLUGIN_CLASSPATHS, classpaths);
+    public static CPointer<LLVMOpaqueValue> onEvaluateLLVMIntrinsics(final LlvmCallable callable,
+                                                                final IrCall callSite,
+                                                                final List<CPointer<LLVMOpaqueValue>> args,
+                                                                final CPointer<LLVMOpaqueValue> result) {
+        return LLVMIntrinsicsExtension.Companion.evaluateAll$kcml_compiler_plugin(callable, callSite, args, result);
     }
 }

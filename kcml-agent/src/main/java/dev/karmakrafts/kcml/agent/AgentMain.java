@@ -17,19 +17,9 @@
 package dev.karmakrafts.kcml.agent;
 
 import java.lang.instrument.Instrumentation;
-import java.util.Arrays;
 
 public final class AgentMain {
     public static void agentmain(String args, Instrumentation instrumentation) {
-        instrumentation.addTransformer(new AbstractConfigurationPhaseTransformer(), true);
-        try { // @formatter:off
-            // Retransform all loaded classes except Java's own classes
-            instrumentation.retransformClasses(Arrays.stream(instrumentation.getAllLoadedClasses())
-                .filter(instrumentation::isModifiableClass)
-                .toArray(Class[]::new));
-        } // @formatter:on
-        catch (Throwable error) {
-            throw new IllegalStateException("Could not retransform compiler classes", error);
-        }
+        instrumentation.addTransformer(new IntrinsicGeneratorTransformer());
     }
 }

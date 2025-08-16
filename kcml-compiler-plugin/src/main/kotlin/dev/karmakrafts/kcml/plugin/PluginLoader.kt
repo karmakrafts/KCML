@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.loader
+package dev.karmakrafts.kcml.plugin
 
-import dev.karmakrafts.kcml.plugin.CompilerPlugin
-import dev.karmakrafts.kcml.plugin.Plugin
-import dev.karmakrafts.kcml.plugin.PluginMetadata
 import dev.karmakrafts.kcml.util.error
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
@@ -31,7 +28,7 @@ import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
+import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
@@ -39,18 +36,21 @@ import java.net.URLClassLoader
 import java.util.*
 
 @OptIn(ExperimentalCompilerApi::class)
-object Loader {
+object PluginLoader {
+    lateinit var messageCollector: MessageCollector
+        private set
+
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, PluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
 
     fun getLoadedPlugins(): Set<String> = plugins.keys
+    fun getLoadedSortedPlugins(): Set<String> = sortedPlugins.keys
     fun getMetadata(id: String): PluginMetadata? = metadata[id]
     operator fun get(id: String): CompilerPlugin? = plugins[id]
 
     @OptIn(ExperimentalSerializationApi::class)
     private fun tryLoadMetadata( // @formatter:off
-        messageCollector: MessageCollector,
         pluginClass: Class<out CompilerPlugin>,
         pluginId: String
     ) { // @formatter:on
@@ -63,13 +63,14 @@ object Loader {
         }
     }
 
-    internal fun ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
+    internal fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
         // Load all plugins and their associated metadata by plugin ID
-        val messageCollector = config.messageCollector
+        messageCollector = config.messageCollector
         messageCollector.log("Loading KCML plugins")
-        val parentClassLoader = Loader::class.java.classLoader
-        val classLoader =
-            URLClassLoader(config.kcmlPluginClasspaths.map { it.toUri().toURL() }.toTypedArray(), parentClassLoader)
+        val parentClassLoader = PluginLoader::class.java.classLoader
+        val classLoader = URLClassLoader(
+            config.kcmlPluginClasspaths.map { it.toUri().toURL() }.toTypedArray(), parentClassLoader
+        )
         val candidates = ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
         messageCollector.log("Found ${candidates.size} KCML plugin candidates")
         for (plugin in candidates) {
@@ -83,12 +84,12 @@ object Loader {
                 messageCollector.error("KCML plugin with ID '$pluginId' was loaded more than once, check your plugin dependencies")
                 continue
             }
-            tryLoadMetadata(messageCollector, pluginClass, pluginId)
+            tryLoadMetadata(pluginClass, pluginId)
             plugins[pluginId] = plugin
         }
         messageCollector.log("Loaded ${plugins.size} KCML plugins")
         // Sort all plugins into their load order
-        sortedPlugins += sortPlugins(messageCollector)
+        sortedPlugins += sortPlugins()
         for ((pluginId, plugin) in sortedPlugins) {
             try {
                 with(plugin) { registerExtensions(config) }
@@ -99,7 +100,7 @@ object Loader {
         messageCollector.log("Initialized ${plugins.size} KCML plugins")
     }
 
-    private fun buildPluginGraph(messageCollector: MessageCollector): Pair<DirectedGraph, HashMap<String, Vertex>> {
+    private fun buildPluginGraph(): Pair<DirectedGraph, HashMap<String, Vertex>> {
         val vertices = HashMap<String, Vertex>()
         val loadedPlugins = getLoadedPlugins()
         val graph = buildDirectedGraph {
@@ -140,8 +141,8 @@ object Loader {
         return graph to vertices
     }
 
-    private fun sortPlugins(messageCollector: MessageCollector): LinkedHashMap<String, CompilerPlugin> {
-        val (graph, vertices) = buildPluginGraph(messageCollector)
+    private fun sortPlugins(): LinkedHashMap<String, CompilerPlugin> {
+        val (graph, vertices) = buildPluginGraph()
         // Apply topological sort to bring plugins into dependency order
         val sorted = LinkedHashMap<String, CompilerPlugin>()
         try {
