@@ -29,13 +29,23 @@ java {
     withJavadocJar()
 }
 
+val shadeImplementation by configurations.creating
+
+configurations {
+    implementation {
+        extendsFrom(shadeImplementation)
+    }
+}
+
 dependencies {
-    implementation(libs.ow2.asm.core)
-    implementation(libs.ow2.asm.tree)
+    shadeImplementation(libs.ow2.asm.core)
+    shadeImplementation(libs.ow2.asm.tree)
+    shadeImplementation(libs.kotlin.stdlib)
 }
 
 tasks {
     shadowJar {
+        configurations = setOf(shadeImplementation)
         entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar
         archiveClassifier = ""
         relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")

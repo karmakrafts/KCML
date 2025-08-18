@@ -2,24 +2,25 @@
 
 java = "21"
 
-kcml = "1.0.1"
-iridium = "1.6.3" # https://github.com/karmakrafts/Iridium/tags
-kotlin = "2.2.0"
-kotlinx-serialization = "1.9.0"
+kcml = "1.1.0"
+iridium = "1.7.0.0-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
+kotlin = "2.2.10" # https://github.com/JetBrains/kotlin/releases
+kotlinx-serialization = "1.9.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases"
 karmaConventions = "1.5.5" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
 gradleNexus = "2.0.0" # https://github.com/gradle-nexus/publish-plugin/releases
-kotlinGraphs = "0.6.0"
-semver = "3.0.0"
-ow2asm = "9.8"
-shadow = "9.0.2"
+kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
+semver = "3.0.0" # https://github.com/z4kn4fein/kotlin-semver/releases
+ow2asm = "9.8" # https://gitlab.ow2.org/asm/asm/-/tags
+shadow = "9.0.2" # https://github.com/GradleUp/shadow/releases
 
 [libraries]
 
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
 kotlin-native-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-native-compiler-embeddable", version.ref = "kotlin" }
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }

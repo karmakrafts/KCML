@@ -23,7 +23,7 @@ import org.objectweb.asm.tree.*;
 final class IntrinsicGeneratorTransformer extends AbstractClassTransformer {
     @Override
     protected boolean shouldTransform(final String className) {
-        return className.equals("org/jetbrains.kotlin/backend/konan/llvm/IntrinsicGenerator");
+        return className.equals("org/jetbrains/kotlin/backend/konan/llvm/IntrinsicGenerator");
     }
 
     private boolean isTargetFunction(final MethodNode method) {

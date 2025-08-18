@@ -19,9 +19,9 @@ package dev.karmakrafts.kcml.agent;
 import org.objectweb.asm.Type;
 
 final class ASMTypes {
+    public static final Type OBJECT = Type.getObjectType("java/lang/Object");
     // Hooks class defined in the loader runtime
     public static final Type COMPILER_HOOKS = Type.getObjectType("dev/karmakrafts/kcml/CompilerHooks");
-
     public static final Type FUNCTION_GENERATION_CONTEXT = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm/FunctionGenerationContext");
     public static final Type LLVM_CALLABLE = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm");
     public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");

@@ -112,7 +112,7 @@ object PluginLoader {
             // Then connect vertices according to each plugins dependency metadata
             for (pluginId in loadedPlugins) {
                 val pluginVertex = vertices[pluginId]!!
-                val pluginMetadata = metadata[pluginId]!!
+                val pluginMetadata = metadata[pluginId] ?: continue
                 for (dependency in pluginMetadata.dependencies) {
                     val dependencyId = dependency.id
                     // Handle required dependencies
@@ -124,8 +124,8 @@ object PluginLoader {
                     }
                     // Check version requirement if present
                     val requiredVersion = dependency.version
-                    val dependencyMetadata = metadata[dependencyId]!!
-                    val dependencyVersion = dependencyMetadata.version
+                    val dependencyMetadata = metadata[dependencyId]
+                    val dependencyVersion = dependencyMetadata?.version
                     if (requiredVersion != null) { // No constraints mean any version is accepted
                         if (dependencyVersion == null || !requiredVersion.isSatisfiedBy(dependencyVersion)) {
                             messageCollector.error("KCML plugin '$pluginId' requested dependency '$dependencyId' version $requiredVersion, but got $dependencyVersion")
