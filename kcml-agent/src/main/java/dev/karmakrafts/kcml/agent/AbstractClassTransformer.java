@@ -21,13 +21,8 @@ import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
-import java.io.ByteArrayInputStream;
 import java.lang.instrument.ClassFileTransformer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.ProtectionDomain;
-import java.util.Arrays;
-import java.util.stream.Collectors;
 
 abstract class AbstractClassTransformer implements ClassFileTransformer {
     protected abstract boolean shouldTransform(final String className);
@@ -51,25 +46,7 @@ abstract class AbstractClassTransformer implements ClassFileTransformer {
             reader.accept(classNode, ClassReader.EXPAND_FRAMES);
             transform(classNode);
             final var writer = new NonLoadingClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
-            try {
-                classNode.accept(writer);
-                try (final var inputStream = new ByteArrayInputStream(classfileBuffer); final var outputStream = Files.newOutputStream(
-                    Path.of(String.format("/home/fux/Schreibtisch/%s.class",
-                        className.substring(className.lastIndexOf('/') + 1))))) {
-                    inputStream.transferTo(outputStream);
-                }
-            }
-            catch (Throwable error) {
-                final var text = new StringBuilder(Arrays.stream(error.getStackTrace()).map(StackTraceElement::toString).collect(
-                    Collectors.joining("\n")));
-                text.insert(0, String.format("%s\n", error));
-                try {
-                    Files.writeString(Path.of("/home/fux/Schreibtisch/agent_err.txt"), text);
-                }
-                catch (Throwable ioError) {
-                    // ...
-                }
-            }
+            classNode.accept(writer);
             return writer.toByteArray();
         }
         return classfileBuffer;
