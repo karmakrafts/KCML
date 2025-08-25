@@ -19,7 +19,6 @@ import dev.karmakrafts.conventions.configureJava
 plugins {
     java
     alias(libs.plugins.shadow)
-    `maven-publish`
 }
 
 configureJava(libs.versions.java)

@@ -38,6 +38,7 @@ open class KCMLGradlePlugin @Inject constructor(
         target.logger.info("KCML ${BuildInfo.version}")
         target.configurations.create(CONFIGURATION_NAME) // Custom configuration for declaring KCML plugin dependencies
         target.logger.info("Created KCML plugin configuration")
+        target.logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
     }
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
