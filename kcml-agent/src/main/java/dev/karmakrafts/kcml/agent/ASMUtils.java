@@ -16,15 +16,48 @@
 
 package dev.karmakrafts.kcml.agent;
 
-import org.objectweb.asm.tree.AbstractInsnNode;
-import org.objectweb.asm.tree.InsnList;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 
+import java.util.List;
+import java.util.Objects;
 import java.util.Spliterators;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 final class ASMUtils {
     public static Stream<AbstractInsnNode> stream(final InsnList list) {
         return StreamSupport.stream(Spliterators.spliterator(list.iterator(), list.size(), 0), false);
+    }
+
+    public static FieldInsnNode loadObjectClass(final Type type) {
+        return new FieldInsnNode(Opcodes.GETSTATIC, type.getInternalName(), "INSTANCE", type.getDescriptor());
+    }
+
+    public static InsnList instantiate(final Type type,
+                                       final List<Type> constructorParams,
+                                       final Consumer<InsnList> constructorCallback) {
+        final var insn = new InsnList();
+        insn.add(new TypeInsnNode(Opcodes.NEW, type.getInternalName()));
+        insn.add(new InsnNode(Opcodes.DUP));
+        constructorCallback.accept(insn);
+        insn.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
+            type.getInternalName(),
+            "<init>",
+            Type.getMethodDescriptor(Type.VOID_TYPE, constructorParams.toArray(Type[]::new))));
+        return insn;
+    }
+
+    public static int findLocal(final MethodNode method, final String name) {
+        final var locals = Objects.requireNonNull(method.localVariables);
+        for (final var local : locals) {
+            if (!local.name.equals(name)) {
+                continue;
+            }
+            return local.index;
+        }
+        throw new IllegalArgumentException(String.format("Could not find local '%s' in method %s", name, method.name));
     }
 }

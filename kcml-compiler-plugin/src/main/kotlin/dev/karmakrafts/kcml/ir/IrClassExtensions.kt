@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.types.defaultType
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
 import org.jetbrains.kotlin.ir.util.constructors
+import org.jetbrains.kotlin.ir.util.superClass
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrClass.addDefaultObjectConstructor( // @formatter:off
@@ -37,17 +38,19 @@ fun IrClass.addDefaultObjectConstructor( // @formatter:off
 ): IrConstructor = addConstructor { // @formatter:on
     this.startOffset = startOffset
     this.endOffset = endOffset
+    isPrimary = true
 }.apply {
     val builtIns = pluginContext.irBuiltIns
     body = pluginContext.irFactory.createBlockBody( // @formatter:off
         startOffset = SYNTHETIC_OFFSET,
         endOffset = SYNTHETIC_OFFSET
     ).apply { // @formatter:on
+        val superClass = this@addDefaultObjectConstructor.superClass ?: pluginContext.irBuiltIns.anyClass.owner
         statements += IrDelegatingConstructorCallImplWithShape(
             startOffset = SYNTHETIC_OFFSET,
             endOffset = SYNTHETIC_OFFSET,
             type = pluginContext.irBuiltIns.unitType,
-            symbol = builtIns.anyClass.owner.constructors.first().symbol,
+            symbol = superClass.constructors.first().symbol,
             typeArgumentsCount = 0,
             valueArgumentsCount = 0,
             contextParameterCount = 0,

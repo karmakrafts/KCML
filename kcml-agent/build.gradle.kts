@@ -40,7 +40,6 @@ configurations {
 dependencies {
     shadeImplementation(libs.ow2.asm.core)
     shadeImplementation(libs.ow2.asm.tree)
-    shadeImplementation(libs.kotlin.stdlib)
 }
 
 tasks {

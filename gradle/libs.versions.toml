@@ -2,7 +2,7 @@
 
 java = "21"
 
-kcml = "1.1.0"
+kcml = "1.1.2"
 iridium = "1.7.0.0-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
 kotlin = "2.2.10" # https://github.com/JetBrains/kotlin/releases
 kotlinx-serialization = "1.9.0" # https://github.com/Kotlin/kotlinx.serialization/releases

@@ -23,19 +23,23 @@ import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.util.dump
-import java.lang.RuntimeException
 
 class UnloweredLLVMIntrinsicException(message: String) : RuntimeException(message)
 
 @OptIn(ExperimentalForeignApi::class)
 interface LLVMIntrinsicsExtension {
     companion object {
-        internal fun evaluateAll(callable: LlvmCallable, callSite: IrCall, args: List<LLVMValueRef>, result: LLVMValueRef?): LLVMValueRef {
+        internal fun evaluateAll(
+            callable: LlvmCallable,
+            callSite: IrCall,
+            args: List<LLVMValueRef>,
+            result: LLVMValueRef?
+        ): LLVMValueRef {
             PluginLoader.messageCollector.log("Evaluating LLVM intrinsics extensions")
             val pluginIds = PluginLoader.getLoadedSortedPlugins()
-            for(pluginId in pluginIds) {
+            for (pluginId in pluginIds) {
                 val extensions = PluginLoader[pluginId]!!.llvmIntrinsicsExtensions
-                for(extension in extensions) {
+                for (extension in extensions) {
                     return extension.evaluate(callable, callSite, args, result) ?: continue
                 }
             }
@@ -43,5 +47,10 @@ interface LLVMIntrinsicsExtension {
         }
     }
 
-    fun evaluate(callable: LlvmCallable, callSite: IrCall, args: List<LLVMValueRef>, result: LLVMValueRef?): LLVMValueRef?
+    fun evaluate(
+        callable: LlvmCallable,
+        callSite: IrCall,
+        args: List<LLVMValueRef>,
+        result: LLVMValueRef?
+    ): LLVMValueRef?
 }

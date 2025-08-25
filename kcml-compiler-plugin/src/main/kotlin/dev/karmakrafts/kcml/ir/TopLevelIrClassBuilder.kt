@@ -19,29 +19,21 @@ package dev.karmakrafts.kcml.ir
 import org.jetbrains.kotlin.descriptors.ClassKind
 import org.jetbrains.kotlin.descriptors.Modality
 import org.jetbrains.kotlin.descriptors.impl.EmptyPackageFragmentDescriptor
-import org.jetbrains.kotlin.fir.backend.FirMetadataSource
-import org.jetbrains.kotlin.fir.builder.buildPackageDirective
-import org.jetbrains.kotlin.fir.declarations.builder.buildFile
 import org.jetbrains.kotlin.ir.builders.declarations.IrDeclarationBuilder
 import org.jetbrains.kotlin.ir.declarations.IrClass
 import org.jetbrains.kotlin.ir.declarations.IrFactory
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.declarations.impl.IrFileImpl
 import org.jetbrains.kotlin.ir.symbols.impl.IrClassSymbolImpl
-import org.jetbrains.kotlin.ir.util.NaiveSourceBasedFileEntryImpl
 import org.jetbrains.kotlin.ir.util.addChild
 import org.jetbrains.kotlin.ir.util.addFile
-import org.jetbrains.kotlin.ir.util.fileEntry
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
-import kotlin.io.path.Path
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.div
 
 class IrTopLevelClassBuilder(
     private val module: IrModuleFragment
 ) : IrDeclarationBuilder() {
-    lateinit var packageName: FqName
+    var packageName: FqName = FqName.ROOT
 
     var kind: ClassKind = ClassKind.CLASS
     var modality: Modality = Modality.FINAL
@@ -74,7 +66,7 @@ class IrTopLevelClassBuilder(
 @PublishedApi
 internal fun Name.asCleanString(): String = asString().drop(1).dropLast(1).replace('-', '_').replace('.', '_')
 
-inline fun IrFactory.buildTopLevelClass( // @formatter:off
+fun IrFactory.buildTopLevelClass( // @formatter:off
     module: IrModuleFragment,
     block: IrTopLevelClassBuilder.() -> Unit
 ): IrClass { // @formatter:on
@@ -100,23 +92,15 @@ inline fun IrFactory.buildTopLevelClass( // @formatter:off
     val moduleName = module.name.asCleanString()
     val declarationName = declaration.name.asCleanString()
     val fileName = "__generated_${moduleName}_${declarationName}__.kt"
-    val firFile = buildFile {
-        moduleData = (declaration.metadata as FirMetadataSource.Class).fir.moduleData
-        name = fileName
-        packageDirective = buildPackageDirective {
-            packageFqName = builder.packageName
-        }
-    }
-    val filePath = Path(declaration.fileEntry.name).parent / fileName
-    val irFile = IrFileImpl(
-        fileEntry = NaiveSourceBasedFileEntryImpl(filePath.absolutePathString()),
+    val irFile = IrFileImpl( // @formatter:off
+        fileEntry = SyntheticIrFileEntry(fileName),
         packageFragmentDescriptor = EmptyPackageFragmentDescriptor(
-            module = module.descriptor, fqName = builder.packageName
+            module = module.descriptor,
+            fqName = builder.packageName
         ),
         module = module
-    ).apply {
-        metadata = FirMetadataSource.File(firFile)
-    }
+    )
+    declaration.parent = irFile
     irFile.addChild(declaration)
     module.addFile(irFile)
     return declaration

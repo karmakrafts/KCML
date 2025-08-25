@@ -20,6 +20,6 @@ import java.lang.instrument.Instrumentation;
 
 public final class AgentMain {
     public static void agentmain(String args, Instrumentation instrumentation) {
-        instrumentation.addTransformer(new IntrinsicGeneratorTransformer());
+        instrumentation.addTransformer(new KT58886Transformer());
     }
 }

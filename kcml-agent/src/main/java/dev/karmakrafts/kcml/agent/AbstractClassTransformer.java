@@ -43,9 +43,9 @@ abstract class AbstractClassTransformer implements ClassFileTransformer {
         if (shouldTransform(className)) {
             final var reader = new ClassReader(classfileBuffer);
             final var classNode = new ClassNode(Opcodes.ASM5);
-            reader.accept(classNode, ClassReader.EXPAND_FRAMES);
+            reader.accept(classNode, 0);
             transform(classNode);
-            final var writer = new NonLoadingClassWriter(reader, ClassWriter.COMPUTE_FRAMES);
+            final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             classNode.accept(writer);
             return writer.toByteArray();
         }
