@@ -29,6 +29,9 @@ final class ASMTypes {
     public static final Type PAIR = Type.getObjectType("kotlin/Pair");
 
     public static final Type SYNTHETIC_IR_FILE_ENTRY = Type.getObjectType("dev/karmakrafts/kcml/ir/SyntheticIrFileEntry");
+    public static final Type NATIVE_IR_DECLARATION_ORIGIN = Type.getObjectType(
+        "dev/karmakrafts/kcml/ir/NativeIrDeclarationOrigin");
+
     public static final Type FUNCTION_GENERATION_CONTEXT = Type.getObjectType(
         "org/jetbrains/kotlin/backend/konan/llvm/FunctionGenerationContext");
     public static final Type LLVM_CALLABLE = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm");
@@ -44,11 +47,15 @@ final class ASMTypes {
     public static final Type KT_IN_MEMORY_SOURCE_FILE = Type.getObjectType(
         "org/jetbrains/kotlin/KtInMemoryTextSourceFile");
 
+    public static final Type IR_DECLARATION_ORIGIN = Type.getObjectType(
+        "org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin");
     public static final Type IR_MODULE_FRAGMENT = Type.getObjectType(
         "org/jetbrains/kotlin/ir/declarations/IrModuleFragment");
     public static final Type IR_FILE = Type.getObjectType("org/jetbrains/kotlin/ir/declarations/IrFile");
     public static final Type IR_FILE_ENTRY = Type.getObjectType("org/jetbrains/kotlin/ir/IrFileEntry");
     public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");
+    public static final Type IR_SIMPLE_FUNCTION = Type.getObjectType(
+        "org/jetbrains/kotlin/ir/declarations/IrSimpleFunction");
 
     public static final Type FIR_MODULE_DATA = Type.getObjectType("org/jetbrains/kotlin/fir/FirModuleData");
     public static final Type FIR_MODULE_DATA_KT = Type.getObjectType("org/jetbrains/kotlin/fir/FirModuleDataKt");

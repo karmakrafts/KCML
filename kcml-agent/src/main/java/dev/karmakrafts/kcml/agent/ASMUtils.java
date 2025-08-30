@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Spliterators;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -59,5 +60,13 @@ final class ASMUtils {
             return local.index;
         }
         throw new IllegalArgumentException(String.format("Could not find local '%s' in method %s", name, method.name));
+    }
+
+    public static Predicate<AbstractInsnNode> firstLocalStore(final int index) {
+        return insn -> insn instanceof VarInsnNode varInsn && varInsn.var == index;
+    }
+
+    public static Predicate<AbstractInsnNode> firstLocalStore(final MethodNode method, final String name) {
+        return firstLocalStore(findLocal(method, name));
     }
 }

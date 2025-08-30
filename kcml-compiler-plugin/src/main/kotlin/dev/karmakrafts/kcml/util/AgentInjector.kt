@@ -63,12 +63,13 @@ internal object AgentInjector {
         }
     }
 
-    fun inject() {
+    fun inject(options: Map<String, String?> = emptyMap()) {
         KCMLCompilerPluginRegistrar::class.java.getResourceAsStream("/kcml-agent.jar")?.use {
             Files.copy(it, agentPath, StandardCopyOption.REPLACE_EXISTING)
         }
         val vm = tryAttachSelf() ?: error("Could not attach to current VM")
-        vm.loadAgent(agentPath.absolutePathString())
+        val args = options.map { (key, value) -> value?.let { "$key=$it" } ?: key }.joinToString(":")
+        vm.loadAgent(agentPath.absolutePathString(), args)
         vm.detach()
     }
 

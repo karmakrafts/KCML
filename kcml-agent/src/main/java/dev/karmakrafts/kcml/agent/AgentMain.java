@@ -17,9 +17,16 @@
 package dev.karmakrafts.kcml.agent;
 
 import java.lang.instrument.Instrumentation;
+import java.util.Arrays;
 
 public final class AgentMain {
     public static void agentmain(String args, Instrumentation instrumentation) {
+        final var monitor = MonitorClient.INSTANCE;
+        final var options = Arrays.asList(args.split(":"));
+        if (options.contains("monitor") && monitor.tryConnect()) {
+            Runtime.getRuntime().addShutdownHook(new Thread(monitor::close));
+        }
         instrumentation.addTransformer(new KT58886Transformer());
+        instrumentation.addTransformer(new CodeGeneratorVisitorTransformer());
     }
 }

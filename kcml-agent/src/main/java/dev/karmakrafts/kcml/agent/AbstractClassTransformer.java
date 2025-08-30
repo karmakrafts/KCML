@@ -37,7 +37,7 @@ abstract class AbstractClassTransformer implements ClassFileTransformer {
                             final ProtectionDomain protectionDomain,
                             final byte[] classfileBuffer) {
         if (className == null || className.startsWith("java/") || className.startsWith("jdk/") || className.startsWith(
-            "org/objectweb/")) {
+            "org/objectweb/") || className.startsWith("dev/karmakrafts/kcml/")) {
             return classfileBuffer;
         }
         if (shouldTransform(className)) {

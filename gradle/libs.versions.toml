@@ -3,7 +3,7 @@
 java = "21"
 
 kcml = "1.0.0"
-iridium = "1.7.0.0-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
+iridium = "1.7.0" # https://github.com/karmakrafts/Iridium/tags
 kotlin = "2.2.10" # https://github.com/JetBrains/kotlin/releases
 kotlinx-serialization = "1.9.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.0.0" # https://github.com/Kotlin/dokka/releases"
@@ -14,6 +14,10 @@ kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/rele
 semver = "3.0.0" # https://github.com/z4kn4fein/kotlin-semver/releases
 ow2asm = "9.8" # https://gitlab.ow2.org/asm/asm/-/tags
 shadow = "9.0.2" # https://github.com/GradleUp/shadow/releases
+flatlaf = "3.6.1"
+miglayout = "11.4.2"
+graphviz = "0.18.1"
+ikonli = "12.4.0"
 
 [libraries]
 
@@ -30,6 +34,12 @@ kotlinGraphs = { module = "io.github.alexandrepiveteau:kotlin-graphs", version.r
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 ow2-asm-core = { module = "org.ow2.asm:asm", version.ref = "ow2asm" }
 ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }
+flatlaf = { module = "com.formdev:flatlaf", version.ref = "flatlaf" }
+miglayout-swing = { module = "com.miglayout:miglayout-swing", version.ref = "miglayout" }
+graphviz = { module = "guru.nidi:graphviz-java", version.ref = "graphviz" }
+ikonli-core = { module = "org.kordamp.ikonli:ikonli-core", version.ref = "ikonli" }
+ikonli-swing = { module = "org.kordamp.ikonli:ikonli-swing", version.ref = "ikonli" }
+ikonli-materialdesign = { module = "org.kordamp.ikonli:ikonli-materialdesign-pack", version.ref = "ikonli" }
 
 [plugins]
 

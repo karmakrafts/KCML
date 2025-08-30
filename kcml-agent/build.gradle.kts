@@ -37,6 +37,7 @@ configurations {
 }
 
 dependencies {
+    shadeImplementation(projects.kcmlMonitorProtocol)
     shadeImplementation(libs.ow2.asm.core)
     shadeImplementation(libs.ow2.asm.tree)
 }

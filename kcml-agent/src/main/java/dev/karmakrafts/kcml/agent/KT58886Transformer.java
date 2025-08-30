@@ -23,6 +23,9 @@ import org.objectweb.asm.tree.*;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Patch for <a href="https://youtrack.jetbrains.com/issue/KT-58886" target="_blank">KT-58886</a>.
+ */
 final class KT58886Transformer extends AbstractClassTransformer {
     @Override
     protected boolean shouldTransform(final String className) {
@@ -159,9 +162,7 @@ final class KT58886Transformer extends AbstractClassTransformer {
         final var instructions = method.instructions;
         // @formatter:off
         final var needle = ASMUtils.stream(instructions)
-            .filter(i -> i.getOpcode() == Opcodes.ALOAD)
-            .map(i -> (VarInsnNode) i)
-            .filter(i -> i.var == 15) // First load of copied this-ref
+            .filter(ASMUtils.firstLocalStore(15)) // First copy of this-ref
             .findFirst()
             .orElseThrow();
         // @formatter:on

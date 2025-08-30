@@ -40,3 +40,5 @@ dependencyResolutionManagement {
 include("kcml-agent")
 include("kcml-gradle-plugin")
 include("kcml-compiler-plugin")
+include("kcml-monitor-protocol")
+include("kcml-monitor")
