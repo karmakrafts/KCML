@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.ir
 
+import dev.karmakrafts.kcml.util.UsedByAgent
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
@@ -25,6 +26,7 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
 @OptIn(ExperimentalForeignApi::class)
 typealias NativeIntrinsicHandler = (callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?) -> LLVMValueRef
 
+@UsedByAgent
 @OptIn(ExperimentalForeignApi::class)
 abstract class NativeIrIntrinsicOrigin(
     override val name: String

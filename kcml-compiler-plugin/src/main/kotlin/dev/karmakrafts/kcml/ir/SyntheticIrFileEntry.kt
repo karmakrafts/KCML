@@ -16,10 +16,12 @@
 
 package dev.karmakrafts.kcml.ir
 
+import dev.karmakrafts.kcml.util.UsedByAgent
 import org.jetbrains.kotlin.ir.IrFileEntry
 import org.jetbrains.kotlin.ir.LineAndColumn
 import org.jetbrains.kotlin.ir.SourceRangeInfo
 
+@UsedByAgent
 class SyntheticIrFileEntry(
     override val name: String
 ) : IrFileEntry {
