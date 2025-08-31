@@ -23,11 +23,14 @@ import java.awt.Color
 import java.awt.Dimension
 import java.awt.Image
 import java.awt.image.BufferedImage
+import java.util.*
 import javax.imageio.ImageIO
 import javax.swing.BorderFactory
+import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JFrame
 import javax.swing.JLabel
+import javax.swing.JList
 import javax.swing.JMenu
 import javax.swing.JMenuBar
 import javax.swing.JMenuItem
@@ -43,13 +46,83 @@ import kotlin.concurrent.atomics.ExperimentalAtomicApi
 @OptIn(ExperimentalAtomicApi::class)
 internal class MonitorWindow : JFrame("KCML Monitor") {
     private val portTextField: PlaceholderTextField = PlaceholderTextField("Default 65000")
+
     private val serverLogTextArea: JTextArea = JTextArea().apply {
         isEditable = false
         background = Colors.consoleBackground
         foreground = Colors.consoleForeground
     }
+
+    private val tabbedPane: JTabbedPane = JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT).apply {
+        border = BorderFactory.createTitledBorder("Clients")
+    }
+    private val agentPanels: HashMap<UUID, AgentPanel> = HashMap()
+    private val agentListModel: DefaultListModel<Agent> = DefaultListModel()
+    private val agentList: JList<Agent> = JList(agentListModel)
+
     val logger: Logger = Logger(serverLogTextArea)
-    val server: MonitorServer = MonitorServer(logger)
+
+    val server: MonitorServer = MonitorServer(logger).apply {
+        onAgentAdded { agent ->
+            SwingUtilities.invokeLater {
+                updateConnectionsLabelText()
+                addAgent(agent)
+            }
+        }
+        onAgentRemoved { agent ->
+            SwingUtilities.invokeLater {
+                updateConnectionsLabelText()
+                disconnectAgent(agent)
+            }
+        }
+    }
+
+    fun addAgent(agent: Agent) {
+        val panel = AgentPanel(agent)
+        agentPanels[agent.clientId] = panel
+        addAgentTab(agent, panel)
+        agentListModel.add(0, agent)
+        agentList.repaint()
+        agentList.revalidate()
+    }
+
+    private fun addAgentTab(agent: Agent, panel: AgentPanel) {
+        tabbedPane.addClosableTab(
+            agent.processId.toString(), FontIcon.of(MaterialDesign.MDI_ETHERNET_CABLE, 16, Color.WHITE), panel
+        )
+        tabbedPane.repaint()
+        tabbedPane.revalidate()
+    }
+
+    fun disconnectAgent(agent: Agent) {
+        agentPanels[agent.clientId] ?: return
+        // TODO: handle disconnection in panel
+    }
+
+    private inline val statusLabelText: String
+        get() {
+            val isRunning = server.isRunning
+            val color = if (isRunning) "#7FFF00" else "#DC143C"
+            val text = if (isRunning) "ONLINE" else "OFFLINE"
+            return "<html><b>Status:</b> <span style='color: $color;'>$text</span></html>"
+        }
+    private val statusLabel: JLabel = JLabel(statusLabelText)
+
+    fun updateStatusText() {
+        statusLabel.text = statusLabelText
+        statusLabel.repaint()
+        statusLabel.revalidate()
+    }
+
+    private inline val connectionsLabelText: String
+        get() = "<html><b>Connections:</b> ${server.connectionCount}</html>"
+    private val connectionsLabel: JLabel = JLabel(connectionsLabelText)
+
+    fun updateConnectionsLabelText() {
+        connectionsLabel.text = connectionsLabelText
+        connectionsLabel.repaint()
+        connectionsLabel.revalidate()
+    }
 
     private val startButton: JButton =
         JButton("Start", FontIcon.of(MaterialDesign.MDI_TOGGLE_SWITCH, 16, Color.WHITE)).apply {
@@ -62,6 +135,7 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
                     server.start(port)
                     stopButton.isEnabled = true
                     isEnabled = false
+                    updateStatusText()
                     logger.info("Server started")
                 }
             }
@@ -77,6 +151,7 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
                     server.stop()
                     startButton.isEnabled = true
                     isEnabled = false
+                    updateStatusText()
                     logger.info("Server stopped")
                 }
             }
@@ -85,7 +160,7 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
 
     init {
         layout = MigLayout("nogrid")
-        preferredSize = Dimension(1200, 800)
+        preferredSize = Dimension(1200, 1000)
         defaultCloseOperation = EXIT_ON_CLOSE
         setup()
         pack()
@@ -114,8 +189,8 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
 
     private fun JPanel.setupControlsPanel() {
         border = BorderFactory.createTitledBorder("Controls")
-        add(JLabel("<html><b>Status:</b> <span style='color: red;'>Offline</span></html>"), "w 100%, wrap")
-        add(JLabel("<html><b>Connections:</b> 0</html>"), "w 100%, wrap")
+        add(statusLabel, "w 100%, wrap")
+        add(connectionsLabel, "w 100%, wrap")
         add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
         add(JLabel("Port"), "w 100%, wrap")
         add(portTextField, "w 100%, wrap")
@@ -126,9 +201,18 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
 
     private fun JPanel.setupConnectionsPanel() {
         border = BorderFactory.createTitledBorder("Connections")
-        add(JScrollPane(JPanel(MigLayout("nogrid")).apply {
-            // TODO: ...
-        }), "w 100%, h 100%, wrap")
+        add(JScrollPane(agentList), "w 100%, h 100%, wrap")
+        add(JButton("Inspect", FontIcon.of(MaterialDesign.MDI_MAGNIFY, 16, Color.WHITE)).apply {
+            addActionListener {
+                for (i in agentList.selectedIndices) {
+                    val agent = agentListModel.get(i)
+                    val panel = agentPanels[agent.clientId] ?: continue
+                    addAgentTab(agent, panel)
+                }
+                tabbedPane.repaint()
+                tabbedPane.revalidate()
+            }
+        })
         add(SearchControls<String> { _, _ -> true }.apply {
             // TODO: ...
         }, "w 100%")
@@ -159,17 +243,18 @@ internal class MonitorWindow : JFrame("KCML Monitor") {
 
     private fun setupCenterPane() {
         add(JSplitPane(JSplitPane.VERTICAL_SPLIT).apply {
-            topComponent = JPanel(MigLayout("nogrid")).apply {
+            resizeWeight = 0.0
+            add(JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
                 border = BorderFactory.createTitledBorder("Server")
-                add(JPanel(MigLayout("nogrid")).apply { setupControlsPanel() }, "w 25%, h 100%")
-                add(JPanel(MigLayout("nogrid")).apply { setupConnectionsPanel() }, "w 25%, h 100%")
-                add(JPanel(MigLayout("nogrid")).apply { setupConsolePanel() }, "w 50%, h 100%")
-            }
-            bottomComponent = JTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT).apply {
-                border = BorderFactory.createTitledBorder("Clients")
-            }
-            isOneTouchExpandable = true
-            resizeWeight = 0.2
+                resizeWeight = 0.4
+                add(JSplitPane(JSplitPane.HORIZONTAL_SPLIT).apply {
+                    resizeWeight = 0.4
+                    add(JPanel(MigLayout("nogrid")).apply { setupControlsPanel() })
+                    add(JPanel(MigLayout("nogrid")).apply { setupConnectionsPanel() })
+                })
+                add(JPanel(MigLayout("nogrid")).apply { setupConsolePanel() })
+            })
+            add(tabbedPane)
         }, "w 100%, h 100%")
     }
 

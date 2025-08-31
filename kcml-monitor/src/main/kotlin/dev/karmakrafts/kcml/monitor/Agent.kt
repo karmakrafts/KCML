@@ -16,13 +16,13 @@
 
 package dev.karmakrafts.kcml.monitor
 
-import java.awt.Color
+import java.util.*
 
-internal object Colors {
-    val consoleBackground: Color = Color(0.1F, 0.1F, 0.15F, 1F)
-    val consoleForeground: Color = Color(0.9F, 0.9F, 0.9F, 1F)
-}
-
-internal fun Color.toHtml(): String {
-    return "#${red.toHexString()}${green.toHexString()}${blue.toHexString()}"
-}
+internal data class Agent(
+    val clientId: UUID,
+    val processId: Long,
+    val jvmVendor: String,
+    val jvmName: String,
+    val jvmVersion: String,
+    val options: Map<String, String?>
+)

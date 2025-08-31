@@ -37,8 +37,7 @@ internal class PlaceholderTextField(
                 updateTextIfNeeded(false)
             }
         })
-
-        updateTextIfNeeded(false)
+        updateTextIfNeeded()
     }
 
     fun updateTextIfNeeded(hasFocus: Boolean = hasFocus()) {

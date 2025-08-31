@@ -19,97 +19,147 @@ package dev.karmakrafts.kcml.monitor
 import dev.karmakrafts.kcml.monitor.protocol.C2SConnectPacket
 import dev.karmakrafts.kcml.monitor.protocol.C2SPacket
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodecs
+import dev.karmakrafts.kcml.monitor.protocol.S2CConnectAckPacket
 import dev.karmakrafts.kcml.monitor.protocol.S2CPacket
-import dev.karmakrafts.kcml.monitor.protocol.S2ConnectAckPacket
 import java.net.ServerSocket
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.channels.Channels
+import java.time.Instant
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.reflect.KClass
 
 @OptIn(ExperimentalAtomicApi::class)
 internal class MonitorServer(private val logger: Logger) {
     private val connectionPool: ConcurrentLinkedDeque<Socket> = ConcurrentLinkedDeque()
-    private val isRunning: AtomicBoolean = AtomicBoolean(false)
-    private val packetHandlers: HashMap<KClass<out C2SPacket>, (C2SPacket) -> Unit> = HashMap()
+    private val packetHandlers: HashMap<KClass<out C2SPacket>, (Socket, C2SPacket) -> Unit> = HashMap()
     private val outgoingPackets: ConcurrentLinkedDeque<S2CPacket> = ConcurrentLinkedDeque()
-    private val packetBuffer: ByteBuffer = ByteBuffer.allocate(100000)
+    private val packetBuffer: ByteBuffer = ByteBuffer.allocate(100000).order(ByteOrder.nativeOrder())
+
+    private val _isRunning: AtomicBoolean = AtomicBoolean(false)
+    inline val isRunning: Boolean get() = _isRunning.load()
+    inline val connectionCount: Int get() = connectionPool.size
 
     private var port: AtomicInt = AtomicInt(65000)
+    private lateinit var executor: ExecutorService
     private lateinit var socket: ServerSocket
-    private lateinit var connectionAcceptorThread: Thread
-    private lateinit var connectionCleanerThread: Thread
-    private lateinit var ioThread: Thread
+    private lateinit var connectionAcceptorTask: CompletableFuture<Unit>
+    private lateinit var connectionCleanerTask: CompletableFuture<Unit>
+    private lateinit var ioTask: CompletableFuture<Unit>
+
+    val agents: ConcurrentLinkedDeque<Agent> = ConcurrentLinkedDeque()
+    private val socketToAgent: ConcurrentHashMap<Socket, Agent> = ConcurrentHashMap()
+    private var onAgentAdded: AtomicReference<(Agent) -> Unit> = AtomicReference {}
+    private var onAgentRemoved: AtomicReference<(Agent) -> Unit> = AtomicReference {}
 
     init {
-        onPacket<C2SConnectPacket> { incomingPacket ->
-            val clientId = incomingPacket.clientId
-            broadcastPacket(S2ConnectAckPacket(clientId))
+        onPacket<C2SConnectPacket> { socket, incomingPacket ->
+            addAgent(socket, incomingPacket.getAgent())
+            broadcastPacket(S2CConnectAckPacket(incomingPacket.clientId, Instant.now()))
         }
+    }
+
+    private fun addAgent(socket: Socket, agent: Agent) {
+        check(agent !in agents) { "Agent $agent is already connected" }
+        agents += agent
+        socketToAgent[socket] = agent
+    }
+
+    private fun removeAgent(socket: Socket) {
+        val agent = socketToAgent[socket] ?: error("Agent for socket $socket could not be found")
+        agents -= agent
+        socketToAgent -= socket
     }
 
     fun broadcastPacket(packet: S2CPacket) {
         outgoingPackets += packet
     }
 
+    fun onAgentAdded(handler: (Agent) -> Unit) {
+        val oldHandler = onAgentAdded.load()
+        onAgentAdded.store { agent ->
+            oldHandler(agent)
+            handler(agent)
+        }
+    }
+
+    fun onAgentRemoved(handler: (Agent) -> Unit) {
+        val oldHandler = onAgentRemoved.load()
+        onAgentRemoved.store { agent ->
+            oldHandler(agent)
+            handler(agent)
+        }
+    }
+
     @Suppress("UNCHECKED_CAST")
-    inline fun <reified P : C2SPacket> onPacket(noinline handler: (P) -> Unit) {
-        packetHandlers[P::class] = handler as (C2SPacket) -> Unit
+    inline fun <reified P : C2SPacket> onPacket(crossinline handler: (Socket, P) -> Unit) {
+        val oldHandler = packetHandlers[P::class]
+        packetHandlers[P::class] = { socket, packet ->
+            oldHandler?.invoke(socket, packet)
+            handler(socket, packet as P)
+        }
     }
 
     private fun handleIo() {
-        Thread.currentThread().name = "IO Handler"
-        logger.info("Starting IO handler thread")
-        while (isRunning.load()) {
+        Thread.currentThread().name = "Monitor Server IO"
+        logger.info("Starting IO handler task")
+        while (_isRunning.load()) {
             for (connection in connectionPool) {
                 val outputStream = connection.getOutputStream()
                 val outputChannel = Channels.newChannel(outputStream)
                 val inputStream = connection.getInputStream()
                 val inputChannel = Channels.newChannel(inputStream)
                 // First process all outgoing packets..
-                while (isRunning.load() && !outgoingPackets.isEmpty()) {
+                while (_isRunning.load() && !outgoingPackets.isEmpty()) {
                     val packet = outgoingPackets.removeFirst()
                     packetBuffer.clear()
                     PacketCodecs.serialize(packet, packetBuffer)
+                    packetBuffer.flip()
                     outputChannel.write(packetBuffer)
                 }
                 // ..then process all incoming ones
-                while (isRunning.load()) {
+                while (_isRunning.load()) {
                     packetBuffer.clear()
                     if (inputChannel.read(packetBuffer) <= 0) break
                     packetBuffer.flip()
                     while (packetBuffer.hasRemaining()) {
                         val packet = PacketCodecs.deserialize<C2SPacket>(packetBuffer)
-                        packetHandlers[packet::class]!!(packet)
+                        packetHandlers[packet::class]!!(connection, packet)
                     }
                 }
             }
-            Thread.sleep(10)
         }
-        logger.info("Stopped IO handler thread")
+        logger.info("Stopped IO handler task")
     }
 
     private fun cleanConnections() {
-        Thread.currentThread().name = "Connection Cleaner"
-        logger.info("Starting connection cleaner thread")
-        while (isRunning.load()) {
-            connectionPool.removeIf { !it.isConnected || it.isClosed }
+        Thread.currentThread().name = "Monitor Server Cleaner"
+        logger.info("Starting connection cleaner task")
+        while (_isRunning.load()) {
+            connectionPool -= connectionPool.filter { socket -> socket.isClosed || !socket.isConnected }
+                .toSet()
+                .onEach(::removeAgent)
             Thread.sleep(500)
         }
-        logger.info("Stopped connection cleaner thread")
+        logger.info("Stopped connection cleaner task")
     }
 
     private fun acceptConnections() {
-        Thread.currentThread().name = "Connection Acceptor"
-        logger.info("Starting connection acceptor thread")
+        Thread.currentThread().name = "Monitor Server Acceptor"
+        logger.info("Starting connection acceptor task")
         socket = ServerSocket(port.load()).apply {
             soTimeout = 100
         }
-        while (isRunning.load()) {
+        while (_isRunning.load()) {
             try {
                 connectionPool += socket.accept()
             } catch (_: Throwable) {
@@ -117,30 +167,26 @@ internal class MonitorServer(private val logger: Logger) {
             }
         }
         socket.close()
-        logger.info("Stopped connection acceptor thread")
+        logger.info("Stopped connection acceptor task")
     }
 
     fun start(port: Int) {
+        if (!_isRunning.compareAndSet(expectedValue = false, newValue = true)) return
+        executor = Executors.newVirtualThreadPerTaskExecutor()
         this.port.store(port)
-        isRunning.store(true)
-        connectionAcceptorThread = Thread(::acceptConnections).apply {
-            start()
-        }
-        connectionCleanerThread = Thread(::cleanConnections).apply {
-            start()
-        }
-        ioThread = Thread(::handleIo).apply {
-            start()
-        }
+        connectionAcceptorTask = CompletableFuture.supplyAsync(::acceptConnections, executor)
+        connectionCleanerTask = CompletableFuture.supplyAsync(::cleanConnections, executor)
+        ioTask = CompletableFuture.supplyAsync(::handleIo, executor)
     }
 
     fun stop() {
-        isRunning.store(false)
-        connectionAcceptorThread.join()
+        if (!_isRunning.compareAndSet(expectedValue = true, newValue = false)) return
+        connectionAcceptorTask.join()
         connectionPool.forEach(Socket::close)
-        connectionCleanerThread.join()
+        connectionCleanerTask.join()
         connectionPool.clear()
-        ioThread.join()
+        ioTask.join()
+        executor.shutdown()
     }
 
     fun restart(port: Int) {
