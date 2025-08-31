@@ -16,31 +16,28 @@
 
 package dev.karmakrafts.kcml.agent;
 
-import dev.karmakrafts.kcml.monitor.protocol.C2SLogPacket;
 import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
 
-final class Logger {
-    public static void log(final MonitorLogLevel level, final String message) {
-        MonitorClient.INSTANCE.sendPacket(new C2SLogPacket(MonitorClient.INSTANCE.id, level, message));
+interface Logger {
+    void log(MonitorLogLevel level, String message);
+
+    default void debug(final String message, final Object... args) {
+        log(MonitorLogLevel.DEBUG, String.format(message, args));
     }
 
-    public static void debug(final String message) {
-        log(MonitorLogLevel.DEBUG, message);
+    default void info(final String message, final Object... args) {
+        log(MonitorLogLevel.INFO, String.format(message, args));
     }
 
-    public static void info(final String message) {
-        log(MonitorLogLevel.INFO, message);
+    default void warn(final String message, final Object... args) {
+        log(MonitorLogLevel.WARN, String.format(message, args));
     }
 
-    public static void warn(final String message) {
-        log(MonitorLogLevel.WARN, message);
+    default void error(final String message, final Object... args) {
+        log(MonitorLogLevel.ERROR, String.format(message, args));
     }
 
-    public static void error(final String message) {
-        log(MonitorLogLevel.ERROR, message);
-    }
-
-    public static void fatal(final String message) {
-        log(MonitorLogLevel.FATAL, message);
+    default void fatal(final String message, final Object... args) {
+        log(MonitorLogLevel.FATAL, String.format(message, args));
     }
 }

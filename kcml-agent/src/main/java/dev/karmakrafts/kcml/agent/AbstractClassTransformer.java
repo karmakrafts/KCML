@@ -23,8 +23,18 @@ import org.objectweb.asm.tree.ClassNode;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.security.ProtectionDomain;
+import java.time.Duration;
+import java.time.Instant;
 
 abstract class AbstractClassTransformer implements ClassFileTransformer {
+    protected final MonitorClient client;
+    protected final Logger logger;
+
+    protected AbstractClassTransformer(final MonitorClient client, final Logger logger) {
+        this.client = client;
+        this.logger = logger;
+    }
+
     protected abstract boolean shouldTransform(final String className);
 
     protected abstract void transform(final ClassNode classNode);
@@ -38,17 +48,30 @@ abstract class AbstractClassTransformer implements ClassFileTransformer {
                             final byte[] classfileBuffer) {
         if (className == null || className.startsWith("java/") || className.startsWith("jdk/") || className.startsWith(
             "org/objectweb/") || className.startsWith("dev/karmakrafts/kcml/")) {
+            logger.debug("Skipping transformation of class %s", className);
             return classfileBuffer;
         }
         if (shouldTransform(className)) {
+            logger.info("Transforming class %s", className);
+            final var startTime = Instant.now();
             final var reader = new ClassReader(classfileBuffer);
             final var classNode = new ClassNode(Opcodes.ASM5);
             reader.accept(classNode, 0);
-            transform(classNode);
+            try {
+                transform(classNode);
+            }
+            catch (Throwable error) {
+                client.handleException(error);
+            }
             final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             classNode.accept(writer);
-            return writer.toByteArray();
+            final var time = Duration.between(startTime, Instant.now()).toMillis();
+            logger.info("Transformed class %s in %dms", className, time);
+            final var transformedBytes = writer.toByteArray();
+            client.sendClassTransformedPacket(className, loader.getName(), classfileBuffer, transformedBytes);
+            return transformedBytes;
         }
+        logger.debug("Skipping transformation of class %s", className);
         return classfileBuffer;
     }
 }

@@ -24,6 +24,10 @@ import org.objectweb.asm.tree.*;
  * Hook for generating custom LLVM bitcode intrinsics from regular plugin code.
  */
 final class CodeGeneratorVisitorTransformer extends AbstractClassTransformer {
+    CodeGeneratorVisitorTransformer(final MonitorClient client, final Logger logger) {
+        super(client, logger);
+    }
+
     @Override
     protected boolean shouldTransform(final String className) {
         return className.equals("org/jetbrains/kotlin/backend/konan/llvm/CodeGeneratorVisitor");
@@ -60,10 +64,18 @@ final class CodeGeneratorVisitorTransformer extends AbstractClassTransformer {
         injection.add(new VarInsnNode(Opcodes.ASTORE, originIndex));
 
         // Check the type of the origin using reflection
-        injection.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
-            ASMTypes.OBJECT.getInternalName(),
-            "getClass",
-            Type.getMethodDescriptor(ASMTypes.CLASS)));
+        injection.add(ASMUtils.reflectiveInstanceof(ASMTypes.NATIVE_IR_DECLARATION_ORIGIN));
+        injection.add(new JumpInsnNode(Opcodes.IFEQ, tailLabel));
+
+        // Invoke the underlying intrinsic handler
+        injection.add(new VarInsnNode(Opcodes.ALOAD, originIndex)); // instance
+        // TODO: pass arguments
+        injection.add(ASMUtils.reflectiveCall(method,
+            "evaluateCall",
+            ASMTypes.C_POINTER,
+            ASMTypes.IR_CALL,
+            ASMTypes.LIST,
+            ASMTypes.C_POINTER));
 
         injection.add(tailLabel);
         instructions.insert(needle, injection);

@@ -20,12 +20,15 @@ import org.objectweb.asm.Type;
 
 final class ASMTypes {
     public static final Type CLASS = Type.getObjectType("java/lang/Class");
+    public static final Type CLASS_ARRAY = Type.getType("[Ljava/lang/Class;");
     public static final Type OBJECT = Type.getObjectType("java/lang/Object");
+    public static final Type OBJECT_ARRAY = Type.getType("[Ljava/lang/Object;");
     public static final Type STRING = Type.getObjectType("java/lang/String");
     public static final Type CHAR_SEQUENCE = Type.getObjectType("java/lang/CharSequence");
     public static final Type LIST = Type.getObjectType("java/util/List");
     public static final Type MAP = Type.getObjectType("java/util/Map");
     public static final Type ITERATOR = Type.getObjectType("java/util/Iterator");
+    public static final Type METHOD = Type.getObjectType("java/lang/reflect/Method");
     public static final Type PAIR = Type.getObjectType("kotlin/Pair");
 
     public static final Type SYNTHETIC_IR_FILE_ENTRY = Type.getObjectType("dev/karmakrafts/kcml/ir/SyntheticIrFileEntry");

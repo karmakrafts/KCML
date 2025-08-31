@@ -17,16 +17,48 @@
 package dev.karmakrafts.kcml.agent;
 
 import java.lang.instrument.Instrumentation;
-import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 public final class AgentMain {
-    public static void agentmain(String args, Instrumentation instrumentation) {
-        final var monitor = MonitorClient.INSTANCE;
-        final var options = Arrays.asList(args.split(":"));
-        if (options.contains("monitor") && monitor.tryConnect()) {
-            Runtime.getRuntime().addShutdownHook(new Thread(monitor::close));
+    private static Map<String, String> parseArgs(final String args) {
+        if (args.isBlank()) {
+            return Collections.emptyMap();
         }
-        instrumentation.addTransformer(new KT58886Transformer());
-        instrumentation.addTransformer(new CodeGeneratorVisitorTransformer());
+        final var options = new HashMap<String, String>();
+        final var argChunks = args.split(":");
+        for (final var argChunk : argChunks) {
+            if (!argChunk.contains("=")) {
+                // We know this is a value-less option
+                options.put(argChunk, null);
+                continue;
+            }
+            // We know we have a value to parse
+            final var pair = argChunk.split("=");
+            options.put(pair[0], pair[1]);
+        }
+        return options;
+    }
+
+    public static void agentmain(final String args, final Instrumentation instrumentation) {
+        final var client = new MonitorClient();
+        final var options = parseArgs(args);
+        Logger logger = NoopLogger.INSTANCE;
+        if (options.containsKey("monitor")) {
+            client.tryConnect(options);
+            logger = client.logger;
+            logger.info("Connected to debugger server");
+        }
+        try {
+            logger.info("Transforming classes");
+            instrumentation.addTransformer(new KT58886Transformer(client, logger));
+            instrumentation.addTransformer(new CodeGeneratorVisitorTransformer(client, logger));
+            logger.info("Done transforming classes");
+        }
+        catch (Throwable error) {
+            client.handleException(error);
+        }
+        client.close();
     }
 }

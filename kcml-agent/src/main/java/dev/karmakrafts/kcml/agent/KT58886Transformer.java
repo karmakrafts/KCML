@@ -27,6 +27,10 @@ import java.util.List;
  * Patch for <a href="https://youtrack.jetbrains.com/issue/KT-58886" target="_blank">KT-58886</a>.
  */
 final class KT58886Transformer extends AbstractClassTransformer {
+    KT58886Transformer(final MonitorClient client, final Logger logger) {
+        super(client, logger);
+    }
+
     @Override
     protected boolean shouldTransform(final String className) {
         return className.equals("org/jetbrains/kotlin/fir/pipeline/Fir2KlibMetadataSerializer");
@@ -206,19 +210,7 @@ final class KT58886Transformer extends AbstractClassTransformer {
         injection.add(new InsnNode(Opcodes.DUP));
         final var fileEntryIndex = method.maxLocals++;
         injection.add(new VarInsnNode(Opcodes.ASTORE, fileEntryIndex));
-        injection.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
-            ASMTypes.OBJECT.getInternalName(),
-            "getClass",
-            Type.getMethodDescriptor(ASMTypes.CLASS)));
-        injection.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
-            ASMTypes.CLASS.getInternalName(),
-            "getName",
-            Type.getMethodDescriptor(ASMTypes.STRING)));
-        injection.add(new LdcInsnNode(ASMTypes.SYNTHETIC_IR_FILE_ENTRY.getInternalName().replace('/', '.')));
-        injection.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
-            ASMTypes.OBJECT.getInternalName(),
-            "equals",
-            Type.getMethodDescriptor(Type.BOOLEAN_TYPE, ASMTypes.OBJECT)));
+        injection.add(ASMUtils.reflectiveInstanceof(ASMTypes.SYNTHETIC_IR_FILE_ENTRY));
         injection.add(new JumpInsnNode(Opcodes.IFEQ, loopHead)); // Continue if this entry is not a SyntheticIrFileEntry
 
         // Get associated compiler output and session

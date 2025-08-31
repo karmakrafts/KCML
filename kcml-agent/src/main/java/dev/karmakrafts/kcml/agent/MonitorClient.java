@@ -21,37 +21,47 @@ import dev.karmakrafts.kcml.monitor.protocol.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.nio.channels.Channels;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 final class MonitorClient implements AutoCloseable {
     private static final InetSocketAddress ADDRESS = InetSocketAddress.createUnresolved("localhost", 65000);
-    public static final MonitorClient INSTANCE = new MonitorClient();
     public final UUID id = UUID.randomUUID();
+    public final RemoteLogger logger = new RemoteLogger(this);
+
+    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
     private final Socket socket = new Socket();
     private final AtomicBoolean isConnecting = new AtomicBoolean(false);
     private final AtomicBoolean isConnected = new AtomicBoolean(false);
     private final ConcurrentLinkedDeque<C2SPacket> outgoingPackets = new ConcurrentLinkedDeque<>();
     private final HashMap<Class<S2CPacket>, Consumer<S2CPacket>> packetHandlers = new HashMap<>();
-    private Thread ioThread;
-    private final ByteBuffer packetBuffer = ByteBuffer.allocate(100000);
+    private final ByteBuffer packetBuffer = ByteBuffer.allocate(100000).order(ByteOrder.nativeOrder());
+    private CompletableFuture<Void> ioTask;
 
-    private MonitorClient() {
-        onPacket(S2ConnectAckPacket.class, incomingPacket -> {
-            if(!incomingPacket.clientId().equals(id)) {
+    MonitorClient() {
+        onPacket(S2CConnectAckPacket.class, incomingPacket -> {
+            if (!incomingPacket.clientId().equals(id)) {
                 return;
             }
             isConnected.set(true); // Now we are acknowledged and we can exchange packets
         });
+        // When the server shuts down, we also terminate gracefully
+        onPacket(S2CShutdownPacket.class, incomingPacket -> close());
     }
 
     @SuppressWarnings("BusyWait")
-    private void performIo() {
+    private void handleIo() {
         try {
             final var outputStream = socket.getOutputStream();
             final var outputChannel = Channels.newChannel(outputStream);
@@ -99,49 +109,73 @@ final class MonitorClient implements AutoCloseable {
     }
 
     public void sendPacket(final C2SPacket packet) {
+        if (!isConnected.get()) {
+            return; // Can't send packets if we're not connected
+        }
         outgoingPackets.addLast(packet);
     }
 
-    public boolean tryConnect(final Map<String, String> agentOptions) {
+    public void handleException(final Throwable error) {
+        // @formatter:off
+        final var stackTrace = Arrays.stream(error.getStackTrace())
+            .map(StackTraceElement::toString)
+            .toList();
+        // @formatter:on
+        sendPacket(new C2SExceptionPacket(id, Instant.now(), error.getMessage(), stackTrace));
+    }
+
+    public void tryConnect(final Map<String, String> agentOptions) {
         if (!isConnecting.compareAndSet(false, true)) {
-            return false;
+            return;
         }
         var failedAttempts = 0;
         while (failedAttempts < 2) {
             try {
                 socket.connect(ADDRESS);
-                // If connection is successful, spin up IO thread for handling packet queues
-                ioThread = new Thread(this::performIo);
-                ioThread.start();
-                // Send connect packet to server with all static info
-                sendConnectPacket(agentOptions);
-                return true;
             }
             catch (Throwable error) {
                 // If we can't connect, we can silently fail and assume there's no monitor running
                 failedAttempts++;
+                continue;
             }
+            // If connection is successful, spin up IO thread for handling packet queues
+            ioTask = CompletableFuture.runAsync(this::handleIo);
+            // Send connect packet to server with all static info
+            sendConnectPacket(agentOptions);
+            return;
         }
-        return false;
     }
 
     private void sendConnectPacket(final Map<String, String> agentOptions) {
         final var processId = ProcessHandle.current().pid();
-        final var jvmInfo = String.format("%s %s %s",
-            System.getProperty("java.vm.vendor"),
-            System.getProperty("java.vm.name"),
-            System.getProperty("java.vm.version"));
-        sendPacket(new C2SConnectPacket(id, processId, jvmInfo, agentOptions));
+        final var jvmVendor = System.getProperty("java.vm.vendor");
+        final var jvmName = System.getProperty("java.vm.name");
+        final var jvmVersion = System.getProperty("java.vm.version");
+        sendPacket(new C2SConnectPacket(id, Instant.now(), processId, jvmVendor, jvmName, jvmVersion, agentOptions));
+    }
+
+    void sendClassTransformedPacket(final String className,
+                                    final String classLoader,
+                                    final byte[] originalData,
+                                    final byte[] transformedData) {
+        sendPacket(new C2SClassTransformedPacket(id,
+            Instant.now(),
+            className,
+            classLoader,
+            originalData,
+            transformedData));
     }
 
     @Override
     public void close() {
-        if (!isConnecting.compareAndSet(true, false)) {
+        if (!isConnected.compareAndSet(true, false)) {
             return;
         }
+        isConnecting.set(false); // Abort any active connection attempts
         try {
             socket.close();
-            ioThread.join();
+            ioTask.join();
+            executor.shutdown();
         }
         catch (Throwable error) {
             // We don't need to handle this error
