@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.agent.client;
 
-import dev.karmakrafts.kcml.monitor.protocol.*;
+import dev.karmakrafts.kcml.monitor.protocol.PacketCodecs;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SClassTransformedPacket;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket;
