@@ -16,10 +16,16 @@
 
 package dev.karmakrafts.kcml.ir
 
+import kotlinx.cinterop.ExperimentalForeignApi
+import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.expressions.IrCall
 
-open class NativeIrIntrinsicOrigin(
+@OptIn(ExperimentalForeignApi::class)
+abstract class NativeIrIntrinsicOrigin(
     override val name: String
 ) : IrDeclarationOrigin {
-
+    abstract fun evaluateCall(
+        callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?
+    ): LLVMValueRef
 }

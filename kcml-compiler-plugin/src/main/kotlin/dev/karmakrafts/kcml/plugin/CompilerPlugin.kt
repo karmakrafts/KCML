@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.plugin
 
-import dev.karmakrafts.kcml.extension.LLVMIntrinsicsExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -26,8 +25,5 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  */
 @OptIn(ExperimentalCompilerApi::class)
 interface CompilerPlugin {
-    val llvmIntrinsicsExtensions: List<LLVMIntrinsicsExtension>
-        get() = emptyList()
-
     fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration)
 }
