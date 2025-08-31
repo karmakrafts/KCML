@@ -1,3 +1,5 @@
+import dev.karmakrafts.conventions.configureJava
+
 /*
  * Copyright 2025 Karma Krafts & associates
  *
@@ -18,6 +20,8 @@ plugins {
     java
     `maven-publish`
 }
+
+configureJava(libs.versions.java)
 
 java {
     withSourcesJar()

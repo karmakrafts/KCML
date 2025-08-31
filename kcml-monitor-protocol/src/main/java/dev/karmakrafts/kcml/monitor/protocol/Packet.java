@@ -16,9 +16,8 @@
 
 package dev.karmakrafts.kcml.monitor.protocol;
 
-/**
- * Marker interface for type-tagging packet records, so we can
- * safely constrain generics.
- */
+import java.time.Instant;
+
 public interface Packet {
+    Instant getTimestamp();
 }

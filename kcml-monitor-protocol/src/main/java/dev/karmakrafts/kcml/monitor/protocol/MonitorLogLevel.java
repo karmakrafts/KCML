@@ -17,11 +17,7 @@
 package dev.karmakrafts.kcml.monitor.protocol;
 
 public enum MonitorLogLevel {
-    DEBUG,
-    INFO,
-    WARN,
-    ERROR,
-    FATAL;
+    DEBUG, INFO, WARN, ERROR, FATAL;
 
     public final String consoleMarker = String.format("[%c]", name().charAt(0));
 }

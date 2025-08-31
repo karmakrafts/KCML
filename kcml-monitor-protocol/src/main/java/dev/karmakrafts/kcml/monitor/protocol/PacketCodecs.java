@@ -28,10 +28,12 @@ public final class PacketCodecs {
     static {
         // Client-to-Server
         register(C2SConnectPacket.class, C2SConnectPacket.Codec.INSTANCE);
+        register(C2SExceptionPacket.class, C2SExceptionPacket.Codec.INSTANCE);
         register(C2SLogPacket.class, C2SLogPacket.Codec.INSTANCE);
-        register(C2STransformClassPacket.class, C2STransformClassPacket.Codec.INSTANCE);
+        register(C2SClassTransformedPacket.class, C2SClassTransformedPacket.Codec.INSTANCE);
         // Server-to-Client
-        register(S2ConnectAckPacket.class, S2ConnectAckPacket.Codec.INSTANCE);
+        register(S2CConnectAckPacket.class, S2CConnectAckPacket.Codec.INSTANCE);
+        register(S2CShutdownPacket.class, S2CShutdownPacket.Codec.INSTANCE);
     }
 
     @SuppressWarnings("unchecked")

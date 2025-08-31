@@ -17,43 +17,52 @@
 package dev.karmakrafts.kcml.monitor.protocol;
 
 import java.nio.ByteBuffer;
+import java.time.Instant;
 import java.util.UUID;
 
-/**
- * Sent from client to server for each class that's instrumented by the agent.
- *
- * @param name        The internal name of the class (using / instead of .).
- * @param classLoader The name of the {@link ClassLoader} this class is being loaded by.
- * @param data        The raw byte stream of the class being instrumented.
- */
-public record C2STransformClassPacket(UUID clientId, String name, String classLoader, byte[] data)
-    implements C2SPacket {
-    public static final class Codec implements PacketCodec<C2STransformClassPacket> {
+public record C2SClassTransformedPacket( // @formatter:off
+    UUID clientId,
+    Instant timestamp,
+    String name,
+    String classLoader,
+    byte[] originalData,
+    byte[] transformedData
+) implements C2SPacket { // @formatter:on
+    @Override
+    public UUID getClientId() {
+        return clientId;
+    }
+
+    @Override
+    public Instant getTimestamp() {
+        return timestamp;
+    }
+
+    public static final class Codec implements PacketCodec<C2SClassTransformedPacket> {
         public static final Codec INSTANCE = new Codec();
 
         private Codec() {
         }
 
         @Override
-        public void serialize(final C2STransformClassPacket value, final ByteBuffer buffer) {
+        public void serialize(final C2SClassTransformedPacket value, final ByteBuffer buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
+            PacketUtils.putInstant(buffer, value.timestamp);
             PacketUtils.putStringUtf8(buffer, value.name);
             PacketUtils.putStringUtf8(buffer, value.classLoader);
-            PacketUtils.putBytes(buffer, value.data);
+            PacketUtils.putBytes(buffer, value.originalData);
+            PacketUtils.putBytes(buffer, value.transformedData);
         }
 
         @Override
-        public C2STransformClassPacket deserialize(final ByteBuffer buffer) {
+        public C2SClassTransformedPacket deserialize(final ByteBuffer buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
+            final var timestamp = PacketUtils.getInstant(buffer);
             final var name = PacketUtils.getStringUtf8(buffer);
             final var classLoader = PacketUtils.getStringUtf8(buffer);
-            final var data = PacketUtils.getBytes(buffer);
-            return new C2STransformClassPacket(clientId, name, classLoader, data);
+            final var originalData = PacketUtils.getBytes(buffer);
+            final var transformedData = PacketUtils.getBytes(buffer);
+            return new C2SClassTransformedPacket(clientId, timestamp, name, classLoader, originalData, transformedData);
         }
-    }
-
-    @Override
-    public UUID getClientId() {
-        return clientId;
     }
 }

@@ -18,10 +18,9 @@ package dev.karmakrafts.kcml.monitor.protocol;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.nio.file.Path;
+import java.time.Instant;
+import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
@@ -35,6 +34,14 @@ final class PacketUtils {
         putBytes(buffer, value.getBytes(StandardCharsets.UTF_8));
     }
 
+    public static void putInstant(final ByteBuffer buffer, final Instant instant) {
+        buffer.putLong(instant.toEpochMilli());
+    }
+
+    public static Instant getInstant(final ByteBuffer buffer) {
+        return Instant.ofEpochMilli(buffer.getLong());
+    }
+
     public static void putUUID(final ByteBuffer buffer, final UUID uuid) {
         buffer.putLong(uuid.getMostSignificantBits());
         buffer.putLong(uuid.getLeastSignificantBits());
@@ -42,6 +49,15 @@ final class PacketUtils {
 
     public static void putEnum(final ByteBuffer buffer, final Enum<?> value) {
         buffer.putInt(value.ordinal());
+    }
+
+    public static <T> void putList(final ByteBuffer buffer,
+                                   final BiConsumer<ByteBuffer, T> serializer,
+                                   final List<T> values) {
+        buffer.putInt(values.size());
+        for (final var value : values) {
+            serializer.accept(buffer, value);
+        }
     }
 
     public static <K, V> void putMap(final ByteBuffer buffer,
@@ -53,6 +69,10 @@ final class PacketUtils {
             keySerializer.accept(buffer, entry.getKey());
             valueSerializer.accept(buffer, entry.getValue());
         }
+    }
+
+    public static void putPath(final ByteBuffer buffer, final Path path) {
+        putStringUtf8(buffer, path.toString());
     }
 
     public static byte[] getBytes(final ByteBuffer buffer) {
@@ -89,5 +109,21 @@ final class PacketUtils {
             map.put(keyDeserializer.apply(buffer), valueDeserializer.apply(buffer));
         }
         return map;
+    }
+
+    public static Path getPath(final ByteBuffer buffer) {
+        return Path.of(getStringUtf8(buffer));
+    }
+
+    public static <T> List<T> getList(final ByteBuffer buffer, final Function<ByteBuffer, T> deserializer) {
+        final var size = buffer.getInt();
+        if (size == 0) {
+            return Collections.emptyList();
+        }
+        final var values = new ArrayList<T>();
+        for (var i = 0; i < size; i++) {
+            values.add(deserializer.apply(buffer));
+        }
+        return values;
     }
 }
