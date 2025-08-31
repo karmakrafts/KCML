@@ -1,4 +1,4 @@
-yes# KCML
+# KCML
 
 The Kotlin Compiler Meta Loader project allows multiple Kotlin compiler plugins to interoperate  
 and provides access to the LLVM internals of the compiler for advanced multiplatform plugins.
