@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.client;
 
 import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
 
-interface Logger {
+public interface Logger {
     void log(MonitorLogLevel level, String message);
 
     default void debug(final String message, final Object... args) {

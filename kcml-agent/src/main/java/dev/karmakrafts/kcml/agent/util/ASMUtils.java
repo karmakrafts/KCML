@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.util;
 
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
@@ -29,7 +29,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-final class ASMUtils {
+public final class ASMUtils {
     public static Stream<AbstractInsnNode> stream(final InsnList list) {
         return StreamSupport.stream(Spliterators.spliterator(list.iterator(), list.size(), 0), false);
     }

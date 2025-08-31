@@ -14,17 +14,22 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.client;
 
+import dev.karmakrafts.kcml.monitor.protocol.C2SLogPacket;
 import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
 
-final class NoopLogger implements Logger {
-    public static final NoopLogger INSTANCE = new NoopLogger();
+import java.time.Instant;
 
-    private NoopLogger() {
+public final class RemoteLogger implements Logger {
+    private final MonitorClient client;
+
+    RemoteLogger(final MonitorClient client) {
+        this.client = client;
     }
 
     @Override
     public void log(final MonitorLogLevel level, final String message) {
+        client.sendPacket(new C2SLogPacket(client.id, Instant.now(), level, message));
     }
 }

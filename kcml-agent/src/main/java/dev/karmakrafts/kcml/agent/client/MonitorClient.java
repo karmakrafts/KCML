@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.client;
 
 import dev.karmakrafts.kcml.monitor.protocol.*;
 
@@ -35,7 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
-final class MonitorClient implements AutoCloseable {
+public final class MonitorClient implements AutoCloseable {
     private static final InetSocketAddress ADDRESS = InetSocketAddress.createUnresolved("localhost", 65000);
     public final UUID id = UUID.randomUUID();
     public final RemoteLogger logger = new RemoteLogger(this);
@@ -49,7 +49,7 @@ final class MonitorClient implements AutoCloseable {
     private final ByteBuffer packetBuffer = ByteBuffer.allocate(100000).order(ByteOrder.nativeOrder());
     private CompletableFuture<Void> ioTask;
 
-    MonitorClient() {
+    public MonitorClient() {
         onPacket(S2CConnectAckPacket.class, incomingPacket -> {
             if (!incomingPacket.clientId().equals(id)) {
                 return;
@@ -154,10 +154,10 @@ final class MonitorClient implements AutoCloseable {
         sendPacket(new C2SConnectPacket(id, Instant.now(), processId, jvmVendor, jvmName, jvmVersion, agentOptions));
     }
 
-    void sendClassTransformedPacket(final String className,
-                                    final String classLoader,
-                                    final byte[] originalData,
-                                    final byte[] transformedData) {
+    public void sendClassTransformedPacket(final String className,
+                                           final String classLoader,
+                                           final byte[] originalData,
+                                           final byte[] transformedData) {
         sendPacket(new C2SClassTransformedPacket(id,
             Instant.now(),
             className,

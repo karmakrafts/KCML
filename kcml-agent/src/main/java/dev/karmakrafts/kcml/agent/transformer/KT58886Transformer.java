@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.transformer;
 
+import dev.karmakrafts.kcml.agent.client.Logger;
+import dev.karmakrafts.kcml.agent.client.MonitorClient;
+import dev.karmakrafts.kcml.agent.util.ASMTypes;
+import dev.karmakrafts.kcml.agent.util.ASMUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -26,8 +30,8 @@ import java.util.List;
 /**
  * Patch for <a href="https://youtrack.jetbrains.com/issue/KT-58886" target="_blank">KT-58886</a>.
  */
-final class KT58886Transformer extends AbstractClassTransformer {
-    KT58886Transformer(final MonitorClient client, final Logger logger) {
+public final class KT58886Transformer extends AbstractClassTransformer {
+    public KT58886Transformer(final MonitorClient client, final Logger logger) {
         super(client, logger);
     }
 

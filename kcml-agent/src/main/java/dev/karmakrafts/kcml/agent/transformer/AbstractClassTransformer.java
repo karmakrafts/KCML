@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.transformer;
 
+import dev.karmakrafts.kcml.agent.client.Logger;
+import dev.karmakrafts.kcml.agent.client.MonitorClient;
+import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -26,7 +29,7 @@ import java.security.ProtectionDomain;
 import java.time.Duration;
 import java.time.Instant;
 
-abstract class AbstractClassTransformer implements ClassFileTransformer {
+public abstract class AbstractClassTransformer implements ClassFileTransformer {
     protected final MonitorClient client;
     protected final Logger logger;
 

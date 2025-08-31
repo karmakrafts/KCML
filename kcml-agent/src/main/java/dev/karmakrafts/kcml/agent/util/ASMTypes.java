@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.util;
 
 import org.objectweb.asm.Type;
 
-final class ASMTypes {
+public final class ASMTypes {
     public static final Type CLASS = Type.getObjectType("java/lang/Class");
     public static final Type CLASS_ARRAY = Type.getType("[Ljava/lang/Class;");
     public static final Type OBJECT = Type.getObjectType("java/lang/Object");

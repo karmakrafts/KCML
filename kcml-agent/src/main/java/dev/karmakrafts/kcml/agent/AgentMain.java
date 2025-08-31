@@ -16,6 +16,12 @@
 
 package dev.karmakrafts.kcml.agent;
 
+import dev.karmakrafts.kcml.agent.client.Logger;
+import dev.karmakrafts.kcml.agent.client.MonitorClient;
+import dev.karmakrafts.kcml.agent.client.NoopLogger;
+import dev.karmakrafts.kcml.agent.transformer.CodeGeneratorVisitorTransformer;
+import dev.karmakrafts.kcml.agent.transformer.KT58886Transformer;
+
 import java.lang.instrument.Instrumentation;
 import java.util.Collections;
 import java.util.HashMap;

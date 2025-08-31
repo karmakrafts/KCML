@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.util;
 
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -23,7 +23,7 @@ import org.objectweb.asm.ClassWriter;
  * Custom class writer to prevent getCommonSuperClass from
  * loading other classes.
  */
-final class NonLoadingClassWriter extends ClassWriter {
+public final class NonLoadingClassWriter extends ClassWriter {
     public NonLoadingClassWriter(final int flags) {
         super(flags);
     }

@@ -14,8 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent;
+package dev.karmakrafts.kcml.agent.transformer;
 
+import dev.karmakrafts.kcml.agent.client.Logger;
+import dev.karmakrafts.kcml.agent.client.MonitorClient;
+import dev.karmakrafts.kcml.agent.util.ASMTypes;
+import dev.karmakrafts.kcml.agent.util.ASMUtils;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -23,8 +27,8 @@ import org.objectweb.asm.tree.*;
 /**
  * Hook for generating custom LLVM bitcode intrinsics from regular plugin code.
  */
-final class CodeGeneratorVisitorTransformer extends AbstractClassTransformer {
-    CodeGeneratorVisitorTransformer(final MonitorClient client, final Logger logger) {
+public final class CodeGeneratorVisitorTransformer extends AbstractClassTransformer {
+    public CodeGeneratorVisitorTransformer(final MonitorClient client, final Logger logger) {
         super(client, logger);
     }
 
