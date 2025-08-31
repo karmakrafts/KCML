@@ -73,7 +73,7 @@ public final class CodeGeneratorVisitorTransformer extends AbstractClassTransfor
 
         // Invoke the underlying intrinsic handler
         injection.add(new VarInsnNode(Opcodes.ALOAD, originIndex)); // instance
-        injection.add(new VarInsnNode(Opcodes.ALOAD, ASMUtils.findLocal(method, "callee")));
+        injection.add(new VarInsnNode(Opcodes.ALOAD, ASMUtils.findLocal(method, "value"))); // callee
         injection.add(new VarInsnNode(Opcodes.ALOAD, ASMUtils.findLocal(method, "args")));
         injection.add(new VarInsnNode(Opcodes.ALOAD, ASMUtils.findLocal(method, "resultSlot")));
         injection.add(ASMUtils.reflectiveCall(method,

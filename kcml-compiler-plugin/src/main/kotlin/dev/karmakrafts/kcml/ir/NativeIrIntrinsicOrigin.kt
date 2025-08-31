@@ -22,9 +22,22 @@ import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.expressions.IrCall
 
 @OptIn(ExperimentalForeignApi::class)
+typealias NativeIntrinsicHandler = (callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?) -> LLVMValueRef
+
+@OptIn(ExperimentalForeignApi::class)
 abstract class NativeIrIntrinsicOrigin(
     override val name: String
 ) : IrDeclarationOrigin {
+    companion object {
+        inline fun create(name: String, crossinline handler: NativeIntrinsicHandler): NativeIrIntrinsicOrigin {
+            return object : NativeIrIntrinsicOrigin(name) {
+                override fun evaluateCall(
+                    callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?
+                ): LLVMValueRef = handler(callee, args, resultSlot)
+            }
+        }
+    }
+
     abstract fun evaluateCall(
         callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?
     ): LLVMValueRef
