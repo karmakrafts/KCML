@@ -23,6 +23,8 @@ import dev.karmakrafts.kcml.agent.transformer.CodeGeneratorVisitorTransformer;
 import dev.karmakrafts.kcml.agent.transformer.KT58886Transformer;
 
 import java.lang.instrument.Instrumentation;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -51,16 +53,18 @@ public final class AgentMain {
         final var client = new MonitorClient();
         final var options = parseArgs(args);
         Logger logger = NoopLogger.INSTANCE;
-        if (options.containsKey("monitor")) {
+        if (options.containsKey("monitor") && Boolean.parseBoolean(options.get("monitor"))) {
             client.tryConnect(options);
             logger = client.logger;
             logger.info("Connected to debugger server");
         }
         try {
             logger.info("Transforming classes");
+            final var startTime = Instant.now();
             instrumentation.addTransformer(new KT58886Transformer(client, logger));
             instrumentation.addTransformer(new CodeGeneratorVisitorTransformer(client, logger));
-            logger.info("Done transforming classes");
+            final var time = Duration.between(startTime, Instant.now()).toMillis();
+            logger.info("Transformed classes in %dms", time);
         }
         catch (Throwable error) {
             client.handleException(error);

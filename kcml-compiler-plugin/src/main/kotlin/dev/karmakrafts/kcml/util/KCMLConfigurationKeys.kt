@@ -22,10 +22,17 @@ import java.nio.file.Path
 
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
+    val agentMonitor: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentMonitor")
 }
 
 internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
     get() = get(KCMLConfigurationKeys.pluginClasspaths)!!
     set(value) {
         put(KCMLConfigurationKeys.pluginClasspaths, value)
+    }
+
+internal var CompilerConfiguration.kcmlAgentMonitor: Boolean
+    get() = get(KCMLConfigurationKeys.agentMonitor) ?: false
+    set(value) {
+        put(KCMLConfigurationKeys.agentMonitor, value)
     }
