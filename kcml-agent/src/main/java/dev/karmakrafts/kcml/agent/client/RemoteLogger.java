@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.agent.client;
 
-import dev.karmakrafts.kcml.monitor.protocol.C2SLogPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket;
 import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
 
 import java.time.Instant;

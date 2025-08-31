@@ -14,50 +14,41 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.protocol;
+package dev.karmakrafts.kcml.monitor.protocol.s2c;
+
+import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
+import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
-import java.util.List;
 import java.util.UUID;
 
-public record C2SExceptionPacket( // @formatter:off
+public record S2CConnectAckPacket( // @formatter:off
     UUID clientId,
-    Instant timestamp,
-    String message,
-    List<String> stackTrace
-) implements C2SPacket { // @formatter:on
-    @Override
-    public UUID getClientId() {
-        return clientId;
-    }
-
+    Instant timestamp
+) implements S2CPacket { // @formatter:on
     @Override
     public Instant getTimestamp() {
         return timestamp;
     }
 
-    public static final class Codec implements PacketCodec<C2SExceptionPacket> {
+    public static final class Codec implements PacketCodec<S2CConnectAckPacket> {
         public static final Codec INSTANCE = new Codec();
 
         private Codec() {
         }
 
         @Override
-        public void serialize(final C2SExceptionPacket value, final ByteBuffer buffer) {
+        public void serialize(final S2CConnectAckPacket value, final ByteBuffer buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
-            PacketUtils.putStringUtf8(buffer, value.message);
-            PacketUtils.putList(buffer, PacketUtils::putStringUtf8, value.stackTrace);
         }
 
         @Override
-        public C2SExceptionPacket deserialize(final ByteBuffer buffer) {
+        public S2CConnectAckPacket deserialize(final ByteBuffer buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
-            final String message = PacketUtils.getStringUtf8(buffer);
-            final var stackTrace = PacketUtils.getList(buffer, PacketUtils::getStringUtf8);
-            return new C2SExceptionPacket(clientId, timestamp, message, stackTrace);
+            return new S2CConnectAckPacket(clientId, timestamp);
         }
     }
 }

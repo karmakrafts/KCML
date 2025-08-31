@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.protocol;
+package dev.karmakrafts.kcml.monitor.protocol.s2c;
+
+import dev.karmakrafts.kcml.monitor.protocol.Packet;
 
 public interface S2CPacket extends Packet {
 }

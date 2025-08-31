@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.protocol;
+package dev.karmakrafts.kcml.monitor.protocol.c2s;
+
+import dev.karmakrafts.kcml.monitor.protocol.Packet;
 
 import java.util.UUID;
 

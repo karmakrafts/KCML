@@ -16,11 +16,10 @@
 
 package dev.karmakrafts.kcml.monitor.server
 
-import dev.karmakrafts.kcml.monitor.protocol.C2SConnectPacket
-import dev.karmakrafts.kcml.monitor.protocol.C2SPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SPacket
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodecs
-import dev.karmakrafts.kcml.monitor.protocol.S2CConnectAckPacket
-import dev.karmakrafts.kcml.monitor.protocol.S2CPacket
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CConnectAckPacket
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CPacket
 import dev.karmakrafts.kcml.monitor.util.Logger
 import dev.karmakrafts.kcml.monitor.util.getAgent
 import java.net.ServerSocket
@@ -64,7 +63,7 @@ internal class MonitorServer(private val logger: Logger) {
     private var onAgentRemoved: AtomicReference<(Agent) -> Unit> = AtomicReference {}
 
     init {
-        onPacket<C2SConnectPacket> { socket, incomingPacket ->
+        onPacket<dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket> { socket, incomingPacket ->
             addAgent(socket, incomingPacket.getAgent())
             broadcastPacket(S2CConnectAckPacket(incomingPacket.clientId, Instant.now()))
         }

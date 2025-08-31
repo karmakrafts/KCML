@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.protocol;
+package dev.karmakrafts.kcml.monitor.protocol.c2s;
+
+import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
+import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
+import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
 
 import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.UUID;
 
-public record C2SClassTransformedPacket( // @formatter:off
+public record C2SLogPacket( // @formatter:off
     UUID clientId,
     Instant timestamp,
-    String name,
-    String classLoader,
-    byte[] originalData,
-    byte[] transformedData
+    MonitorLogLevel level,
+    String message
 ) implements C2SPacket { // @formatter:on
     @Override
     public UUID getClientId() {
@@ -38,31 +40,27 @@ public record C2SClassTransformedPacket( // @formatter:off
         return timestamp;
     }
 
-    public static final class Codec implements PacketCodec<C2SClassTransformedPacket> {
+    public static final class Codec implements PacketCodec<C2SLogPacket> {
         public static final Codec INSTANCE = new Codec();
 
         private Codec() {
         }
 
         @Override
-        public void serialize(final C2SClassTransformedPacket value, final ByteBuffer buffer) {
+        public void serialize(final C2SLogPacket value, final ByteBuffer buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
-            PacketUtils.putStringUtf8(buffer, value.name);
-            PacketUtils.putStringUtf8(buffer, value.classLoader);
-            PacketUtils.putBytes(buffer, value.originalData);
-            PacketUtils.putBytes(buffer, value.transformedData);
+            PacketUtils.putEnum(buffer, value.level);
+            PacketUtils.putStringUtf8(buffer, value.message);
         }
 
         @Override
-        public C2SClassTransformedPacket deserialize(final ByteBuffer buffer) {
+        public C2SLogPacket deserialize(final ByteBuffer buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
-            final var name = PacketUtils.getStringUtf8(buffer);
-            final var classLoader = PacketUtils.getStringUtf8(buffer);
-            final var originalData = PacketUtils.getBytes(buffer);
-            final var transformedData = PacketUtils.getBytes(buffer);
-            return new C2SClassTransformedPacket(clientId, timestamp, name, classLoader, originalData, transformedData);
+            final var level = PacketUtils.getEnum(buffer, MonitorLogLevel.class);
+            final var message = PacketUtils.getStringUtf8(buffer);
+            return new C2SLogPacket(clientId, timestamp, level, message);
         }
     }
 }

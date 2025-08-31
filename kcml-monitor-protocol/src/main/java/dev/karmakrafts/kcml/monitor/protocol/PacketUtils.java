@@ -24,7 +24,10 @@ import java.util.*;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-final class PacketUtils {
+public final class PacketUtils {
+    private PacketUtils() {
+    }
+
     public static void putBytes(final ByteBuffer buffer, final byte[] bytes) {
         buffer.putInt(bytes.length);
         buffer.put(bytes);

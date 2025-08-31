@@ -16,6 +16,13 @@
 
 package dev.karmakrafts.kcml.monitor.protocol;
 
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SClassTransformedPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CConnectAckPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CShutdownPacket;
+
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map.Entry;
@@ -34,6 +41,9 @@ public final class PacketCodecs {
         // Server-to-Client
         register(S2CConnectAckPacket.class, S2CConnectAckPacket.Codec.INSTANCE);
         register(S2CShutdownPacket.class, S2CShutdownPacket.Codec.INSTANCE);
+    }
+
+    private PacketCodecs() {
     }
 
     @SuppressWarnings("unchecked")

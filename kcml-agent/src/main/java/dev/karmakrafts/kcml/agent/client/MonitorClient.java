@@ -17,6 +17,13 @@
 package dev.karmakrafts.kcml.agent.client;
 
 import dev.karmakrafts.kcml.monitor.protocol.*;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SClassTransformedPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CConnectAckPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CShutdownPacket;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;

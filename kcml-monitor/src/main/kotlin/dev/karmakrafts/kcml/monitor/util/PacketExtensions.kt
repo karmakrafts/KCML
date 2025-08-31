@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.monitor.util
 
-import dev.karmakrafts.kcml.monitor.protocol.C2SConnectPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket
 import dev.karmakrafts.kcml.monitor.server.Agent
 
 internal fun C2SConnectPacket.getAgent(): Agent = Agent(
