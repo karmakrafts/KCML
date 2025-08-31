@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.ir
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
+import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrCall
 
 @OptIn(ExperimentalForeignApi::class)
@@ -36,9 +37,18 @@ abstract class NativeIrIntrinsicOrigin(
                 ): LLVMValueRef = handler(callee, args, resultSlot)
             }
         }
+
+        inline fun create(
+            origin: IrDeclarationOrigin, crossinline handler: NativeIntrinsicHandler
+        ): NativeIrIntrinsicOrigin = create(origin.name, handler)
     }
 
     abstract fun evaluateCall(
         callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?
     ): LLVMValueRef
+}
+
+@OptIn(ExperimentalForeignApi::class)
+inline fun IrFunction.attachBitcode(crossinline handler: NativeIntrinsicHandler) {
+    origin = NativeIrIntrinsicOrigin.create(origin, handler)
 }
