@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor
+package dev.karmakrafts.kcml.monitor.util
 
-import dev.karmakrafts.kcml.monitor.protocol.C2SConnectPacket
+import java.awt.Color
 
-internal fun C2SConnectPacket.getAgent(): Agent = Agent(
-    clientId = clientId,
-    processId = processId,
-    jvmVendor = jvmVendor,
-    jvmName = jvmName,
-    jvmVersion = jvmVersion,
-    options = agentOptions
-)
+internal object Colors {
+    val consoleBackground: Color = Color(0.1F, 0.1F, 0.15F, 1F)
+    val consoleForeground: Color = Color(0.9F, 0.9F, 0.9F, 1F)
+}
+
+internal fun Color.toHtml(): String {
+    return "#${red.toHexString()}${green.toHexString()}${blue.toHexString()}"
+}

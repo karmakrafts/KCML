@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor
+package dev.karmakrafts.kcml.monitor.component
 
+import dev.karmakrafts.kcml.monitor.server.Agent
+import dev.karmakrafts.kcml.monitor.util.Colors
+import dev.karmakrafts.kcml.monitor.util.saveToFile
 import net.miginfocom.swing.MigLayout
 import org.kordamp.ikonli.materialdesign.MaterialDesign
 import org.kordamp.ikonli.swing.FontIcon

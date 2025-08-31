@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor
+package dev.karmakrafts.kcml.monitor.util
 
 import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel
 import java.time.ZonedDateTime

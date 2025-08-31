@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor
+package dev.karmakrafts.kcml.monitor.component
 
 import org.kordamp.ikonli.materialdesign.MaterialDesign
 import org.kordamp.ikonli.swing.FontIcon

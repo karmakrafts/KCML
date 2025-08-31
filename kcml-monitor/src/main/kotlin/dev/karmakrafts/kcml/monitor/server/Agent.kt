@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor
+package dev.karmakrafts.kcml.monitor.server
 
-import java.awt.Component
-import java.nio.file.Files
-import javax.swing.JFileChooser
-import javax.swing.JTextArea
+import java.util.*
 
-internal fun JTextArea.saveToFile(parent: Component) {
-    val dialog = JFileChooser()
-    dialog.showDialog(parent, "Save")
-    val path = dialog.selectedFile?.toPath() ?: return
-    Files.writeString(path, text)
-}
+internal data class Agent(
+    val clientId: UUID,
+    val processId: Long,
+    val jvmVendor: String,
+    val jvmName: String,
+    val jvmVersion: String,
+    val options: Map<String, String?>
+)
