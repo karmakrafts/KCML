@@ -29,6 +29,7 @@ import dev.karmakrafts.kcml.monitor.ui.AdaptiveMenuItem
 import dev.karmakrafts.kcml.monitor.ui.AdaptiveTabbedPane
 import dev.karmakrafts.kcml.monitor.ui.AgentPanel
 import dev.karmakrafts.kcml.monitor.ui.ClosableTabComponent
+import dev.karmakrafts.kcml.monitor.ui.ConnectionListCell
 import dev.karmakrafts.kcml.monitor.ui.ConsoleTextArea
 import dev.karmakrafts.kcml.monitor.ui.PlaceholderTextField
 import dev.karmakrafts.kcml.monitor.ui.SearchControls
@@ -108,7 +109,9 @@ internal class MonitorWindow( // @formatter:off
         }
 
     private val connectionListModel: DefaultListModel<AgentHolder> = DefaultListModel()
-    private val connectionList: JList<AgentHolder> = JList(connectionListModel)
+    private val connectionList: JList<AgentHolder> = JList(connectionListModel).apply {
+        cellRenderer = ConnectionListCell.CellRenderer
+    }
     private val connectionListSearchControls: SearchControls<AgentHolder> = connectionList.createSearchControls()
 
     val server: MonitorServer = MonitorServer(logger, ::getAgentLogger).apply { // @formatter:on
@@ -146,7 +149,7 @@ internal class MonitorWindow( // @formatter:off
         }
         // Otherwise we have to add it as a new AgentHolder
         val tabName = agent.clientId.toString()
-        holder = AgentHolder(true, agent)
+        holder = AgentHolder(true, agent, channel)
         val panel = AgentPanel(holder, settingsHolder)
         holder.panel = panel
         tabbedPane.addClosableTab( // @formatter:off

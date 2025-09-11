@@ -58,11 +58,11 @@ internal class AgentPanel(
 
     init {
         add(JPanel(MigLayout("nogrid")).apply {
-            add(AdaptiveLabel("<html><b>Client ID:</b> ${agent.clientId}</html>"), "w 100%, wrap")
-            add(AdaptiveLabel("<html><b>Process ID:</b> ${agent.processId}</html>"), "w 100%, wrap")
-            add(AdaptiveLabel("<html><b>JVM Vendor:</b> ${agent.jvmVendor}</html>"), "w 100%, wrap")
-            add(AdaptiveLabel("<html><b>JVM Name:</b> ${agent.jvmName}</html>"), "w 100%, wrap")
-            add(AdaptiveLabel("<html><b>JVM Version:</b> ${agent.jvmVersion}</html>"), "w 100%, wrap")
+            add(AdaptiveLabel("Client ID: ${agent.clientId}"), "w 100%, wrap")
+            add(AdaptiveLabel("Process ID: ${agent.processId}"), "w 100%, wrap")
+            add(AdaptiveLabel("JVM Vendor: ${agent.jvmVendor}"), "w 100%, wrap")
+            add(AdaptiveLabel("JVM Name: ${agent.jvmName}"), "w 100%, wrap")
+            add(AdaptiveLabel("JVM Version: ${agent.jvmVersion}"), "w 100%, wrap")
 
             add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
             add(AdaptiveLabel("JVM Options"), "w 100%, wrap")

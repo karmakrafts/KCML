@@ -21,6 +21,7 @@ import net.miginfocom.swing.MigLayout
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.Font
+import javax.swing.BorderFactory
 import javax.swing.JLabel
 import javax.swing.JList
 import javax.swing.JPanel
@@ -30,7 +31,7 @@ import javax.swing.UIManager
 internal class LibraryListCell( // @formatter:off
     library: Library,
     isSelected: Boolean
-) : JPanel(MigLayout("nogrid, aligny center")) { // @formatter:on
+) : JPanel(MigLayout("nogrid, insets 0, aligny center")) { // @formatter:on
     object CellRenderer : ListCellRenderer<Library> {
         override fun getListCellRendererComponent( // @formatter:off
             list: JList<out Library?>?,
@@ -42,6 +43,7 @@ internal class LibraryListCell( // @formatter:off
     }
 
     init {
+        border = BorderFactory.createEmptyBorder(8, 8, 8, 8)
         preferredSize = Dimension(0, 96)
         if (isSelected) background = UIManager.getColor("List.selectionBackground")
         add(JLabel(library.name).apply {

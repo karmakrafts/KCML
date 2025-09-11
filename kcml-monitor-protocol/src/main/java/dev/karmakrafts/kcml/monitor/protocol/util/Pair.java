@@ -16,10 +16,5 @@
 
 package dev.karmakrafts.kcml.monitor.protocol.util;
 
-import java.util.Map.Entry;
-
 public record Pair<L, R>(L left, R right) {
-    public static <L, R> Pair<L, R> from(final Entry<L, R> entry) {
-        return new Pair<>(entry.getKey(), entry.getValue());
-    }
 }

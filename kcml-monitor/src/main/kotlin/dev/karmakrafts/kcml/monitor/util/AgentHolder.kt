@@ -18,13 +18,18 @@ package dev.karmakrafts.kcml.monitor.util
 
 import dev.karmakrafts.kcml.monitor.server.Agent
 import dev.karmakrafts.kcml.monitor.ui.AgentPanel
+import io.netty.channel.Channel
 
 /**
  * Holder class for agents in the UI **only**.
+ * [channel] shall be treated as immutable only for obtaining information
+ * relevant to the UI at some point.
  */
-internal data class AgentHolder(
-    var isConnected: Boolean, var agent: Agent
-) {
+internal data class AgentHolder( // @formatter:off
+    var isConnected: Boolean,
+    val agent: Agent,
+    val channel: Channel
+) { // @formatter:on
     companion object {
         const val CLOSED_TAB_INDEX: Int = -1
     }

@@ -140,7 +140,7 @@ internal class MockAgentWindow(owner: MonitorWindow) : JFrame("Mock Agent") {
                 add(CollapsiblePanel(animationHandler, "Exception") {
                     val typeComboBox = JComboBox(exceptionTypes.toTypedArray()).apply {
                         renderer = ListCellRenderer { _, value, _, isSelected, _ ->
-                            JLabel(value.simpleName).apply {
+                            AdaptiveLabel(value.simpleName).apply {
                                 isOpaque = true
                                 background = if (isSelected) UIManager.getColor("ComboBox.selectionBackground")
                                 else UIManager.getColor("ComboBox.background")
