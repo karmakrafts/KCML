@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.client;
+package dev.karmakrafts.kcml.monitor.protocol.log;
 
-import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
-
+@FunctionalInterface
 public interface Logger {
     void log(MonitorLogLevel level, String message);
 

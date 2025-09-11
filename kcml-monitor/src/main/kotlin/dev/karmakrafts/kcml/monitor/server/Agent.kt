@@ -24,5 +24,6 @@ internal data class Agent(
     val jvmVendor: String,
     val jvmName: String,
     val jvmVersion: String,
+    var jvmOptions: Map<String, String?>,
     val options: Map<String, String?>
 )

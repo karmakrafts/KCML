@@ -19,9 +19,11 @@ package dev.karmakrafts.kcml.ir
 import dev.karmakrafts.kcml.util.UsedByAgent
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
+import org.jetbrains.kotlin.backend.jvm.ir.fileParentOrNull
 import org.jetbrains.kotlin.ir.declarations.IrDeclarationOrigin
 import org.jetbrains.kotlin.ir.declarations.IrFunction
 import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.platform.konan.NativePlatforms
 
 @OptIn(ExperimentalForeignApi::class)
 typealias NativeIntrinsicHandler = (callee: IrCall, args: List<LLVMValueRef>, resultSlot: LLVMValueRef?) -> LLVMValueRef
@@ -50,7 +52,11 @@ abstract class NativeIrIntrinsicOrigin(
     ): LLVMValueRef
 }
 
+
+// handler is a function provider to avoid eager class loading
 @OptIn(ExperimentalForeignApi::class)
-inline fun IrFunction.attachBitcode(crossinline handler: NativeIntrinsicHandler) {
-    origin = NativeIrIntrinsicOrigin.create(origin, handler)
+inline fun IrFunction.attachBitcode(handler: () -> NativeIntrinsicHandler) {
+    val platform = fileParentOrNull?.module?.descriptor?.platform ?: return
+    if (platform !in NativePlatforms.allNativePlatforms) return
+    origin = NativeIrIntrinsicOrigin.create(origin, handler())
 }

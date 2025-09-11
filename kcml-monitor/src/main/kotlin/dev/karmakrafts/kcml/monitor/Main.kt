@@ -16,17 +16,35 @@
 
 package dev.karmakrafts.kcml.monitor
 
-import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatLaf
+import dev.karmakrafts.kcml.monitor.util.SettingsHolder
+import java.util.concurrent.Executors
 import javax.swing.JDialog
 import javax.swing.JFrame
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.div
+import kotlin.io.path.exists
 
-fun main() = SwingUtilities.invokeLater {
+fun main() {
+    FlatLaf.setUseNativeWindowDecorations(false) // Enable FlatLaf custom decorations
     JFrame.setDefaultLookAndFeelDecorated(true)
     JDialog.setDefaultLookAndFeelDecorated(true)
-    FlatDarkLaf.setup()
     UIManager.put("TitlePane.showIcon", true)
-    val window = MonitorWindow()
-    window.isVisible = true
+    val userHome = Path(System.getProperty("user.home"))
+    val workingDir = userHome / ".kcmlmon"
+    if (!workingDir.exists()) workingDir.createDirectories()
+    val settingsFilePath = workingDir / "settings.json"
+    val settingsHolder = SettingsHolder.load(settingsFilePath)
+    SwingUtilities.invokeLater {
+        val executor = Executors.newVirtualThreadPerTaskExecutor()
+        val window = MonitorWindow(settingsHolder, executor)
+        Runtime.getRuntime().addShutdownHook(Thread {
+            executor.shutdown()
+            settingsHolder.save()
+        })
+        window.isVisible = true
+    }
 }

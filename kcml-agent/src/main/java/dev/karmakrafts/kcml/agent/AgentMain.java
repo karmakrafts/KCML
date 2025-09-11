@@ -16,11 +16,11 @@
 
 package dev.karmakrafts.kcml.agent;
 
-import dev.karmakrafts.kcml.agent.client.Logger;
-import dev.karmakrafts.kcml.agent.client.MonitorClient;
-import dev.karmakrafts.kcml.agent.client.NoopLogger;
 import dev.karmakrafts.kcml.agent.transformer.CodeGeneratorVisitorTransformer;
 import dev.karmakrafts.kcml.agent.transformer.KT58886Transformer;
+import dev.karmakrafts.kcml.monitor.protocol.MonitorClient;
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger;
+import dev.karmakrafts.kcml.monitor.protocol.log.NoopLogger;
 
 import java.lang.instrument.Instrumentation;
 import java.time.Duration;
@@ -54,8 +54,9 @@ public final class AgentMain {
         final var options = parseArgs(args);
         Logger logger = NoopLogger.INSTANCE;
         if (options.containsKey("monitor") && Boolean.parseBoolean(options.get("monitor"))) {
-            client.tryConnect(options);
-            logger = client.logger;
+            final var port = Integer.parseInt(options.getOrDefault("monitorPort", "65000"));
+            client.tryConnect(port, options);
+            logger = client.logger; // If we connect to a server, use the remote logger
             logger.info("Connected to debugger server");
         }
         try {
@@ -67,7 +68,7 @@ public final class AgentMain {
             logger.info("Transformed classes in %dms", time);
         }
         catch (Throwable error) {
-            client.handleException(error);
+            client.sendExceptionPacket(error);
         }
         client.close();
     }

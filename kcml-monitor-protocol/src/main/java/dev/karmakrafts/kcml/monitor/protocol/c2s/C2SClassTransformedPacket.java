@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.monitor.protocol.c2s;
 
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
-import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
+import dev.karmakrafts.kcml.monitor.protocol.util.PacketUtils;
+import io.netty.buffer.ByteBuf;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -48,7 +48,7 @@ public record C2SClassTransformedPacket( // @formatter:off
         }
 
         @Override
-        public void serialize(final C2SClassTransformedPacket value, final ByteBuffer buffer) {
+        public void serialize(final C2SClassTransformedPacket value, final ByteBuf buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
             PacketUtils.putStringUtf8(buffer, value.name);
@@ -58,7 +58,7 @@ public record C2SClassTransformedPacket( // @formatter:off
         }
 
         @Override
-        public C2SClassTransformedPacket deserialize(final ByteBuffer buffer) {
+        public C2SClassTransformedPacket deserialize(final ByteBuf buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
             final var name = PacketUtils.getStringUtf8(buffer);

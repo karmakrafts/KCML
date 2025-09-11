@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.util
+package dev.karmakrafts.kcml.monitor.protocol.log;
 
-import java.awt.Color
+public enum MonitorLogLevel {
+    // @formatter:off
+    DEBUG,
+    INFO,
+    WARN,
+    ERROR,
+    FATAL;
+    // @formatter:on
 
-internal object Colors {
-    val consoleBackground: Color = Color(0.1F, 0.1F, 0.15F, 1F)
-    val consoleForeground: Color = Color(0.9F, 0.9F, 0.9F, 1F)
-}
-
-internal fun Color.toHtml(): String {
-    return "#${red.toHexString()}${green.toHexString()}${blue.toHexString()}"
+    public final String consoleMarker = String.format("[%c]", name().charAt(0));
 }

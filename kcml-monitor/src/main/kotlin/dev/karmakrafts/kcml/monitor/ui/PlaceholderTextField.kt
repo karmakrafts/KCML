@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.monitor.component
+package dev.karmakrafts.kcml.monitor.ui
 
 import java.awt.Color
 import java.awt.event.FocusEvent
@@ -40,21 +40,29 @@ internal class PlaceholderTextField(
         updateTextIfNeeded()
     }
 
-    fun updateTextIfNeeded(hasFocus: Boolean = hasFocus()) {
-        if (hasFocus) {
-            if (!isPlaceholderVisible) return
-            text = ""
-            foreground = defaultForeground
-            repaint()
-            revalidate()
-            isPlaceholderVisible = false
-            return
-        }
+    fun unsetPlaceholder() {
+        if (!isPlaceholderVisible) return
+        text = ""
+        foreground = defaultForeground
+        repaint()
+        revalidate()
+        isPlaceholderVisible = false
+    }
+
+    fun setPlaceholder() {
         if (text.isNotBlank() || isPlaceholderVisible) return
         foreground = Color.GRAY
         text = placeholder
         repaint()
         revalidate()
         isPlaceholderVisible = true
+    }
+
+    fun updateTextIfNeeded(hasFocus: Boolean = hasFocus()) {
+        if (hasFocus) {
+            unsetPlaceholder()
+            return
+        }
+        setPlaceholder()
     }
 }

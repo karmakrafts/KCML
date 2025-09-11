@@ -16,10 +16,10 @@
 
 package dev.karmakrafts.kcml.agent.transformer;
 
-import dev.karmakrafts.kcml.agent.client.Logger;
-import dev.karmakrafts.kcml.agent.client.MonitorClient;
 import dev.karmakrafts.kcml.agent.util.ASMTypes;
 import dev.karmakrafts.kcml.agent.util.ASMUtils;
+import dev.karmakrafts.kcml.monitor.protocol.MonitorClient;
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;

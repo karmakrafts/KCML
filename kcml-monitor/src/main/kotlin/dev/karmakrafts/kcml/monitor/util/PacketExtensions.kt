@@ -25,5 +25,6 @@ internal fun C2SConnectPacket.getAgent(): Agent = Agent(
     jvmVendor = jvmVendor,
     jvmName = jvmName,
     jvmVersion = jvmVersion,
+    jvmOptions = jvmOptions,
     options = agentOptions
 )

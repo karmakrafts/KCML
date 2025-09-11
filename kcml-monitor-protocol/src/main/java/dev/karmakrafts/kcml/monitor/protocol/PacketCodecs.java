@@ -16,14 +16,13 @@
 
 package dev.karmakrafts.kcml.monitor.protocol;
 
-import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SClassTransformedPacket;
-import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket;
-import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket;
-import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket;
+import dev.karmakrafts.kcml.monitor.protocol.c2s.*;
 import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CConnectAckPacket;
-import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CShutdownPacket;
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CUpdateJvmOptionsPacket;
+import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelPipeline;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map.Entry;
 
@@ -35,28 +34,37 @@ public final class PacketCodecs {
     static {
         // Client-to-Server
         register(C2SConnectPacket.class, C2SConnectPacket.Codec.INSTANCE);
+        register(C2SUpdateJvmOptionsPacket.class, C2SUpdateJvmOptionsPacket.Codec.INSTANCE);
         register(C2SExceptionPacket.class, C2SExceptionPacket.Codec.INSTANCE);
         register(C2SLogPacket.class, C2SLogPacket.Codec.INSTANCE);
         register(C2SClassTransformedPacket.class, C2SClassTransformedPacket.Codec.INSTANCE);
         // Server-to-Client
         register(S2CConnectAckPacket.class, S2CConnectAckPacket.Codec.INSTANCE);
-        register(S2CShutdownPacket.class, S2CShutdownPacket.Codec.INSTANCE);
+        register(S2CUpdateJvmOptionsPacket.class, S2CUpdateJvmOptionsPacket.Codec.INSTANCE);
     }
 
     private PacketCodecs() {
     }
 
+    public static void configurePipeline(final ChannelPipeline pipeline) {
+        // MessageEncoder always prepends total packet size as an Integer, pre-allocate and strip
+        pipeline.addLast(new LengthFieldBasedFrameDecoder(1024 * 1024 * 10, 0, Long.BYTES, 0, Long.BYTES));
+        // Decode/encode Packet based messages
+        pipeline.addLast(new MessageDecoder());
+        pipeline.addLast(new MessageEncoder());
+    }
+
     @SuppressWarnings("unchecked")
-    public static void serialize(final Packet packet, final ByteBuffer buffer) {
+    public static void serialize(final Packet packet, final ByteBuf buffer) {
         final var packetType = packet.getClass();
         final var id = ids.get(packetType);
-        buffer.putInt(id);
+        buffer.writeInt(id);
         ((PacketCodec<Packet>) codecs.get(packetType)).serialize(packet, buffer);
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends Packet> T deserialize(final ByteBuffer buffer) {
-        final var id = buffer.getInt();
+    public static <T extends Packet> T deserialize(final ByteBuf buffer) {
+        final var id = buffer.readInt();
         // @formatter:off
         final var packetType = ids.entrySet().stream()
             .filter(e -> e.getValue() == id)

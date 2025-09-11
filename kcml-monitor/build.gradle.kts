@@ -1,4 +1,6 @@
+import com.mikepenz.aboutlibraries.plugin.AboutLibrariesTask
 import dev.karmakrafts.conventions.configureJava
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 /*
  * Copyright 2025 Karma Krafts & associates
@@ -19,6 +21,8 @@ import dev.karmakrafts.conventions.configureJava
 plugins {
     application
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.aboutLibraries.plugin)
     `maven-publish`
 }
 
@@ -28,16 +32,49 @@ java {
     withSourcesJar()
 }
 
-application {
-    mainClass = "${rootProject.group}.monitor.MainKt"
+val generatedResources = layout.buildDirectory.dir("generatedResources")
+
+val generateLicenseData = tasks.register<AboutLibrariesTask>("generateLicenseData") {
+    group = "build"
+    configureOutputFile(generatedResources.map { dir -> dir.file("licenses.json") })
+    configure()
 }
 
-dependencies {
-    implementation(projects.kcmlMonitorProtocol)
-    implementation(libs.flatlaf)
-    implementation(libs.miglayout.swing)
-    implementation(libs.graphviz)
-    implementation(libs.ikonli.core)
-    implementation(libs.ikonli.swing)
-    implementation(libs.ikonli.materialdesign)
+tasks {
+    withType<KotlinCompile>().configureEach {
+        dependsOn(generateLicenseData)
+    }
+    withType<ProcessResources>().configureEach {
+        dependsOn(generateLicenseData)
+    }
+}
+
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xcontext-parameters")
+    }
+    sourceSets {
+        val main by getting {
+            resources.srcDir(generatedResources)
+            dependencies {
+                implementation(projects.kcmlMonitorProtocol)
+                implementation(libs.flatlaf.core)
+                implementation(libs.flatlaf.extras)
+                implementation(libs.flatlaf.intellijThemes)
+                implementation(libs.miglayout.swing)
+                implementation(libs.graphviz)
+                implementation(libs.ikonli.core)
+                implementation(libs.ikonli.swing)
+                implementation(libs.ikonli.materialdesign)
+                implementation(libs.kotlinx.serialization.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.aboutLibraries.core)
+                implementation(libs.netty.all)
+            }
+        }
+    }
+}
+
+application {
+    mainClass = "${rootProject.group}.monitor.MainKt"
 }

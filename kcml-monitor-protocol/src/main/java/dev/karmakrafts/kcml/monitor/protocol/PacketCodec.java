@@ -16,10 +16,10 @@
 
 package dev.karmakrafts.kcml.monitor.protocol;
 
-import java.nio.ByteBuffer;
+import io.netty.buffer.ByteBuf;
 
 public interface PacketCodec<T extends Packet> {
-    void serialize(final T value, final ByteBuffer buffer);
+    void serialize(final T value, final ByteBuf buffer);
 
-    T deserialize(final ByteBuffer buffer);
+    T deserialize(final ByteBuf buffer);
 }

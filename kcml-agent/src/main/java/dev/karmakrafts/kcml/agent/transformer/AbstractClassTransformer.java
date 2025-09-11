@@ -16,9 +16,9 @@
 
 package dev.karmakrafts.kcml.agent.transformer;
 
-import dev.karmakrafts.kcml.agent.client.Logger;
-import dev.karmakrafts.kcml.agent.client.MonitorClient;
 import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
+import dev.karmakrafts.kcml.monitor.protocol.MonitorClient;
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -64,14 +64,15 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
                 transform(classNode);
             }
             catch (Throwable error) {
-                client.handleException(error);
+                client.sendExceptionPacket(error);
             }
             final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             classNode.accept(writer);
             final var time = Duration.between(startTime, Instant.now()).toMillis();
             logger.info("Transformed class %s in %dms", className, time);
             final var transformedBytes = writer.toByteArray();
-            client.sendClassTransformedPacket(className, loader.getName(), classfileBuffer, transformedBytes);
+            // TODO: reimplement this
+            //client.sendClassTransformedPacket(className, loader.getName(), classfileBuffer, transformedBytes);
             return transformedBytes;
         }
         logger.debug("Skipping transformation of class %s", className);

@@ -14,22 +14,19 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.client;
+package dev.karmakrafts.kcml.monitor.ui
 
-import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
-import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket;
+import javax.swing.Icon
+import javax.swing.JButton
 
-import java.time.Instant;
-
-public final class RemoteLogger implements Logger {
-    private final MonitorClient client;
-
-    RemoteLogger(final MonitorClient client) {
-        this.client = client;
-    }
-
-    @Override
-    public void log(final MonitorLogLevel level, final String message) {
-        client.sendPacket(new C2SLogPacket(client.id, Instant.now(), level, message));
+internal class AdaptiveButton( // @formatter:off
+    text: String? = null,
+    icon: Icon? = null
+) : JButton(text, icon) { // @formatter:on
+    override fun updateUI() {
+        super.updateUI()
+        when (val icon = icon) {
+            is AdaptiveIcon -> icon.update()
+        }
     }
 }

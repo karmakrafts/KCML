@@ -26,7 +26,7 @@ internal object KCMLConfigurationKeys {
 }
 
 internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
-    get() = get(KCMLConfigurationKeys.pluginClasspaths)!!
+    get() = get(KCMLConfigurationKeys.pluginClasspaths) ?: emptyList()
     set(value) {
         put(KCMLConfigurationKeys.pluginClasspaths, value)
     }

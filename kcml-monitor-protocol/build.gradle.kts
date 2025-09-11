@@ -26,3 +26,7 @@ configureJava(libs.versions.java)
 java {
     withSourcesJar()
 }
+
+dependencies {
+    implementation(libs.netty.all)
+}

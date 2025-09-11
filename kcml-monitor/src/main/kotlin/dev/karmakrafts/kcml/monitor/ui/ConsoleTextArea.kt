@@ -14,17 +14,19 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.client;
+package dev.karmakrafts.kcml.monitor.ui
 
-import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
+import dev.karmakrafts.kcml.monitor.util.lightOrDark
+import javax.swing.JTextArea
 
-public final class NoopLogger implements Logger {
-    public static final NoopLogger INSTANCE = new NoopLogger();
-
-    private NoopLogger() {
+internal class ConsoleTextArea : JTextArea() {
+    init {
+        isEditable = false
+        background = lightOrDark("TextArea.background", 0.925F, 0.7F)
     }
 
-    @Override
-    public void log(final MonitorLogLevel level, final String message) {
+    override fun updateUI() {
+        super.updateUI()
+        background = lightOrDark("TextArea.background", 0.925F, 0.7F)
     }
 }

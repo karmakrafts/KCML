@@ -16,24 +16,19 @@
 
 package dev.karmakrafts.kcml.monitor.util
 
-import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger
+import dev.karmakrafts.kcml.monitor.protocol.log.MonitorLogLevel
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 
-internal class Logger(val textArea: JTextArea) {
-    fun log(level: MonitorLogLevel, message: String) {
+internal class UILogger(val textArea: JTextArea) : Logger {
+    override fun log(level: MonitorLogLevel, message: String) {
         val threadName = Thread.currentThread().name
+        val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         SwingUtilities.invokeLater {
-            val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
             textArea.append("[$timestamp]${level.consoleMarker}[$threadName] $message\n")
         }
     }
-
-    fun debug(message: String) = log(MonitorLogLevel.DEBUG, message)
-    fun info(message: String) = log(MonitorLogLevel.INFO, message)
-    fun warn(message: String) = log(MonitorLogLevel.WARN, message)
-    fun error(message: String) = log(MonitorLogLevel.ERROR, message)
-    fun fatal(message: String) = log(MonitorLogLevel.FATAL, message)
 }

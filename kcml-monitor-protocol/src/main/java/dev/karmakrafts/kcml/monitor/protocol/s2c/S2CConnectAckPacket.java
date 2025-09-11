@@ -17,19 +17,25 @@
 package dev.karmakrafts.kcml.monitor.protocol.s2c;
 
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
-import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
+import dev.karmakrafts.kcml.monitor.protocol.TargetedPacket;
+import dev.karmakrafts.kcml.monitor.protocol.util.PacketUtils;
+import io.netty.buffer.ByteBuf;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.UUID;
 
 public record S2CConnectAckPacket( // @formatter:off
     UUID clientId,
     Instant timestamp
-) implements S2CPacket { // @formatter:on
+) implements S2CPacket, TargetedPacket { // @formatter:on
     @Override
     public Instant getTimestamp() {
         return timestamp;
+    }
+
+    @Override
+    public UUID getClientId() {
+        return clientId;
     }
 
     public static final class Codec implements PacketCodec<S2CConnectAckPacket> {
@@ -39,13 +45,13 @@ public record S2CConnectAckPacket( // @formatter:off
         }
 
         @Override
-        public void serialize(final S2CConnectAckPacket value, final ByteBuffer buffer) {
+        public void serialize(final S2CConnectAckPacket value, final ByteBuf buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
         }
 
         @Override
-        public S2CConnectAckPacket deserialize(final ByteBuffer buffer) {
+        public S2CConnectAckPacket deserialize(final ByteBuf buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
             return new S2CConnectAckPacket(clientId, timestamp);

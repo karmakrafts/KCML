@@ -16,11 +16,11 @@
 
 package dev.karmakrafts.kcml.monitor.protocol.c2s;
 
-import dev.karmakrafts.kcml.monitor.protocol.MonitorLogLevel;
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
-import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
+import dev.karmakrafts.kcml.monitor.protocol.log.MonitorLogLevel;
+import dev.karmakrafts.kcml.monitor.protocol.util.PacketUtils;
+import io.netty.buffer.ByteBuf;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -47,7 +47,7 @@ public record C2SLogPacket( // @formatter:off
         }
 
         @Override
-        public void serialize(final C2SLogPacket value, final ByteBuffer buffer) {
+        public void serialize(final C2SLogPacket value, final ByteBuf buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
             PacketUtils.putEnum(buffer, value.level);
@@ -55,7 +55,7 @@ public record C2SLogPacket( // @formatter:off
         }
 
         @Override
-        public C2SLogPacket deserialize(final ByteBuffer buffer) {
+        public C2SLogPacket deserialize(final ByteBuf buffer) {
             final var clientId = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
             final var level = PacketUtils.getEnum(buffer, MonitorLogLevel.class);

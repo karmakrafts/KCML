@@ -17,181 +17,212 @@
 package dev.karmakrafts.kcml.monitor.server
 
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodecs
+import dev.karmakrafts.kcml.monitor.protocol.TargetedPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SPacket
-import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CConnectAckPacket
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger
+import dev.karmakrafts.kcml.monitor.protocol.log.NoopLogger
 import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CPacket
-import dev.karmakrafts.kcml.monitor.util.Logger
 import dev.karmakrafts.kcml.monitor.util.getAgent
-import java.net.ServerSocket
-import java.net.Socket
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
-import java.nio.channels.Channels
-import java.time.Instant
-import java.util.concurrent.CompletableFuture
+import io.netty.bootstrap.ServerBootstrap
+import io.netty.channel.Channel
+import io.netty.channel.ChannelHandler.Sharable
+import io.netty.channel.ChannelHandlerContext
+import io.netty.channel.ChannelInitializer
+import io.netty.channel.ChannelOption
+import io.netty.channel.SimpleChannelInboundHandler
+import io.netty.channel.group.DefaultChannelGroup
+import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.SocketChannel
+import io.netty.channel.socket.nio.NioServerSocketChannel
+import io.netty.util.concurrent.GlobalEventExecutor
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedDeque
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.AtomicReference
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
-import kotlin.reflect.KClass
+import kotlin.concurrent.atomics.decrementAndFetch
+import kotlin.concurrent.atomics.incrementAndFetch
 
 @OptIn(ExperimentalAtomicApi::class)
-internal class MonitorServer(private val logger: Logger) {
-    private val connectionPool: ConcurrentLinkedDeque<Socket> = ConcurrentLinkedDeque()
-    private val packetHandlers: HashMap<KClass<out C2SPacket>, (Socket, C2SPacket) -> Unit> = HashMap()
-    private val outgoingPackets: ConcurrentLinkedDeque<S2CPacket> = ConcurrentLinkedDeque()
-    private val packetBuffer: ByteBuffer = ByteBuffer.allocate(100000).order(ByteOrder.nativeOrder())
+internal class MonitorServer(
+    private val logger: Logger = NoopLogger.INSTANCE,
+    private val agentLogger: (UUID) -> Logger = { NoopLogger.INSTANCE }
+) : AutoCloseable {
+    private val errorHandler: AtomicReference<(Throwable) -> Unit> = AtomicReference {}
+    private var bossGroup: NioEventLoopGroup? = null
+    private var workerGroup: NioEventLoopGroup? = null
+    private var serverChannel: Channel? = null
+    private var channelGroup: DefaultChannelGroup? = null
+    private val packetHandlers: ConcurrentHashMap<Class<out C2SPacket>, (Channel, C2SPacket) -> Unit> =
+        ConcurrentHashMap()
+    private val agentsById: ConcurrentHashMap<UUID, Agent> = ConcurrentHashMap()
+    private val channelById: ConcurrentHashMap<UUID, Channel> = ConcurrentHashMap()
+    private val connectHandler: AtomicReference<(Channel, Agent) -> Unit> = AtomicReference { _, _ -> }
+    private val disconnectHandler: AtomicReference<(Channel, Agent) -> Unit> = AtomicReference { _, _ -> }
 
     private val _isRunning: AtomicBoolean = AtomicBoolean(false)
     inline val isRunning: Boolean get() = _isRunning.load()
-    inline val connectionCount: Int get() = connectionPool.size
 
-    private var port: AtomicInt = AtomicInt(65000)
-    private lateinit var executor: ExecutorService
-    private lateinit var socket: ServerSocket
-    private lateinit var connectionAcceptorTask: CompletableFuture<Unit>
-    private lateinit var connectionCleanerTask: CompletableFuture<Unit>
-    private lateinit var ioTask: CompletableFuture<Unit>
+    private val _connectionCount: AtomicInt = AtomicInt(0)
+    inline val connectionCount: Int get() = _connectionCount.load()
 
-    val agents: ConcurrentLinkedDeque<Agent> = ConcurrentLinkedDeque()
-    private val socketToAgent: ConcurrentHashMap<Socket, Agent> = ConcurrentHashMap()
-    private var onAgentAdded: AtomicReference<(Agent) -> Unit> = AtomicReference {}
-    private var onAgentRemoved: AtomicReference<(Agent) -> Unit> = AtomicReference {}
+    // Resolved underlying Logger for the current Agent
+    private inline val C2SPacket.logger: Logger
+        get() = agentLogger(clientId)
 
     init {
-        onPacket<dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket> { socket, incomingPacket ->
-            addAgent(socket, incomingPacket.getAgent())
-            broadcastPacket(S2CConnectAckPacket(incomingPacket.clientId, Instant.now()))
+        onPacket<C2SConnectPacket> { channel, packet ->
+            val id = packet.clientId
+            if (agentsById.containsKey(id)) {
+                logger.error("Client $id could not connect, already connected")
+                return@onPacket
+            }
+            val agent = packet.getAgent()
+            agentsById[id] = agent // Remember agent data
+            channelById[id] = channel
+            connectHandler.load()(channel, agent)
+            logger.info("Client $id connected")
+        }
+        onPacket<C2SLogPacket> { _, packet ->
+            packet.logger.log(packet.level, packet.message)
+        }
+        onPacket<C2SExceptionPacket> { _, packet ->
+            packet.logger.error("Uncaught exception in agent: ${packet.message}\n${packet.stackTrace.joinToString("\n")}")
         }
     }
 
-    private fun addAgent(socket: Socket, agent: Agent) {
-        check(agent !in agents) { "Agent $agent is already connected" }
-        agents += agent
-        socketToAgent[socket] = agent
+    @Sharable
+    private inner class ChannelInboundHandler : SimpleChannelInboundHandler<C2SPacket>(C2SPacket::class.java) {
+        override fun messageReceived(ctx: ChannelHandlerContext, msg: C2SPacket) {
+            logger.debug("Received ${msg::class.simpleName}: $msg")
+            packetHandlers[msg::class.java]?.invoke(ctx.channel(), msg)
+        }
+
+        override fun channelActive(ctx: ChannelHandlerContext) {
+            val channel = ctx.channel()
+            channelGroup?.add(channel)
+            _connectionCount.incrementAndFetch()
+            logger.debug("Channel $channel active")
+            super.channelActive(ctx)
+        }
+
+        override fun channelInactive(ctx: ChannelHandlerContext) {
+            val channel = ctx.channel()
+            // @formatter:off
+            channelById.entries
+                .find { (_, chann) -> chann === channel }
+                ?.let { (id, chann) ->
+                    val agent = agentsById[id] ?: return@let
+                    disconnectHandler.load()(chann, agent)
+                    agentsById -= id
+                    channelById -= id
+                    logger.info("Client $id disconnected")
+                }
+            // @formatter:on
+            channelGroup?.remove(channel)
+            _connectionCount.decrementAndFetch()
+            logger.debug("Channel $channel inactive")
+            super.channelInactive(ctx)
+        }
+
+        override fun exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+            logger.error("Could not handle packet: ${cause.stackTraceToString()}")
+            ctx.close()
+        }
     }
 
-    private fun removeAgent(socket: Socket) {
-        val agent = socketToAgent[socket] ?: error("Agent for socket $socket could not be found")
-        agents -= agent
-        socketToAgent -= socket
+    inline fun onClientConnect(crossinline handler: (Channel, Agent) -> Unit) {
+        val oldHandler = connectHandler.load()
+        connectHandler.store { channel, agent ->
+            oldHandler(channel, agent)
+            handler(channel, agent)
+        }
+    }
+
+    inline fun onClientDisconnect(crossinline handler: (Channel, Agent) -> Unit) {
+        val oldHandler = disconnectHandler.load()
+        disconnectHandler.store { channel, agent ->
+            oldHandler(channel, agent)
+            handler(channel, agent)
+        }
+    }
+
+    inline fun onError(crossinline handler: (Throwable) -> Unit) {
+        val oldHandler = errorHandler.load()
+        errorHandler.store { error ->
+            oldHandler(error)
+            handler(error)
+        }
+    }
+
+    inline fun <reified P : C2SPacket> onPacket(crossinline handler: (Channel, P) -> Unit) {
+        val type = P::class.java
+        if (!packetHandlers.containsKey(type)) {
+            packetHandlers[type] = { channel, packet -> handler(channel, packet as P) }
+            return
+        }
+        val oldHandler = packetHandlers[type]!!
+        packetHandlers[type] = { channel, packet ->
+            oldHandler(channel, packet)
+            handler(channel, packet as P)
+        }
     }
 
     fun broadcastPacket(packet: S2CPacket) {
-        outgoingPackets += packet
+        channelGroup?.writeAndFlush(packet)
     }
 
-    fun onAgentAdded(handler: (Agent) -> Unit) {
-        val oldHandler = onAgentAdded.load()
-        onAgentAdded.store { agent ->
-            oldHandler(agent)
-            handler(agent)
-        }
-    }
-
-    fun onAgentRemoved(handler: (Agent) -> Unit) {
-        val oldHandler = onAgentRemoved.load()
-        onAgentRemoved.store { agent ->
-            oldHandler(agent)
-            handler(agent)
-        }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    inline fun <reified P : C2SPacket> onPacket(crossinline handler: (Socket, P) -> Unit) {
-        val oldHandler = packetHandlers[P::class]
-        packetHandlers[P::class] = { socket, packet ->
-            oldHandler?.invoke(socket, packet)
-            handler(socket, packet as P)
-        }
-    }
-
-    private fun handleIo() {
-        Thread.currentThread().name = "Monitor Server IO"
-        logger.info("Starting IO handler task")
-        while (_isRunning.load()) {
-            for (connection in connectionPool) {
-                val outputStream = connection.getOutputStream()
-                val outputChannel = Channels.newChannel(outputStream)
-                val inputStream = connection.getInputStream()
-                val inputChannel = Channels.newChannel(inputStream)
-                // First process all outgoing packets..
-                while (_isRunning.load() && !outgoingPackets.isEmpty()) {
-                    val packet = outgoingPackets.removeFirst()
-                    packetBuffer.clear()
-                    PacketCodecs.serialize(packet, packetBuffer)
-                    packetBuffer.flip()
-                    outputChannel.write(packetBuffer)
-                }
-                // ..then process all incoming ones
-                while (_isRunning.load()) {
-                    packetBuffer.clear()
-                    if (inputChannel.read(packetBuffer) <= 0) break
-                    packetBuffer.flip()
-                    while (packetBuffer.hasRemaining()) {
-                        val packet = PacketCodecs.deserialize<C2SPacket>(packetBuffer)
-                        packetHandlers[packet::class]!!(connection, packet)
-                    }
-                }
-            }
-        }
-        logger.info("Stopped IO handler task")
-    }
-
-    private fun cleanConnections() {
-        Thread.currentThread().name = "Monitor Server Cleaner"
-        logger.info("Starting connection cleaner task")
-        while (_isRunning.load()) {
-            connectionPool -= connectionPool.filter { socket -> socket.isClosed || !socket.isConnected }
-                .toSet()
-                .onEach(::removeAgent)
-            Thread.sleep(500)
-        }
-        logger.info("Stopped connection cleaner task")
-    }
-
-    private fun acceptConnections() {
-        Thread.currentThread().name = "Monitor Server Acceptor"
-        logger.info("Starting connection acceptor task")
-        socket = ServerSocket(port.load()).apply {
-            soTimeout = 100
-        }
-        while (_isRunning.load()) {
-            try {
-                connectionPool += socket.accept()
-            } catch (_: Throwable) {
-                // We can safely ignore this error
-            }
-        }
-        socket.close()
-        logger.info("Stopped connection acceptor task")
+    fun <P> sendPacket(packet: P) where P : S2CPacket, P : TargetedPacket {
+        channelById[packet.clientId]?.writeAndFlush(packet)
     }
 
     fun start(port: Int) {
-        if (!_isRunning.compareAndSet(expectedValue = false, newValue = true)) return
-        executor = Executors.newVirtualThreadPerTaskExecutor()
-        this.port.store(port)
-        connectionAcceptorTask = CompletableFuture.supplyAsync(::acceptConnections, executor)
-        connectionCleanerTask = CompletableFuture.supplyAsync(::cleanConnections, executor)
-        ioTask = CompletableFuture.supplyAsync(::handleIo, executor)
+        if (_isRunning.load()) return
+        try {
+            logger.info("Starting server on localhost:$port")
+            bossGroup = NioEventLoopGroup(1)
+            workerGroup = NioEventLoopGroup()
+            channelGroup = DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
+            val bootstrap = ServerBootstrap().apply {
+                group(bossGroup, workerGroup)
+                channel(NioServerSocketChannel::class.java)
+                option(ChannelOption.SO_BACKLOG, 128)
+                childOption(ChannelOption.SO_KEEPALIVE, true)
+                childHandler(object : ChannelInitializer<SocketChannel>() {
+                    override fun initChannel(channel: SocketChannel) {
+                        channel.pipeline().apply {
+                            PacketCodecs.configurePipeline(this)
+                            addLast(ChannelInboundHandler())
+                        }
+                    }
+                })
+            }
+            val future = bootstrap.bind("localhost", port).sync()
+            serverChannel = future.channel()
+            logger.info("Server started")
+        } catch (error: Throwable) {
+            errorHandler.load()(error)
+        }
+        _isRunning.store(true)
     }
 
-    fun stop() {
-        if (!_isRunning.compareAndSet(expectedValue = true, newValue = false)) return
-        connectionAcceptorTask.join()
-        connectionPool.forEach(Socket::close)
-        connectionCleanerTask.join()
-        connectionPool.clear()
-        ioTask.join()
-        executor.shutdown()
-    }
-
-    fun restart(port: Int) {
-        stop()
-        start(port)
+    override fun close() {
+        if (!_isRunning.load()) return
+        logger.info("Stopping server")
+        channelGroup?.close()?.syncUninterruptibly()
+        channelGroup = null
+        serverChannel?.close()?.syncUninterruptibly()
+        serverChannel = null
+        workerGroup?.shutdownGracefully()
+        workerGroup = null
+        bossGroup?.shutdownGracefully()
+        bossGroup = null
+        agentsById.clear()
+        logger.info("Server stopped")
+        _isRunning.store(false)
     }
 }

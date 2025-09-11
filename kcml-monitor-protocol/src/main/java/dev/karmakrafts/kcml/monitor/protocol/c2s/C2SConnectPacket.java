@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.monitor.protocol.c2s;
 
 import dev.karmakrafts.kcml.monitor.protocol.PacketCodec;
-import dev.karmakrafts.kcml.monitor.protocol.PacketUtils;
+import dev.karmakrafts.kcml.monitor.protocol.util.PacketUtils;
+import io.netty.buffer.ByteBuf;
 
-import java.nio.ByteBuffer;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -31,6 +31,7 @@ public record C2SConnectPacket( // @formatter:off
     String jvmVendor,
     String jvmName,
     String jvmVersion,
+    Map<String, String> jvmOptions,
     Map<String, String> agentOptions
 ) implements C2SPacket { // @formatter:on
     @Override
@@ -50,26 +51,35 @@ public record C2SConnectPacket( // @formatter:off
         }
 
         @Override
-        public void serialize(final C2SConnectPacket value, final ByteBuffer buffer) {
+        public void serialize(final C2SConnectPacket value, final ByteBuf buffer) {
             PacketUtils.putUUID(buffer, value.clientId);
             PacketUtils.putInstant(buffer, value.timestamp);
-            buffer.putLong(value.processId);
+            buffer.writeLong(value.processId);
             PacketUtils.putStringUtf8(buffer, value.jvmVendor);
             PacketUtils.putStringUtf8(buffer, value.jvmName);
             PacketUtils.putStringUtf8(buffer, value.jvmVersion);
+            PacketUtils.putMap(buffer, PacketUtils::putStringUtf8, PacketUtils::putStringUtf8, value.jvmOptions);
             PacketUtils.putMap(buffer, PacketUtils::putStringUtf8, PacketUtils::putStringUtf8, value.agentOptions);
         }
 
         @Override
-        public C2SConnectPacket deserialize(final ByteBuffer buffer) {
+        public C2SConnectPacket deserialize(final ByteBuf buffer) {
             final var uuid = PacketUtils.getUUID(buffer);
             final var timestamp = PacketUtils.getInstant(buffer);
-            final var processId = buffer.getLong();
+            final var processId = buffer.readLong();
             final var jvmVendor = PacketUtils.getStringUtf8(buffer);
             final var jvmName = PacketUtils.getStringUtf8(buffer);
             final var jvmVersion = PacketUtils.getStringUtf8(buffer);
+            final var jvmOptions = PacketUtils.getMap(buffer, PacketUtils::getStringUtf8, PacketUtils::getStringUtf8);
             final var agentOptions = PacketUtils.getMap(buffer, PacketUtils::getStringUtf8, PacketUtils::getStringUtf8);
-            return new C2SConnectPacket(uuid, timestamp, processId, jvmVendor, jvmName, jvmVersion, agentOptions);
+            return new C2SConnectPacket(uuid,
+                timestamp,
+                processId,
+                jvmVendor,
+                jvmName,
+                jvmVersion,
+                jvmOptions,
+                agentOptions);
         }
     }
 }

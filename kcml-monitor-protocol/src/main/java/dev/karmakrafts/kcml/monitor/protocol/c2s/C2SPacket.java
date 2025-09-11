@@ -16,10 +16,7 @@
 
 package dev.karmakrafts.kcml.monitor.protocol.c2s;
 
-import dev.karmakrafts.kcml.monitor.protocol.Packet;
+import dev.karmakrafts.kcml.monitor.protocol.TargetedPacket;
 
-import java.util.UUID;
-
-public interface C2SPacket extends Packet {
-    UUID getClientId();
+public interface C2SPacket extends TargetedPacket {
 }
