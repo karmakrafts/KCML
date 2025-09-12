@@ -81,7 +81,7 @@ internal class MonitorWindow( // @formatter:off
     val settingsHolder: SettingsHolder,
     val executor: ExecutorService,
     val debugEnabled: Boolean
-) : JFrame("KCML Monitor${if(debugEnabled) " (Debug)" else ""}") { // @formatter:on
+) : JFrame("KCML Monitor${if (debugEnabled) " (Debug)" else ""}") { // @formatter:on
     // @formatter:off
     val lafs: Map<String, LookAndFeel> = FlatAllIJThemes.INFOS.asSequence()
         .mapNotNull(::tryLoadLookAndFeel)
