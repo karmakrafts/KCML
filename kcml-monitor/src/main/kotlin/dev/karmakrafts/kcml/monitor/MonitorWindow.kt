@@ -87,6 +87,16 @@ internal class MonitorWindow( // @formatter:off
         setLookAndFeel(lafs[settingsHolder.settings.lookAndFeel] ?: lafs.values.first())
     }
 
+    private val hostNameTextField: PlaceholderTextField = PlaceholderTextField(
+        placeholder = "Default localhost", text = settingsHolder.settings.hostName
+    ).apply {
+        document.onTextChanged { text ->
+            settingsHolder.update {
+                it.copy(hostName = text)
+            }
+        }
+    }
+
     private val portTextField: PlaceholderTextField = PlaceholderTextField( // @formatter:off
         placeholder = "Default 65000",
         text = settingsHolder.settings.port.toString()
@@ -118,6 +128,7 @@ internal class MonitorWindow( // @formatter:off
         onError { error -> logger.error("Could not process packet: ${error.stackTraceToString()}") }
         onClientConnect(this@MonitorWindow::onClientConnect)
         onClientDisconnect(this@MonitorWindow::onClientDisconnect)
+        onClientUpdate(this@MonitorWindow::onClientUpdate)
     }
 
     private inline val statusLabelText: String
@@ -133,6 +144,13 @@ internal class MonitorWindow( // @formatter:off
 
     private fun getAgentLogger(clientId: UUID): Logger =
         findAgentHolderById(clientId)?.panel?.logger ?: NoopLogger.INSTANCE
+
+    private fun onClientUpdate(channel: Channel, agent: Agent) = SwingUtilities.invokeLater {
+        findAgentHolderById(agent.clientId)?.panel?.apply {
+            revalidate()
+            repaint()
+        }
+    }
 
     private fun onClientConnect(channel: Channel, agent: Agent) = SwingUtilities.invokeLater {
         var holder = findAgentHolderById(agent.clientId)
@@ -150,7 +168,7 @@ internal class MonitorWindow( // @formatter:off
         // Otherwise we have to add it as a new AgentHolder
         val tabName = agent.clientId.toString()
         holder = AgentHolder(true, agent, channel)
-        val panel = AgentPanel(holder, settingsHolder)
+        val panel = AgentPanel(executor, server, holder, settingsHolder)
         holder.panel = panel
         tabbedPane.addClosableTab( // @formatter:off
             title = tabName,
@@ -206,8 +224,9 @@ internal class MonitorWindow( // @formatter:off
             startButton.isEnabled = false
             stopButton.isEnabled = false
         }
+        val hostName = hostNameTextField.text
         val port = portTextField.text.toIntOrNull() ?: 65000
-        server.start(port)
+        server.start(hostName, port)
         SwingUtilities.invokeLater {
             stopButton.isEnabled = true
             startButton.isEnabled = false
@@ -272,6 +291,8 @@ internal class MonitorWindow( // @formatter:off
         add(statusLabel, "w 100%, wrap")
         add(connectionsLabel, "w 100%, wrap")
         add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
+        add(AdaptiveLabel("Hostname"), "w 100%, wrap")
+        add(hostNameTextField, "w 100%, h 24px, wrap")
         add(AdaptiveLabel("Port"), "w 100%, wrap")
         add(portTextField, "w 100%, h 24px, wrap")
         add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
@@ -282,7 +303,7 @@ internal class MonitorWindow( // @formatter:off
     private fun JPanel.setupConnectionsPanel() {
         border = BorderFactory.createTitledBorder("Connections")
         add(JScrollPane(connectionList), "w 100%, h 100%, wrap")
-        add(AdaptiveButton("Inspect", MaterialDesign.MDI_MAGNIFY.adaptive()).apply {
+        add(AdaptiveButton(icon = MaterialDesign.MDI_MAGNIFY.adaptive()).apply {
             addActionListener {
                 for (index in connectionList.selectedIndices) {
                     val holder = connectionListModel.get(index)
@@ -305,7 +326,7 @@ internal class MonitorWindow( // @formatter:off
                 }
             }
         })
-        add(AdaptiveButton("Remove", MaterialDesign.MDI_DELETE.adaptive()).apply {
+        add(AdaptiveButton(icon = MaterialDesign.MDI_DELETE.adaptive()).apply {
             addActionListener {
                 for (index in connectionList.selectedIndices) {
                     val holder = connectionListModel.get(index)

@@ -22,6 +22,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class Settings(
     val version: Int = VERSION,
+    @SerialName("host_name") val hostName: String = "localhost",
     val port: Int = 65000,
     @SerialName("look_and_feel") val lookAndFeel: String = "FlatLaf Dark",
     @SerialName("window_x") val windowX: Int = -1,
@@ -32,17 +33,8 @@ internal data class Settings(
     @SerialName("nh0_divider_location") val nh0DividerLocation: Int = 600,
     @SerialName("nh1_divider_location") val nh1DividerLocation: Int = 220,
     @SerialName("sh0_divider_location") val sh0DividerLocation: Int = 400,
-    @SerialName("mock_agent") val mockAgent: MockAgent = MockAgent()
 ) {
     companion object {
         const val VERSION: Int = 1
     }
-
-    @Serializable
-    data class MockAgent(
-        @SerialName("window_x") override val windowX: Int = -1,
-        @SerialName("window_y") override val windowY: Int = -1,
-        @SerialName("window_w") override val windowWidth: Int = 1400,
-        @SerialName("window_h") override val windowHeight: Int = 1000
-    ) : PersistentWindowState
 }

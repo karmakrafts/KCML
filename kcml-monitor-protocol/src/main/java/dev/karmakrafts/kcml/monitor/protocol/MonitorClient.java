@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SPacket;
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SUpdateJvmOptionsPacket;
+import dev.karmakrafts.kcml.monitor.protocol.log.Logger;
 import dev.karmakrafts.kcml.monitor.protocol.log.RemoteLogger;
 import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CPacket;
 import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CUpdateJvmOptionsPacket;
@@ -44,6 +45,7 @@ import java.util.stream.Collectors;
 public final class MonitorClient implements AutoCloseable {
     public final UUID id = UUID.randomUUID();
     public final RemoteLogger logger = new RemoteLogger(this);
+    public final Logger localLogger;
     private final AtomicReference<Consumer<Throwable>> errorHandler = new AtomicReference<>(error -> {
     });
     private final AtomicReference<Runnable> connectHandler = new AtomicReference<>(() -> {
@@ -54,7 +56,8 @@ public final class MonitorClient implements AutoCloseable {
     private NioEventLoopGroup eventLoopGroup;
     private Channel channel;
 
-    public MonitorClient() {
+    public MonitorClient(final Logger localLogger) {
+        this.localLogger = localLogger;
         onTargetedPacket(S2CUpdateJvmOptionsPacket.class, (channel, packet) -> {
             sendUpdateJvmOptionsPacket(); // Answer with current JVM options
         });
@@ -177,7 +180,7 @@ public final class MonitorClient implements AutoCloseable {
                 sendConnectPacket(agentOptions);
                 return true;
             }
-            catch (InterruptedException error) {
+            catch (Throwable error) {
                 errorHandler.get().accept(error);
                 attempts++;
             }
@@ -205,10 +208,12 @@ public final class MonitorClient implements AutoCloseable {
 
         @Override
         protected void messageReceived(final ChannelHandlerContext ctx, final S2CPacket msg) {
-            final var handler = packetHandlers.get(msg.getClass());
+            final var packetType = msg.getClass();
+            final var handler = packetHandlers.get(packetType);
             if (handler == null) {
                 return;
             }
+            localLogger.debug("Received %s: %s", packetType, msg);
             handler.accept(ctx.channel(), msg);
         }
 

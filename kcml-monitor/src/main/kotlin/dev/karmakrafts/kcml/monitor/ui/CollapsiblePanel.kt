@@ -24,7 +24,6 @@ import dev.karmakrafts.kcml.monitor.ui.animation.registerAsAnimated
 import dev.karmakrafts.kcml.monitor.util.lightOrDark
 import net.miginfocom.swing.MigLayout
 import org.kordamp.ikonli.materialdesign.MaterialDesign
-import org.kordamp.ikonli.swing.FontIcon
 import java.awt.Color
 import java.awt.Dimension
 import java.awt.Graphics
@@ -75,7 +74,7 @@ internal class CollapsiblePanel( // @formatter:off
             headerLabel.foreground = color
             headerLabel.repaint()
             headerArrow.foreground = color
-            headerArrow.updateColor()
+            headerArrow.update()
         }
         registerAsAnimated(animationHandler, this)
     }
@@ -146,13 +145,6 @@ internal class CollapsiblePanel( // @formatter:off
         }
     }
 
-    override fun updateUI() {
-        super.updateUI()
-        if (separator == null) return // The curse of calls in constructors.. don't remove this!
-        separator.foreground = if (isMouseOverHeader) UIManager.getColor("Label.foreground")
-        else UIManager.getColor("Separator.foreground")
-    }
-
     override fun updateAnimation(deltaTime: Float) {
         var movement = ANIMATION_SPEED * deltaTime
         if (animationReversed) movement = -movement
@@ -209,22 +201,11 @@ internal class CollapsiblePanel( // @formatter:off
     private inner class HeaderArrow : JLabel() {
         init {
             verticalAlignment = CENTER
-            foreground = UIManager.getColor("Label.foreground")
+            icon = MaterialDesign.MDI_ARROW_RIGHT_BOLD.adaptive { foreground }
         }
 
-        private val icon: FontIcon = FontIcon.of(MaterialDesign.MDI_ARROW_RIGHT_BOLD, 16, foreground).apply {
-            super.icon = this
-        }
-
-        override fun updateUI() {
-            super.updateUI()
-            foreground = UIManager.getColor("Label.foreground")
-            if (icon == null) return // More call-in-non-final-constructor goodness..
-            icon.iconColor = foreground
-        }
-
-        fun updateColor() {
-            icon.iconColor = foreground
+        fun update() {
+            (icon as? AdaptiveIcon)?.update()
             repaint()
         }
 

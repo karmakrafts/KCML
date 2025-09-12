@@ -17,20 +17,25 @@
 package dev.karmakrafts.kcml.monitor.ui
 
 import dev.karmakrafts.kcml.monitor.server.Agent
+import dev.karmakrafts.kcml.monitor.server.MonitorServer
 import dev.karmakrafts.kcml.monitor.util.AgentHolder
 import dev.karmakrafts.kcml.monitor.util.SettingsHolder
 import dev.karmakrafts.kcml.monitor.util.UILogger
 import dev.karmakrafts.kcml.monitor.util.saveToFile
 import net.miginfocom.swing.MigLayout
 import org.kordamp.ikonli.materialdesign.MaterialDesign
+import java.util.concurrent.ExecutorService
+import javax.swing.BorderFactory
 import javax.swing.JPanel
 import javax.swing.JScrollPane
-import javax.swing.JSeparator
 import javax.swing.JSplitPane
 import javax.swing.JTextArea
 
 internal class AgentPanel(
-    val agentHolder: AgentHolder, val settingsHolder: SettingsHolder
+    val executor: ExecutorService,
+    val server: MonitorServer,
+    val agentHolder: AgentHolder,
+    val settingsHolder: SettingsHolder
 ) : JSplitPane(HORIZONTAL_SPLIT) {
     private fun Map<*, *>.getPreviewString(): String {
         var result = ""
@@ -64,37 +69,40 @@ internal class AgentPanel(
             add(AdaptiveLabel("JVM Name: ${agent.jvmName}"), "w 100%, wrap")
             add(AdaptiveLabel("JVM Version: ${agent.jvmVersion}"), "w 100%, wrap")
 
-            add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
-            add(AdaptiveLabel("JVM Options"), "w 100%, wrap")
-            add(JPanel(MigLayout("nogrid, insets 0")).apply {
-                add(JScrollPane(jvmOptionsTextArea), "w 100%, h 100%, wrap")
+            add(JSplitPane(VERTICAL_SPLIT).apply {
                 add(JPanel(MigLayout("nogrid, insets 0")).apply {
-                    add(jvmOptionsSearchControls, "w 100%")
-                    add(AdaptiveButton().apply {
-                        icon = MaterialDesign.MDI_CONTENT_COPY.adaptive()
-                        addActionListener {}
-                    }, "w 24px, h 24px")
-                    add(AdaptiveButton().apply {
-                        icon = MaterialDesign.MDI_RELOAD.adaptive()
-                        addActionListener {}
-                    }, "w 24px, h 24px")
-                }, "w 100%")
-            }, "w 100%, h 20%, wrap")
-
-            add(JSeparator(JSeparator.HORIZONTAL), "w 100%, wrap")
-            add(AdaptiveLabel("Options"), "w 100%, wrap")
-            add(JPanel(MigLayout("nogrid, insets 0")).apply {
-                add(JScrollPane(agentOptionsTextArea), "w 100%, h 100%, wrap")
+                    border = BorderFactory.createTitledBorder("JVM Options")
+                    add(JScrollPane(jvmOptionsTextArea), "w 100%, h 100%, wrap")
+                    add(JPanel(MigLayout("nogrid, insets 0")).apply {
+                        add(jvmOptionsSearchControls, "w 100%")
+                        add(AdaptiveButton().apply {
+                            icon = MaterialDesign.MDI_CONTENT_COPY.adaptive()
+                            addActionListener {}
+                        }, "w 24px, h 24px")
+                        add(AdaptiveButton().apply {
+                            icon = MaterialDesign.MDI_RELOAD.adaptive()
+                            addActionListener {
+                                executor.submit {
+                                    server.sendUpdateJvmOptionsPacket(agent.clientId)
+                                }
+                            }
+                        }, "w 24px, h 24px")
+                    }, "w 100%")
+                })
                 add(JPanel(MigLayout("nogrid, insets 0")).apply {
-                    add(agentOptionsSearchControls, "w 100%")
-                    add(AdaptiveButton().apply {
-                        icon = MaterialDesign.MDI_CONTENT_COPY.adaptive()
-                        addActionListener {
-
-                        }
-                    }, "w 24px, h 24px")
-                }, "w 100%")
-            }, "w 100%, h 20%")
+                    border = BorderFactory.createTitledBorder("Options")
+                    add(JScrollPane(agentOptionsTextArea), "w 100%, h 100%, wrap")
+                    add(JPanel(MigLayout("nogrid, insets 0")).apply {
+                        add(agentOptionsSearchControls, "w 100%")
+                        add(AdaptiveButton().apply {
+                            icon = MaterialDesign.MDI_CONTENT_COPY.adaptive()
+                            addActionListener {}
+                        }, "w 24px, h 24px")
+                    }, "w 100%")
+                })
+                resizeWeight = 0.5
+                setDividerLocation(0.5)
+            }, "w 100%, h 100%")
         })
         add(JPanel(MigLayout("nogrid")).apply {
             add(JScrollPane(consoleTextArea), "w 100%, h 100%, wrap")

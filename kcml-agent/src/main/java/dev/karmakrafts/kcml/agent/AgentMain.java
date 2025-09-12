@@ -50,7 +50,7 @@ public final class AgentMain {
     }
 
     public static void agentmain(final String args, final Instrumentation instrumentation) {
-        final var client = new MonitorClient();
+        final var client = new MonitorClient(NoopLogger.INSTANCE);
         final var options = parseArgs(args);
         Logger logger = NoopLogger.INSTANCE;
         if (options.containsKey("monitor") && Boolean.parseBoolean(options.get("monitor"))) {

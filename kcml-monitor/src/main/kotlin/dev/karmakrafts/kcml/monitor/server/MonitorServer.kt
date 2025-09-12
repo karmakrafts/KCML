@@ -22,9 +22,11 @@ import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SConnectPacket
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SExceptionPacket
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket
 import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SPacket
+import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SUpdateJvmOptionsPacket
 import dev.karmakrafts.kcml.monitor.protocol.log.Logger
 import dev.karmakrafts.kcml.monitor.protocol.log.NoopLogger
 import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CPacket
+import dev.karmakrafts.kcml.monitor.protocol.s2c.S2CUpdateJvmOptionsPacket
 import dev.karmakrafts.kcml.monitor.util.getAgent
 import io.netty.bootstrap.ServerBootstrap
 import io.netty.channel.Channel
@@ -38,6 +40,7 @@ import io.netty.channel.nio.NioEventLoopGroup
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.util.concurrent.GlobalEventExecutor
+import java.time.Instant
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.atomics.AtomicBoolean
@@ -63,6 +66,7 @@ internal class MonitorServer(
     private val channelById: ConcurrentHashMap<UUID, Channel> = ConcurrentHashMap()
     private val connectHandler: AtomicReference<(Channel, Agent) -> Unit> = AtomicReference { _, _ -> }
     private val disconnectHandler: AtomicReference<(Channel, Agent) -> Unit> = AtomicReference { _, _ -> }
+    private val updateHandler: AtomicReference<(Channel, Agent) -> Unit> = AtomicReference { _, _ -> }
 
     private val _isRunning: AtomicBoolean = AtomicBoolean(false)
     inline val isRunning: Boolean get() = _isRunning.load()
@@ -93,7 +97,14 @@ internal class MonitorServer(
         onPacket<C2SExceptionPacket> { _, packet ->
             packet.logger.error("Uncaught exception in agent: ${packet.message}\n${packet.stackTrace.joinToString("\n")}")
         }
+        onPacket<C2SUpdateJvmOptionsPacket> { channel, packet ->
+            val agent = agentsById[packet.clientId] ?: return@onPacket
+            agent.jvmOptions = packet.jvmOptions
+            updateHandler.load()(channel, agent)
+        }
     }
+
+    fun sendUpdateJvmOptionsPacket(clientId: UUID) = sendPacket(S2CUpdateJvmOptionsPacket(clientId, Instant.now()))
 
     @Sharable
     private inner class ChannelInboundHandler : SimpleChannelInboundHandler<C2SPacket>(C2SPacket::class.java) {
@@ -159,6 +170,14 @@ internal class MonitorServer(
         }
     }
 
+    inline fun onClientUpdate(crossinline handler: (Channel, Agent) -> Unit) {
+        val oldHandler = updateHandler.load()
+        updateHandler.store { channel, agent ->
+            oldHandler(channel, agent)
+            handler(channel, agent)
+        }
+    }
+
     inline fun <reified P : C2SPacket> onPacket(crossinline handler: (Channel, P) -> Unit) {
         val type = P::class.java
         if (!packetHandlers.containsKey(type)) {
@@ -180,10 +199,10 @@ internal class MonitorServer(
         channelById[packet.clientId]?.writeAndFlush(packet)
     }
 
-    fun start(port: Int) {
+    fun start(hostName: String, port: Int) {
         if (_isRunning.load()) return
         try {
-            logger.info("Starting server on localhost:$port")
+            logger.info("Starting server on $hostName:$port")
             bossGroup = NioEventLoopGroup(1)
             workerGroup = NioEventLoopGroup()
             channelGroup = DefaultChannelGroup(GlobalEventExecutor.INSTANCE)
@@ -201,7 +220,7 @@ internal class MonitorServer(
                     }
                 })
             }
-            val future = bootstrap.bind("localhost", port).sync()
+            val future = bootstrap.bind(hostName, port).sync()
             serverChannel = future.channel()
             logger.info("Server started")
         } catch (error: Throwable) {

@@ -36,7 +36,6 @@ import javax.swing.BorderFactory
 import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JFrame
-import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JSplitPane
@@ -44,7 +43,9 @@ import javax.swing.JTextField
 import javax.swing.ListCellRenderer
 import javax.swing.UIManager
 
-internal class MockAgentWindow(owner: MonitorWindow) : JFrame("Mock Agent") {
+internal class MockAgentWindow(
+    owner: MonitorWindow
+) : JFrame("Mock Agent") {
     companion object {
         private val exceptionTypes: List<Class<out Throwable>> = listOf(
             IllegalArgumentException::class.java,
@@ -108,7 +109,7 @@ internal class MockAgentWindow(owner: MonitorWindow) : JFrame("Mock Agent") {
     private val consoleSearchControls: SearchControls<String> = consoleTextArea.createSearchControls()
     private val logger: UILogger = UILogger(consoleTextArea)
 
-    private val client: MonitorClient = MonitorClient().apply {
+    private val client: MonitorClient = MonitorClient(logger).apply {
         onError { error -> logger.error(error.stackTraceToString()) }
         onConnect { disconnectButton.isEnabled = true }
         onDisconnect { connectButton.isEnabled = true }
@@ -130,7 +131,9 @@ internal class MockAgentWindow(owner: MonitorWindow) : JFrame("Mock Agent") {
                 add(CollapsiblePanel(animationHandler, "Connect") {
                     add(AdaptiveButton("Send", MaterialDesign.MDI_SEND.adaptive()).apply {
                         addActionListener {
-                            client.sendConnectPacket(emptyMap()) // TODO: implement simulating agent options
+                            owner.executor.submit {
+                                client.sendConnectPacket(emptyMap())
+                            }
                         }
                     }, "w 100%, h 24px")
                 }.apply {
@@ -156,14 +159,16 @@ internal class MockAgentWindow(owner: MonitorWindow) : JFrame("Mock Agent") {
                     add(messageTextField, "w 100%, h 24px, wrap")
                     add(AdaptiveButton("Send", MaterialDesign.MDI_SEND.adaptive()).apply {
                         addActionListener {
-                            try { // @formatter:off
-                                @Suppress("UNCHECKED_CAST")
-                                val exception = (typeComboBox.selectedItem as Class<out Throwable>)
-                                    .getConstructor(String::class.java)
-                                    .newInstance(messageTextField.text)
-                                client.sendExceptionPacket(exception)
-                            } catch (error: Throwable) { // @formatter:on
-                                logger.error("Could not create exception packet: ${error.stackTraceToString()}")
+                            owner.executor.submit {
+                                try { // @formatter:off
+                                    @Suppress("UNCHECKED_CAST")
+                                    val exception = (typeComboBox.selectedItem as Class<out Throwable>)
+                                        .getConstructor(String::class.java)
+                                        .newInstance(messageTextField.text)
+                                    client.sendExceptionPacket(exception)
+                                } catch (error: Throwable) { // @formatter:on
+                                    logger.error("Could not create exception packet: ${error.stackTraceToString()}")
+                                }
                             }
                         }
                     }, "w 100%, h 24px, wrap")

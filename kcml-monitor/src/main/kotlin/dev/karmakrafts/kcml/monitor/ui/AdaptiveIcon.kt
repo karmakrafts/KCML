@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.monitor.ui
 import com.formdev.flatlaf.extras.FlatSVGIcon
 import org.kordamp.ikonli.Ikon
 import org.kordamp.ikonli.swing.FontIcon
+import java.awt.Color
 import java.awt.Component
 import java.awt.Graphics
 import javax.swing.Icon
@@ -27,22 +28,33 @@ import javax.swing.UIManager
 internal class AdaptiveIcon(
     private val provider: () -> Icon
 ) : Icon {
-    private var icon: Icon = provider()
+    private var icon: Icon? = null
 
     fun update() {
         icon = provider()
     }
 
-    override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) = icon.paintIcon(c, g, x, y)
-    override fun getIconWidth(): Int = icon.iconWidth
-    override fun getIconHeight(): Int = icon.iconHeight
+    private fun getOrCreateIcon(): Icon {
+        if (icon == null) icon = provider()
+        return icon!!
+    }
+
+    override fun paintIcon(c: Component?, g: Graphics?, x: Int, y: Int) {
+        getOrCreateIcon().paintIcon(c, g, x, y)
+    }
+
+    override fun getIconWidth(): Int = getOrCreateIcon().iconWidth
+    override fun getIconHeight(): Int = getOrCreateIcon().iconHeight
 }
 
-internal fun Ikon.adaptive(size: Int = 16): Icon = AdaptiveIcon {
-    FontIcon.of(this, size, UIManager.getColor("Label.foreground"))
+internal fun Ikon.adaptive( // @formatter:off
+    size: Int = 16,
+    colorGetter: () -> Color = { UIManager.getColor("Label.foreground") }
+): AdaptiveIcon = AdaptiveIcon { // @formatter:on
+    FontIcon.of(this, size, colorGetter())
 }
 
-internal fun FlatSVGIcon.adaptive(): Icon = AdaptiveIcon {
+internal fun FlatSVGIcon.adaptive(): AdaptiveIcon = AdaptiveIcon {
     val color = UIManager.getColor("Label.foreground")
     colorFilter = FlatSVGIcon.ColorFilter { color }
     this@adaptive

@@ -28,7 +28,7 @@ import javax.swing.UIManager
 
 internal class ConnectionListCell( // @formatter:off
     private val agentHolder: AgentHolder,
-    private val isSelected: Boolean
+    isSelected: Boolean
 ) : JPanel(MigLayout("nogrid, insets 0, aligny center")) { // @formatter:on
     object CellRenderer : ListCellRenderer<AgentHolder> {
         override fun getListCellRendererComponent( // @formatter:off
@@ -42,24 +42,23 @@ internal class ConnectionListCell( // @formatter:off
 
     init {
         border = BorderFactory.createEmptyBorder(4, 4, 4, 4)
-        val icon = if (agentHolder.isConnected) MaterialDesign.MDI_POWER_PLUG.adaptive(24)
-        else MaterialDesign.MDI_POWER_PLUG_OFF.adaptive(24)
         background = if (isSelected) UIManager.getColor("List.selectionBackground")
         else UIManager.getColor("List.background")
+        foreground = when {
+            isSelected -> UIManager.getColor("List.selectionForeground")
+            else -> UIManager.getColor("List.foreground")
+        }
+        val icon = if (agentHolder.isConnected) MaterialDesign.MDI_POWER_PLUG.adaptive(24) { foreground }
+        else MaterialDesign.MDI_POWER_PLUG_OFF.adaptive(24) { foreground }
         add(AdaptiveLabel(icon = icon))
         add(JPanel(MigLayout("nogrid, insets 0, aligny center")).apply {
             isOpaque = false // This is only for grouping, not for visuals
             add(AdaptiveLabel(agentHolder.agent.clientId.toString()).apply {
-                foreground = when {
-                    !agentHolder.isConnected -> if (isSelected) UIManager.getColor("List.selectionInactiveForeground")
-                    else UIManager.getColor("List.inactiveForeground")
-
-                    isSelected -> UIManager.getColor("List.selectionForeground")
-                    else -> UIManager.getColor("List.foreground")
-                }
+                foreground = this@ConnectionListCell.foreground
             }, "w 100%, wrap")
-            val address = "Address: ${agentHolder.channel.remoteAddress()}"
-            add(AdaptiveLabel(address), "w 100%")
+            add(AdaptiveLabel("Address: ${agentHolder.channel.remoteAddress()}").apply {
+                foreground = this@ConnectionListCell.foreground
+            }, "w 100%")
         })
     }
 }
