@@ -128,6 +128,13 @@ internal class MonitorWindow( // @formatter:off
     private val connectionListModel: DefaultListModel<AgentHolder> = DefaultListModel()
     private val connectionList: JList<AgentHolder> = JList(connectionListModel).apply {
         cellRenderer = ConnectionListCell.CellRenderer
+        addListSelectionListener { event ->
+            if (event.valueIsAdjusting) return@addListSelectionListener
+            removeConnectionButton.isEnabled = selectedValuesList.none { it.isConnected }
+            removeConnectionButton.repaint()
+            inspectConnectionButton.isEnabled = true
+            inspectConnectionButton.repaint()
+        }
     }
     private val connectionListSearchControls: SearchControls<AgentHolder> = connectionList.createSearchControls()
 
@@ -255,6 +262,36 @@ internal class MonitorWindow( // @formatter:off
             isEnabled = false
         }
 
+    private val inspectConnectionButton: AdaptiveButton =
+        AdaptiveButton(icon = MaterialDesign.MDI_MAGNIFY.adaptive()).apply {
+            isEnabled = false
+            addActionListener {
+                for (holder in connectionList.selectedValuesList) {
+                    if (holder.tabIndex != AgentHolder.CLOSED_TAB_INDEX) continue
+                    addAgentTab(holder)
+                }
+            }
+        }
+
+    private val removeConnectionButton: AdaptiveButton =
+        AdaptiveButton(icon = MaterialDesign.MDI_DELETE.adaptive()).apply {
+            isEnabled = false
+            addActionListener {
+                for (index in connectionList.selectedIndices) {
+                    val holder = connectionListModel.get(index)
+                    if (holder.tabIndex != AgentHolder.CLOSED_TAB_INDEX) {
+                        tabbedPane.remove(holder.tabIndex)
+                        tabbedPane.revalidate()
+                        tabbedPane.repaint()
+                    }
+                    connectionListModel.remove(index)
+                    connectionList.revalidate()
+                    connectionList.repaint()
+                }
+                updateTabIndices()
+            }
+        }
+
     init {
         val settings = settingsHolder.settings
         val hasDefaultPosition = settings.windowX == -1 || settings.windowY == -1
@@ -327,31 +364,8 @@ internal class MonitorWindow( // @formatter:off
     private fun JPanel.setupConnectionsPanel() {
         border = BorderFactory.createTitledBorder("Connections")
         add(JScrollPane(connectionList), "w 100%, h 100%, wrap")
-        add(AdaptiveButton(icon = MaterialDesign.MDI_MAGNIFY.adaptive()).apply {
-            addActionListener {
-                for (index in connectionList.selectedIndices) {
-                    val holder = connectionListModel.get(index)
-                    if (holder.tabIndex != AgentHolder.CLOSED_TAB_INDEX) continue
-                    addAgentTab(holder)
-                }
-            }
-        })
-        add(AdaptiveButton(icon = MaterialDesign.MDI_DELETE.adaptive()).apply {
-            addActionListener {
-                for (index in connectionList.selectedIndices) {
-                    val holder = connectionListModel.get(index)
-                    if (holder.tabIndex != AgentHolder.CLOSED_TAB_INDEX) {
-                        tabbedPane.remove(holder.tabIndex)
-                        tabbedPane.revalidate()
-                        tabbedPane.repaint()
-                    }
-                    connectionListModel.remove(index)
-                    connectionList.revalidate()
-                    connectionList.repaint()
-                }
-                updateTabIndices()
-            }
-        })
+        add(inspectConnectionButton)
+        add(removeConnectionButton)
         add(connectionListSearchControls, "w 100%")
     }
 
