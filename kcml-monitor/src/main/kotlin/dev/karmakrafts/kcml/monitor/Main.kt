@@ -34,13 +34,14 @@ fun main() {
     JDialog.setDefaultLookAndFeelDecorated(true)
     UIManager.put("TitlePane.showIcon", true)
     val userHome = Path(System.getProperty("user.home"))
+    val debugEnabled = System.getProperty("kcmlmon.debug", "false").toBoolean()
     val workingDir = userHome / ".kcmlmon"
     if (!workingDir.exists()) workingDir.createDirectories()
     val settingsFilePath = workingDir / "settings.json"
     val settingsHolder = SettingsHolder.load(settingsFilePath)
     SwingUtilities.invokeLater {
         val executor = Executors.newVirtualThreadPerTaskExecutor()
-        val window = MonitorWindow(settingsHolder, executor)
+        val window = MonitorWindow(settingsHolder, executor, debugEnabled)
         Runtime.getRuntime().addShutdownHook(Thread {
             executor.shutdown()
             settingsHolder.save()

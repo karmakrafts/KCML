@@ -21,9 +21,24 @@ import dev.karmakrafts.kcml.monitor.protocol.c2s.C2SLogPacket;
 
 import java.time.Instant;
 
-public record RemoteLogger(MonitorClient client) implements Logger {
+public final class RemoteLogger implements Logger {
+    private final MonitorClient client;
+    private MonitorLogLevel level = MonitorLogLevel.INFO;
+
+    public RemoteLogger(final MonitorClient client) {
+        this.client = client;
+    }
+
     @Override
     public void log(final MonitorLogLevel level, final String message) {
+        if (level.ordinal() < this.level.ordinal()) {
+            return;
+        }
         client.sendPacket(new C2SLogPacket(client.id, Instant.now(), level, message));
+    }
+
+    @Override
+    public void setLevel(final MonitorLogLevel level) {
+        this.level = level;
     }
 }

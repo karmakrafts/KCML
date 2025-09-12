@@ -25,4 +25,7 @@ public final class NoopLogger implements Logger {
     @Override
     public void log(final MonitorLogLevel level, final String message) {
     }
+
+    @Override
+    public void setLevel(final MonitorLogLevel level) {}
 }

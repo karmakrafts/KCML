@@ -107,7 +107,9 @@ internal class MockAgentWindow(
 
     private val consoleTextArea: ConsoleTextArea = ConsoleTextArea()
     private val consoleSearchControls: SearchControls<String> = consoleTextArea.createSearchControls()
-    private val logger: UILogger = UILogger(consoleTextArea)
+    private val logger: UILogger = UILogger(consoleTextArea).apply {
+        if (owner.debugEnabled) setLevel(MonitorLogLevel.DEBUG)
+    }
 
     private val client: MonitorClient = MonitorClient(logger).apply {
         onError { error -> logger.error(error.stackTraceToString()) }

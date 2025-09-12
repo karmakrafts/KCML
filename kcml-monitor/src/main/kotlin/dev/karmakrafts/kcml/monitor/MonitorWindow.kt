@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.monitor
 import com.formdev.flatlaf.extras.FlatSVGUtils
 import com.formdev.flatlaf.intellijthemes.FlatAllIJThemes
 import dev.karmakrafts.kcml.monitor.protocol.log.Logger
+import dev.karmakrafts.kcml.monitor.protocol.log.MonitorLogLevel
 import dev.karmakrafts.kcml.monitor.protocol.log.NoopLogger
 import dev.karmakrafts.kcml.monitor.server.Agent
 import dev.karmakrafts.kcml.monitor.server.MonitorServer
@@ -38,6 +39,7 @@ import dev.karmakrafts.kcml.monitor.ui.addClosableTab
 import dev.karmakrafts.kcml.monitor.ui.createSearchControls
 import dev.karmakrafts.kcml.monitor.util.AgentHolder
 import dev.karmakrafts.kcml.monitor.util.PositiveIntFilter
+import dev.karmakrafts.kcml.monitor.util.Settings
 import dev.karmakrafts.kcml.monitor.util.SettingsHolder
 import dev.karmakrafts.kcml.monitor.util.UILogger
 import dev.karmakrafts.kcml.monitor.util.onTextChanged
@@ -58,6 +60,7 @@ import java.util.concurrent.ExecutorService
 import javax.swing.BorderFactory
 import javax.swing.ButtonGroup
 import javax.swing.DefaultListModel
+import javax.swing.JFileChooser
 import javax.swing.JFrame
 import javax.swing.JList
 import javax.swing.JMenuBar
@@ -69,14 +72,16 @@ import javax.swing.JSplitPane
 import javax.swing.JTabbedPane
 import javax.swing.LookAndFeel
 import javax.swing.SwingUtilities
+import javax.swing.filechooser.FileNameExtensionFilter
 import javax.swing.text.AbstractDocument
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
 
 @OptIn(ExperimentalAtomicApi::class)
 internal class MonitorWindow( // @formatter:off
     val settingsHolder: SettingsHolder,
-    val executor: ExecutorService
-) : JFrame("KCML Monitor") { // @formatter:on
+    val executor: ExecutorService,
+    val debugEnabled: Boolean
+) : JFrame("KCML Monitor${if(debugEnabled) " (Debug)" else ""}") { // @formatter:on
     // @formatter:off
     val lafs: Map<String, LookAndFeel> = FlatAllIJThemes.INFOS.asSequence()
         .mapNotNull(::tryLoadLookAndFeel)
@@ -111,7 +116,9 @@ internal class MonitorWindow( // @formatter:off
 
     private val serverLogTextArea: ConsoleTextArea = ConsoleTextArea()
     private val serverLogSearchControls: SearchControls<String> = serverLogTextArea.createSearchControls()
-    val logger: UILogger = UILogger(serverLogTextArea)
+    val logger: UILogger = UILogger(serverLogTextArea).apply {
+        if (debugEnabled) setLevel(MonitorLogLevel.DEBUG)
+    }
 
     private val tabbedPane: AdaptiveTabbedPane =
         AdaptiveTabbedPane(JTabbedPane.TOP, JTabbedPane.SCROLL_TAB_LAYOUT).apply {
@@ -166,21 +173,10 @@ internal class MonitorWindow( // @formatter:off
             return@invokeLater
         }
         // Otherwise we have to add it as a new AgentHolder
-        val tabName = agent.clientId.toString()
         holder = AgentHolder(true, agent, channel)
-        val panel = AgentPanel(executor, server, holder, settingsHolder)
+        val panel = AgentPanel(executor, server, holder, settingsHolder, debugEnabled)
         holder.panel = panel
-        tabbedPane.addClosableTab( // @formatter:off
-            title = tabName,
-            icon = MaterialDesign.MDI_POWER_PLUG.adaptive(),
-            panel = panel,
-            closeCallback = { index ->
-                (tabbedPane.getComponentAt(index) as AgentPanel).agentHolder.tabIndex = AgentHolder.CLOSED_TAB_INDEX
-            }
-        ) // @formatter:on
-        holder.tabIndex = tabbedPane.indexOfTab(tabName)
-        tabbedPane.revalidate()
-        tabbedPane.repaint()
+        addAgentTab(holder)
         connectionListModel.addElement(holder)
         updateConnections()
     }
@@ -300,6 +296,34 @@ internal class MonitorWindow( // @formatter:off
         add(stopButton, "w 100%, h 24px")
     }
 
+    private fun addAgentTab(holder: AgentHolder) {
+        val icon = if (holder.isConnected) MaterialDesign.MDI_POWER_PLUG.adaptive()
+        else MaterialDesign.MDI_POWER_PLUG_OFF.adaptive()
+        tabbedPane.addClosableTab( // @formatter:off
+            title = holder.agent.clientId.toString(),
+            icon = icon,
+            component = holder.panel,
+            closingCallback = { index ->
+                (tabbedPane.getComponentAt(index) as AgentPanel).agentHolder.tabIndex =
+                    AgentHolder.CLOSED_TAB_INDEX
+                logger.debug("Invalidating tab index")
+            },
+            closeCallback = { updateTabIndices() }
+        ) // @formatter:on
+        holder.tabIndex = tabbedPane.indexOfComponent(holder.panel)
+        tabbedPane.revalidate()
+        tabbedPane.repaint()
+    }
+
+    private fun updateTabIndices() {
+        for (i in 0..<tabbedPane.tabCount) {
+            val panel = tabbedPane.getComponentAt(i) as? AgentPanel ?: continue
+            connectionListModel.elements().asSequence().find { holder -> holder.panel === panel }?.tabIndex =
+                tabbedPane.indexOfComponent(panel)
+        }
+        logger.debug("Updated tab indices")
+    }
+
     private fun JPanel.setupConnectionsPanel() {
         border = BorderFactory.createTitledBorder("Connections")
         add(JScrollPane(connectionList), "w 100%, h 100%, wrap")
@@ -308,21 +332,7 @@ internal class MonitorWindow( // @formatter:off
                 for (index in connectionList.selectedIndices) {
                     val holder = connectionListModel.get(index)
                     if (holder.tabIndex != AgentHolder.CLOSED_TAB_INDEX) continue
-                    val tabName = holder.agent.clientId.toString()
-                    val icon = if (holder.isConnected) MaterialDesign.MDI_POWER_PLUG.adaptive()
-                    else MaterialDesign.MDI_POWER_PLUG_OFF.adaptive()
-                    tabbedPane.addClosableTab( // @formatter:off
-                        title = tabName,
-                        icon = icon,
-                        panel = holder.panel,
-                        closeCallback = {
-                            (tabbedPane.getComponentAt(index) as AgentPanel).agentHolder.tabIndex =
-                                AgentHolder.CLOSED_TAB_INDEX
-                        }
-                    ) // @formatter:on
-                    holder.tabIndex = tabbedPane.indexOfTab(tabName)
-                    tabbedPane.revalidate()
-                    tabbedPane.repaint()
+                    addAgentTab(holder)
                 }
             }
         })
@@ -339,6 +349,7 @@ internal class MonitorWindow( // @formatter:off
                     connectionList.revalidate()
                     connectionList.repaint()
                 }
+                updateTabIndices()
             }
         })
         add(connectionListSearchControls, "w 100%")
@@ -402,6 +413,9 @@ internal class MonitorWindow( // @formatter:off
     private fun setupMenuBar() {
         jMenuBar = JMenuBar().apply {
             add(AdaptiveMenu("File").apply {
+                add(AdaptiveMenuItem("Mock Agent", MaterialDesign.MDI_LAN_CONNECT.adaptive()).apply {
+                    addActionListener { MockAgentWindow.show(this@MonitorWindow) }
+                })
                 add(AdaptiveMenu("Theme").apply {
                     icon = MaterialDesign.MDI_PALETTE.adaptive()
                     val group = ButtonGroup()
@@ -417,8 +431,32 @@ internal class MonitorWindow( // @formatter:off
                         add(button)
                     }
                 })
-                add(AdaptiveMenuItem("Mock Agent", MaterialDesign.MDI_LAN_CONNECT.adaptive()).apply {
-                    addActionListener { MockAgentWindow.show(this@MonitorWindow) }
+                addSeparator()
+                add(AdaptiveMenuItem("Reset settings", MaterialDesign.MDI_SETTINGS.adaptive()).apply {
+                    addActionListener {
+                        settingsHolder.update { Settings() }
+                        logger.debug("Reset settings to default values")
+                    }
+                })
+                add(AdaptiveMenuItem("Export settings", MaterialDesign.MDI_EXPORT.adaptive()).apply {
+                    addActionListener {
+                        val dialog = JFileChooser().apply {
+                            fileFilter = FileNameExtensionFilter("Settings file (JSON)", "json")
+                            showDialog(parent, "Export")
+                        }
+                        val path = dialog.selectedFile?.toPath() ?: return@addActionListener
+                        settingsHolder.save(path)
+                    }
+                })
+                add(AdaptiveMenuItem("Import settings", MaterialDesign.MDI_IMPORT.adaptive()).apply {
+                    addActionListener {
+                        val dialog = JFileChooser().apply {
+                            fileFilter = FileNameExtensionFilter("Settings file (JSON)", "json")
+                            showDialog(parent, "Import")
+                        }
+                        val path = dialog.selectedFile?.toPath() ?: return@addActionListener
+                        settingsHolder.load(path)
+                    }
                 })
                 addSeparator()
                 add(AdaptiveMenuItem("Exit", MaterialDesign.MDI_EXIT_TO_APP.adaptive()).apply {

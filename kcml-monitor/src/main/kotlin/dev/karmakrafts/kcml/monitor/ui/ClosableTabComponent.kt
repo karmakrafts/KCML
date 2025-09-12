@@ -26,6 +26,7 @@ import javax.swing.JTabbedPane
 
 internal class ClosableTabComponent( // @formatter:off
     private val parent: JTabbedPane,
+    private val closingCallback: (Int) -> Unit,
     private val closeCallback: (Int) -> Unit
 ) : JPanel() { // @formatter:on
     inline val index: Int
@@ -51,10 +52,11 @@ internal class ClosableTabComponent( // @formatter:off
         add(AdaptiveButton().apply {
             icon = MaterialDesign.MDI_CLOSE_CIRCLE.adaptive(12)
             addActionListener {
-                closeCallback(index)
+                closingCallback(index)
                 this@ClosableTabComponent.parent.remove(index)
-                this@ClosableTabComponent.parent.repaint()
                 this@ClosableTabComponent.parent.revalidate()
+                this@ClosableTabComponent.parent.repaint()
+                closeCallback(index)
             }
         })
     }
@@ -63,12 +65,13 @@ internal class ClosableTabComponent( // @formatter:off
 internal inline fun JTabbedPane.addClosableTab( // @formatter:off
     title: String,
     icon: Icon? = null,
-    panel: Component,
+    component: Component,
     init: ClosableTabComponent.() -> Unit = {},
+    noinline closingCallback: (Int) -> Unit,
     noinline closeCallback: (Int) -> Unit = {}
 ): ClosableTabComponent { // @formatter:on
-    addTab(title, icon, panel)
-    val tab = ClosableTabComponent(this, closeCallback).apply(init)
+    addTab(title, icon, component)
+    val tab = ClosableTabComponent(this, closingCallback, closeCallback).apply(init)
     setTabComponentAt(tabCount - 1, tab)
     tab.setupTabComponents()
     return tab

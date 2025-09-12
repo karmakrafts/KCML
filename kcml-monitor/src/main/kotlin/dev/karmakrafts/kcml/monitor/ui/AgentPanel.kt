@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.monitor.ui
 
+import dev.karmakrafts.kcml.monitor.protocol.log.MonitorLogLevel
 import dev.karmakrafts.kcml.monitor.server.Agent
 import dev.karmakrafts.kcml.monitor.server.MonitorServer
 import dev.karmakrafts.kcml.monitor.util.AgentHolder
@@ -35,7 +36,8 @@ internal class AgentPanel(
     val executor: ExecutorService,
     val server: MonitorServer,
     val agentHolder: AgentHolder,
-    val settingsHolder: SettingsHolder
+    val settingsHolder: SettingsHolder,
+    val debugEnabled: Boolean
 ) : JSplitPane(HORIZONTAL_SPLIT) {
     private fun Map<*, *>.getPreviewString(): String {
         var result = ""
@@ -49,7 +51,9 @@ internal class AgentPanel(
 
     private val consoleTextArea: ConsoleTextArea = ConsoleTextArea()
     private val consoleSearchControls: SearchControls<String> = consoleTextArea.createSearchControls()
-    val logger: UILogger = UILogger(consoleTextArea)
+    val logger: UILogger = UILogger(consoleTextArea).apply {
+        if (debugEnabled) setLevel(MonitorLogLevel.DEBUG)
+    }
 
     private val jvmOptionsTextArea: JTextArea = JTextArea(agent.jvmOptions.getPreviewString()).apply {
         isEditable = false

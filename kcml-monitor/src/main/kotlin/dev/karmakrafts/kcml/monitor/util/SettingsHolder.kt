@@ -30,8 +30,8 @@ import kotlin.io.path.exists
 
 @OptIn(ExperimentalAtomicApi::class)
 internal class SettingsHolder( // @formatter:off
-    settings: Settings,
-    val path: Path
+    val path: Path,
+    settings: Settings = Settings()
 ) { // @formatter:on
     companion object {
         @OptIn(ExperimentalSerializationApi::class)
@@ -43,24 +43,32 @@ internal class SettingsHolder( // @formatter:off
         }
 
         @OptIn(ExperimentalSerializationApi::class)
-        fun load(path: Path): SettingsHolder {
-            val settings = if (path.exists()) Files.newInputStream(path, StandardOpenOption.READ).use { stream ->
-                codec.decodeFromStream<Settings>(stream)
-            }
-            else Settings()
-            return SettingsHolder(settings, path)
+        fun load(path: Path): SettingsHolder = SettingsHolder(path).apply {
+            load(path)
         }
     }
 
     private val _settings: AtomicReference<Settings> = AtomicReference(settings)
-    inline val settings: Settings get() = _settings.load()
+    inline var settings: Settings
+        get() = _settings.load()
+        private set(value) {
+            _settings.store(value)
+        }
 
     inline fun update(block: (Settings) -> Settings) {
-        _settings.store(block(_settings.load()))
+        settings = block(settings)
     }
 
     @OptIn(ExperimentalSerializationApi::class)
-    fun save() {
+    fun load(path: Path) {
+        if (!path.exists()) return
+        settings = Files.newInputStream(path, StandardOpenOption.READ).use { stream ->
+            codec.decodeFromStream<Settings>(stream)
+        }
+    }
+
+    @OptIn(ExperimentalSerializationApi::class)
+    fun save(path: Path = this.path) {
         path.deleteIfExists()
         Files.newOutputStream(path, StandardOpenOption.CREATE_NEW, StandardOpenOption.WRITE).use { stream ->
             codec.encodeToStream(settings, stream)

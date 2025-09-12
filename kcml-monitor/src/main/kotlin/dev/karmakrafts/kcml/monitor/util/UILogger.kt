@@ -24,11 +24,18 @@ import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 
 internal class UILogger(val textArea: JTextArea) : Logger {
+    private var level: MonitorLogLevel = MonitorLogLevel.INFO
+
     override fun log(level: MonitorLogLevel, message: String) {
+        if (level < this.level) return
         val threadName = Thread.currentThread().name
         val timestamp = ZonedDateTime.now().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME)
         SwingUtilities.invokeLater {
             textArea.append("[$timestamp]${level.consoleMarker}[$threadName] $message\n")
         }
+    }
+
+    override fun setLevel(level: MonitorLogLevel) {
+        this.level = level
     }
 }

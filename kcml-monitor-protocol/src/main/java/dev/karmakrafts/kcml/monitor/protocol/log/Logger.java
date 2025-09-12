@@ -16,9 +16,10 @@
 
 package dev.karmakrafts.kcml.monitor.protocol.log;
 
-@FunctionalInterface
 public interface Logger {
-    void log(MonitorLogLevel level, String message);
+    void setLevel(final MonitorLogLevel level);
+
+    void log(final MonitorLogLevel level, final String message);
 
     default void debug(final String message, final Object... args) {
         log(MonitorLogLevel.DEBUG, String.format(message, args));

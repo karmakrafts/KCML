@@ -47,6 +47,9 @@ tasks {
     withType<ProcessResources>().configureEach {
         dependsOn(generateLicenseData)
     }
+    named<JavaExec>("run") {
+        jvmArgs = listOf("-Dkcmlmon.debug=true")
+    }
 }
 
 kotlin {
