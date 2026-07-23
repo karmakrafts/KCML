@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.dokka.configureDokka
+import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
-import java.time.ZonedDateTime
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
@@ -29,6 +30,12 @@ plugins {
     `maven-publish`
 }
 
+configureDokka {
+    withKotlin()
+    withKotlinGradle()
+    withGradle()
+}
+
 configureJava(rootProject.libs.versions.java)
 
 dependencies {
@@ -37,6 +44,7 @@ dependencies {
 }
 
 kotlin {
+    defaultCompilerOptions()
     sourceSets {
         main {
             resources.srcDir("build/generated")
@@ -45,7 +53,9 @@ kotlin {
 }
 
 tasks {
-    val createVersionFile by registering {
+    val createVersionFile = register("createVersionFile") {
+        group = "build"
+        description = "Generate the version file embedded in the finished plugin JAR"
         doFirst {
             val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
             path.deleteIfExists()
@@ -74,35 +84,10 @@ gradlePlugin {
     }
 }
 
-dokka {
-    moduleName = project.name
-    pluginsConfiguration {
-        html {
-            footerMessage = "(c) ${ZonedDateTime.now().year} Karma Krafts & associates"
-        }
-    }
-}
-
-val dokkaJar by tasks.registering(Jar::class) {
-    dependsOn(tasks.dokkaGeneratePublicationHtml)
-    from(tasks.dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
-    archiveClassifier.set("javadoc")
-}
-
-tasks {
-    System.getProperty("publishDocs.root")?.let { docsDir ->
-        register("publishDocs", Copy::class) {
-            dependsOn(dokkaJar)
-            mustRunAfter(dokkaJar)
-            from(zipTree(dokkaJar.get().outputs.files.first()))
-            into("$docsDir/${project.name}")
-        }
-    }
-}
-
 publishing {
-    publications.withType<MavenPublication> {
-        artifact(dokkaJar)
-    }
-    setProjectInfo("KCML Gradle Plugin", "Gradle plugin for the Kotlin Compiler Meta Loader")
+    setProjectInfo(
+        name = "KCML Gradle Plugin",
+        description = "Gradle plugin for the Kotlin Compiler Meta Loader",
+        url = "https://git.karmakrafts.dev/kk/kcml"
+    )
 }

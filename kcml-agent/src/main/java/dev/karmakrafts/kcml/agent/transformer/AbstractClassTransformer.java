@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,6 @@
 package dev.karmakrafts.kcml.agent.transformer;
 
 import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
-import dev.karmakrafts.kcml.monitor.protocol.MonitorClient;
-import dev.karmakrafts.kcml.monitor.protocol.log.Logger;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Opcodes;
@@ -30,14 +28,6 @@ import java.time.Duration;
 import java.time.Instant;
 
 public abstract class AbstractClassTransformer implements ClassFileTransformer {
-    protected final MonitorClient client;
-    protected final Logger logger;
-
-    protected AbstractClassTransformer(final MonitorClient client, final Logger logger) {
-        this.client = client;
-        this.logger = logger;
-    }
-
     protected abstract boolean shouldTransform(final String className);
 
     protected abstract void transform(final ClassNode classNode);
@@ -51,31 +41,22 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
                             final byte[] classfileBuffer) {
         if (className == null || className.startsWith("java/") || className.startsWith("jdk/") || className.startsWith(
             "org/objectweb/") || className.startsWith("dev/karmakrafts/kcml/")) {
-            logger.debug("Skipping transformation of class %s", className);
             return classfileBuffer;
         }
         if (shouldTransform(className)) {
-            logger.info("Transforming class %s", className);
             final var startTime = Instant.now();
             final var reader = new ClassReader(classfileBuffer);
             final var classNode = new ClassNode(Opcodes.ASM5);
             reader.accept(classNode, 0);
-            try {
-                transform(classNode);
-            }
-            catch (Throwable error) {
-                client.sendExceptionPacket(error);
-            }
+            transform(classNode);
             final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
             classNode.accept(writer);
             final var time = Duration.between(startTime, Instant.now()).toMillis();
-            logger.info("Transformed class %s in %dms", className, time);
             final var transformedBytes = writer.toByteArray();
             // TODO: reimplement this
             //client.sendClassTransformedPacket(className, loader.getName(), classfileBuffer, transformedBytes);
             return transformedBytes;
         }
-        logger.debug("Skipping transformation of class %s", className);
         return classfileBuffer;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
+import java.time.Duration
+
 rootProject.name = "kcml"
-enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {
     repositories {
@@ -37,8 +38,24 @@ dependencyResolutionManagement {
     }
 }
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver") version "1.0.0"
+    id("com.gradleup.nmcp.settings") version "1.6.1"
+}
+
+nmcpSettings {
+    providers.environmentVariable("OSSRH_USERNAME").orNull?.let { username ->
+        centralPortal {
+            uploadSnapshotsParallelism = Runtime.getRuntime().availableProcessors() * 4
+            this.username = username
+            password = providers.environmentVariable("OSSRH_PASSWORD").get()
+            validationTimeout = Duration.ofMinutes(30)
+        }
+    }
+}
+
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include("kcml-agent")
 include("kcml-gradle-plugin")
 include("kcml-compiler-plugin")
-include("kcml-monitor-protocol")
-include("kcml-monitor")
+include("kcml-plugin-api")

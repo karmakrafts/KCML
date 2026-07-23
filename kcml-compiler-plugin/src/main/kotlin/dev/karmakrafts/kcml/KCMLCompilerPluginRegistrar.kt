@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,8 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
-import dev.karmakrafts.kcml.plugin.PluginLoader
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
-import dev.karmakrafts.kcml.util.kcmlAgentMonitor
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -29,11 +28,11 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        AgentInjector.inject(mapOf("monitor" to configuration.kcmlAgentMonitor.toString()))
+        AgentInjector.inject()
         registerDisposable(AgentInjector::cleanup)
-
-        with(PluginLoader) { loadAndInvoke(configuration) }
+        with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
 
+    override val pluginId: String get() = KCMLConstants.PLUGIN_ID
     override val supportsK2: Boolean = true
 }

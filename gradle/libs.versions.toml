@@ -2,24 +2,19 @@
 
 java = "21"
 
+kotlinBootstrap = "2.4.0" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
+kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
+
 kcml = "1.0.0"
-iridium = "1.8.0" # https://github.com/karmakrafts/Iridium/tags
-kotlin = "2.2.20" # https://github.com/JetBrains/kotlin/releases
-kotlinx-serialization = "1.9.0" # https://github.com/Kotlin/kotlinx.serialization/releases
-dokka = "2.1.0-Beta" # https://github.com/Kotlin/dokka/releases"
-karmaConventions = "1.7.0" # https://github.com/karmakrafts/karma-conventions/tags
+iridium = "1.13.2" # https://github.com/karmakrafts/Iridium/tags
+kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
+dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
+karmaConventions = "1.18.3" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
-gradleNexus = "2.0.0" # https://github.com/gradle-nexus/publish-plugin/releases
+semver = "3.1.0" # https://github.com/z4kn4fein/kotlin-semver/releases
+ow2asm = "9.10.1" # https://gitlab.ow2.org/asm/asm/-/tags
+shadow = "9.6.0" # https://github.com/GradleUp/shadow/releases
 kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
-semver = "3.0.0" # https://github.com/z4kn4fein/kotlin-semver/releases
-ow2asm = "9.8" # https://gitlab.ow2.org/asm/asm/-/tags
-shadow = "9.1.0" # https://github.com/GradleUp/shadow/releases
-flatlaf = "3.6.1" # https://github.com/JFormDesigner/FlatLaf/releases
-miglayout = "11.4.2" # https://github.com/mikaelgrev/miglayout/releases
-graphviz = "0.18.1" # https://github.com/nidi3/graphviz-java/releases
-ikonli = "12.4.0" # https://github.com/kordamp/ikonli/releases
-aboutLibraries = "12.2.4" # https://github.com/mikepenz/AboutLibraries/releases
-netty = "5.0.0.Alpha2" # https://github.com/netty/netty/tags
 
 [libraries]
 
@@ -28,32 +23,26 @@ kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-em
 kotlin-native-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-native-compiler-embeddable", version.ref = "kotlin" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlin" }
+
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinx-serialization" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinx-serialization" }
-autoService = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
+
+autoService-processor = { module = "com.google.auto.service:auto-service", version.ref = "autoService" }
+autoService-annotations = { module = "com.google.auto.service:auto-service-annotations", version.ref = "autoService" }
+
 iridium = { module = "dev.karmakrafts.iridium:iridium", version.ref = "iridium" }
-kotlinGraphs = { module = "io.github.alexandrepiveteau:kotlin-graphs", version.ref = "kotlinGraphs" }
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
+kotlinGraphs = { module = "io.github.alexandrepiveteau:kotlin-graphs", version.ref = "kotlinGraphs" }
+
 ow2-asm-core = { module = "org.ow2.asm:asm", version.ref = "ow2asm" }
 ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }
-flatlaf-core = { module = "com.formdev:flatlaf", version.ref = "flatlaf" }
-flatlaf-extras = { module = "com.formdev:flatlaf-extras", version.ref = "flatlaf" }
-flatlaf-intellijThemes = { module = "com.formdev:flatlaf-intellij-themes", version.ref = "flatlaf" }
-miglayout-swing = { module = "com.miglayout:miglayout-swing", version.ref = "miglayout" }
-graphviz = { module = "guru.nidi:graphviz-java", version.ref = "graphviz" }
-ikonli-core = { module = "org.kordamp.ikonli:ikonli-core", version.ref = "ikonli" }
-ikonli-swing = { module = "org.kordamp.ikonli:ikonli-swing", version.ref = "ikonli" }
-ikonli-materialdesign = { module = "org.kordamp.ikonli:ikonli-materialdesign-pack", version.ref = "ikonli" }
-aboutLibraries-core = { module = "com.mikepenz:aboutlibraries-core", version.ref = "aboutLibraries" }
-netty-all = { module = "io.netty:netty-all", version.ref = "netty" }
 
 [plugins]
 
-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
-kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinBootstrap" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinBootstrap" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinBootstrap" }
+
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
-gradleNexus = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "gradleNexus" }
 karmaConventions = { id = "dev.karmakrafts.conventions.karma-conventions", version.ref = "karmaConventions" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
-aboutLibraries-plugin = { id = "com.mikepenz.aboutlibraries.plugin", version.ref = "aboutLibraries" }

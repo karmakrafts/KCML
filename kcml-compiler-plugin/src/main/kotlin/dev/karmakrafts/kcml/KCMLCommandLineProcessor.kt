@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
-import dev.karmakrafts.kcml.util.kcmlAgentMonitor
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
-import org.jetbrains.kotlin.cli.common.toBooleanLenient
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
@@ -33,27 +31,21 @@ import kotlin.io.path.Path
 class KCMLCommandLineProcessor : CommandLineProcessor {
     companion object {
         private const val PLUGIN_CLASSPATHS: String = "pluginClasspaths"
-        private const val AGENT_MONITOR: String = "agentMonitor"
     }
 
-    override val pluginId: String = "kcml"
+    override val pluginId: String get() = KCMLConstants.PLUGIN_ID
 
     override val pluginOptions: Collection<AbstractCliOption> = listOf(
         CliOption(
             optionName = PLUGIN_CLASSPATHS,
             valueDescription = "<string>",
             description = "File paths to all JARs added to the KCML plugin class loader"
-        ), CliOption(
-            optionName = AGENT_MONITOR,
-            valueDescription = "<true|false>",
-            description = "Whether the KCML agent will attempt to connect to a local monitor"
         )
     )
 
     override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
         when (option.optionName) {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
-            AGENT_MONITOR -> configuration.kcmlAgentMonitor = value.toBooleanLenient() == true
         }
     }
 }

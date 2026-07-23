@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,17 +22,10 @@ import java.nio.file.Path
 
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
-    val agentMonitor: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentMonitor")
 }
 
 internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
     get() = get(KCMLConfigurationKeys.pluginClasspaths) ?: emptyList()
     set(value) {
         put(KCMLConfigurationKeys.pluginClasspaths, value)
-    }
-
-internal var CompilerConfiguration.kcmlAgentMonitor: Boolean
-    get() = get(KCMLConfigurationKeys.agentMonitor) ?: false
-    set(value) {
-        put(KCMLConfigurationKeys.agentMonitor, value)
     }

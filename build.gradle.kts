@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 import dev.karmakrafts.conventions.GitLabCI
 import dev.karmakrafts.conventions.apache2License
-import dev.karmakrafts.conventions.authenticatedSonatype
 import dev.karmakrafts.conventions.defaultDependencyLocking
 import dev.karmakrafts.conventions.setRepository
 import dev.karmakrafts.conventions.signPublications
-import java.time.Duration
 
 plugins {
     alias(libs.plugins.dokka) apply false
@@ -28,19 +26,19 @@ plugins {
     alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.kotlin.serialization) apply false
     alias(libs.plugins.shadow) apply false
-    alias(libs.plugins.aboutLibraries.plugin) apply false
     alias(libs.plugins.karmaConventions)
     signing
     `maven-publish`
-    alias(libs.plugins.gradleNexus)
 }
 
 group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 
 subprojects {
-    apply<PublishingPlugin>()
-    apply<SigningPlugin>()
+    apply {
+        plugin<PublishingPlugin>()
+        plugin<SigningPlugin>()
+    }
 
     group = rootProject.group
     version = rootProject.version
@@ -55,10 +53,4 @@ subprojects {
     signing {
         signPublications()
     }
-}
-
-nexusPublishing {
-    authenticatedSonatype()
-    connectTimeout = Duration.ofSeconds(30)
-    clientTimeout = Duration.ofMinutes(60)
 }

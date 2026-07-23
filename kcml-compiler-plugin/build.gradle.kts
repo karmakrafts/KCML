@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 Karma Krafts & associates
+ * Copyright 2026 Karma Krafts
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,13 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
-import java.time.ZonedDateTime
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.dokka)
     alias(libs.plugins.shadow)
     `maven-publish`
 }
@@ -33,8 +32,17 @@ java {
     withSourcesJar()
 }
 
-val shadeImplementation by configurations.creating { isTransitive = false }
-val shadeApi by configurations.creating { isTransitive = false }
+kotlin {
+    defaultCompilerOptions()
+}
+
+val shadeImplementation = configurations.create("shadeImplementation") {
+    isTransitive = false
+}
+
+val shadeApi = configurations.create("shadeApi") {
+    isTransitive = false
+}
 
 configurations {
     implementation { extendsFrom(shadeImplementation) }
@@ -42,25 +50,18 @@ configurations {
 }
 
 dependencies {
-    api(libs.kotlin.compiler.embeddable)
-    api(libs.kotlin.native.compiler.embeddable)
+    shadeImplementation(projects.kcmlPluginApi)
+
     shadeApi(libs.semver)
-    compileOnly(libs.autoService)
+    compileOnly(libs.autoService.annotations)
     compileOnly(libs.kotlin.reflect)
-    shadeImplementation(libs.kotlinGraphs)
     shadeImplementation(libs.kotlinx.serialization.core)
     shadeImplementation(libs.kotlinx.serialization.json)
-    kapt(libs.autoService)
+    shadeImplementation(libs.kotlinGraphs)
+    kapt(libs.autoService.processor)
 
-    testImplementation(libs.kotlin.compiler.embeddable)
-    testImplementation(libs.kotlin.native.compiler.embeddable)
-    testImplementation(libs.kotlin.reflect)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.iridium)
-    testImplementation(libs.kotlinGraphs)
-    testImplementation(libs.semver)
-    testImplementation(libs.kotlinx.serialization.core)
-    testImplementation(libs.kotlinx.serialization.json)
 }
 
 tasks {
@@ -68,21 +69,6 @@ tasks {
         useJUnitPlatform()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
     }
-}
-
-dokka {
-    moduleName = project.name
-    pluginsConfiguration {
-        html {
-            footerMessage = "(c) ${ZonedDateTime.now().year} Karma Krafts & associates"
-        }
-    }
-}
-
-val dokkaJar by tasks.registering(Jar::class) {
-    dependsOn(tasks.dokkaGeneratePublicationHtml)
-    from(tasks.dokkaGeneratePublicationHtml.flatMap { it.outputDirectory })
-    archiveClassifier.set("javadoc")
 }
 
 val agentJarTask = project(":kcml-agent").tasks.named("shadowJar")
@@ -99,22 +85,8 @@ tasks {
             rename { "kcml-agent.jar" }
         }
     }
-    System.getProperty("publishDocs.root")?.let { docsDir ->
-        register("publishDocs", Copy::class) {
-            dependsOn(dokkaJar)
-            mustRunAfter(dokkaJar)
-            from(zipTree(dokkaJar.get().outputs.files.first()))
-            into("$docsDir/${project.name}")
-        }
-    }
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("compilerPlugin") {
-            artifact(dokkaJar)
-            from(components["java"])
-        }
-    }
     setProjectInfo("KCML Compiler Plugin", "Kotlin Compiler Meta Loader for plugin interop")
 }
