@@ -17,6 +17,9 @@
 package dev.karmakrafts.kcml.backend
 
 import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.DeclarationFinder
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -25,7 +28,10 @@ import org.jetbrains.kotlin.ir.declarations.IrFile
 
 internal abstract class AbstractBackend( // @formatter:off
     protected val context: IrPluginContext,
-    override val config: CompilerConfiguration
+    override val config: CompilerConfiguration,
+    override val loggerFactory: LoggerFactory,
+    override val logger: Logger,
+    override val loader: PluginLoader
 ) : Backend { // @formatter:on
     override val irBuiltIns: IrBuiltIns
         get() = context.irBuiltIns

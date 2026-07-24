@@ -17,10 +17,16 @@
 package dev.karmakrafts.kcml.backend
 
 import dev.karmakrafts.kcml.api.backend.JvmBackend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 internal class JvmBackendImpl( // @formatter:off
     context: IrPluginContext,
-    config: CompilerConfiguration
-) : AbstractBackend(context, config), JvmBackend // @formatter:on
+    config: CompilerConfiguration,
+    loggerFactory: LoggerFactory,
+    logger: Logger,
+    loader: PluginLoader
+) : AbstractBackend(context, config, loggerFactory, logger, loader), JvmBackend // @formatter:on

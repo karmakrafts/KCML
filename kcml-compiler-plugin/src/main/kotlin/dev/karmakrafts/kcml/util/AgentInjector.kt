@@ -17,7 +17,6 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
-import dev.karmakrafts.kcml.KCMLCompilerPluginRegistrar
 import sun.misc.Unsafe
 import java.nio.file.Files
 import java.nio.file.Path

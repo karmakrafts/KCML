@@ -17,6 +17,9 @@
 package dev.karmakrafts.kcml.backend
 
 import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.platform.js.JsPlatforms
@@ -26,11 +29,14 @@ import org.jetbrains.kotlin.platform.wasm.WasmPlatforms
 
 internal fun Backend.Companion.create( // @formatter:off
     context: IrPluginContext,
-    config: CompilerConfiguration
+    config: CompilerConfiguration,
+    loggerFactory: LoggerFactory,
+    logger: Logger,
+    loader: PluginLoader
 ): Backend = when (context.platform) { // @formatter:on
-    in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(context, config)
-    in JsPlatforms.allJsPlatforms -> JsBackendImpl(context, config)
-    in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(context, config)
-    in NativePlatforms.allNativePlatforms -> NativeBackendImpl(context, config)
+    in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(context, config, loggerFactory, logger, loader)
+    in JsPlatforms.allJsPlatforms -> JsBackendImpl(context, config, loggerFactory, logger, loader)
+    in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(context, config, loggerFactory, logger, loader)
+    in NativePlatforms.allNativePlatforms -> NativeBackendImpl(context, config, loggerFactory, logger, loader)
     else -> error("Unsupported compiler backend")
 }

@@ -17,10 +17,16 @@
 package dev.karmakrafts.kcml.frontend
 
 import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 
 internal class FrontendImpl( // @formatter:off
     override val session: FirSession,
-    override val config: CompilerConfiguration
+    override val config: CompilerConfiguration,
+    override val loggerFactory: LoggerFactory,
+    override val logger: Logger,
+    override val loader: PluginLoader
 ) : Frontend // @formatter:on

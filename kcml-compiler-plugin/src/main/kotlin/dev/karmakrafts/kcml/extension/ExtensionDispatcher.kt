@@ -20,6 +20,8 @@ import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -30,7 +32,8 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 
 @OptIn(ExperimentalCompilerApi::class)
 internal class ExtensionDispatcher( // @formatter:off
-    registries: Map<String, ExtensionRegistry>
+    private val loader: PluginLoader,
+    private val registries: Map<String, ExtensionRegistry>
 ) { // @formatter:on
     private val extensions: List<Extension> = registries.values.flatMap(ExtensionRegistry::allSorted)
 
@@ -38,14 +41,22 @@ internal class ExtensionDispatcher( // @formatter:off
      * Registers all adapters required to wire through existing compiler extension APIs
      * to KCML extension APIs.
      */
-    fun registerAdapters(storage: ExtensionStorage, config: CompilerConfiguration) = with(storage) {
+    fun registerAdapters( // @formatter:off
+        storage: ExtensionStorage,
+        config: CompilerConfiguration,
+        loggerFactory: LoggerFactory
+    ) = with(storage) { // @formatter:on
         FirExtensionRegistrar.registerExtension(object : FirExtensionRegistrar() {
             override fun ExtensionRegistrarContext.configurePlugin() {
                 +FirDeclarationGenerationExtension.Factory { session ->
-                    FirExtensionAdapter(config, session, extensions.filterIsInstance<FirExtension>())
+                    val firExtensions = extensions.filterIsInstance<FirExtension>()
+                    FirExtensionAdapter(loader, config, loggerFactory, session, firExtensions, registries)
                 }
             }
         })
-        IrGenerationExtension.registerExtension(IrExtensionAdapter(config, extensions.filterIsInstance<IrExtension>()))
+        val irExtensions = extensions.filterIsInstance<IrExtension>()
+        IrGenerationExtension.registerExtension(
+            IrExtensionAdapter(loader, config, loggerFactory, irExtensions, registries)
+        )
     }
 }

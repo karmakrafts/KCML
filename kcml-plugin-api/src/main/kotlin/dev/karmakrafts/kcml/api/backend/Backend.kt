@@ -16,6 +16,9 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.DeclarationFinder
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -34,6 +37,20 @@ interface Backend {
 
     /** Compiler configuration for the active Kotlin compilation. */
     val config: CompilerConfiguration
+
+    /**
+     * Creates named KCML loggers that report through the current compiler's diagnostic collector.
+     */
+    val loggerFactory: LoggerFactory
+
+    /** Logger for the KCML component dispatching this backend extension. */
+    val logger: Logger
+
+    /**
+     * Provides the plugins and extension registries discovered for this compiler invocation.
+     * Registries have already been populated before IR extensions are dispatched.
+     */
+    val loader: PluginLoader
 
     /** Kotlin IR built-ins used to construct and inspect IR types and declarations. */
     val irBuiltIns: IrBuiltIns

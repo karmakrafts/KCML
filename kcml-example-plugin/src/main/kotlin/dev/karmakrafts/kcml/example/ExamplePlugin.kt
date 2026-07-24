@@ -17,17 +17,19 @@
 package dev.karmakrafts.kcml.example
 
 import com.google.auto.service.AutoService
-import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import org.jetbrains.kotlin.config.CompilerConfiguration
+import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
 
 @Suppress("UNUSED")
 @AutoService(CompilerPlugin::class)
 @Plugin("example")
 class ExamplePlugin : CompilerPlugin {
-    override fun registerExtensions(registry: ExtensionRegistry, config: CompilerConfiguration) {
-        registry.register(ExampleFirExtension())
-        registry.register(ExampleIrExtension())
+    override fun load(context: PluginLoadContext) {
+        context.logger.info("Loading example plugin!")
+        context.extensionRegistry.apply {
+            register(ExampleFirExtension())
+            register(ExampleIrExtension())
+        }
     }
 }

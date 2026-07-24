@@ -16,6 +16,9 @@
 
 package dev.karmakrafts.kcml.api.frontend
 
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
@@ -33,6 +36,20 @@ interface Frontend {
 
     /** Compiler configuration for the active Kotlin compilation. */
     val config: CompilerConfiguration
+
+    /**
+     * Creates named KCML loggers that report through the current compiler's diagnostic collector.
+     */
+    val loggerFactory: LoggerFactory
+
+    /** Logger for the KCML component dispatching this frontend extension. */
+    val logger: Logger
+
+    /**
+     * Provides the plugins and extension registries discovered for this compiler invocation.
+     * Registries have already been populated before FIR extensions are dispatched.
+     */
+    val loader: PluginLoader
 
     /** Collects compiler diagnostics emitted by KCML extensions. */
     val messageCollector: MessageCollector

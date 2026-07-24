@@ -16,21 +16,19 @@
 
 package dev.karmakrafts.kcml.api.plugin
 
-import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
-import org.jetbrains.kotlin.config.CompilerConfiguration
-
 /**
- * Entry point for a KCML compiler plugin.
+ * Entry point for a KCML compiler plugin discovered through Java's [java.util.ServiceLoader].
  *
- * KCML invokes this contract while initializing a discovered plugin so it can contribute compiler
- * extensions for the active Kotlin compilation.
+ * KCML calls [load] once after ordering discovered plugins by their declared dependencies and
+ * before it installs the Kotlin FIR and IR extension adapters. Implementations register the
+ * extensions that should participate in this compilation through the supplied context.
  */
 interface CompilerPlugin {
     /**
-     * Registers this plugin's KCML extensions.
+     * Configures this plugin for the current Kotlin compiler invocation.
      *
-     * @param registry registry that will dispatch the registered extensions to Kotlin compiler phases.
-     * @param config compiler configuration for the active Kotlin compilation.
+     * @param context services scoped to the active plugin load, including the registry to which
+     *   this plugin contributes extensions.
      */
-    fun registerExtensions(registry: ExtensionRegistry, config: CompilerConfiguration)
+    fun load(context: PluginLoadContext)
 }

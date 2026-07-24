@@ -17,6 +17,9 @@
 package dev.karmakrafts.kcml.backend
 
 import dev.karmakrafts.kcml.api.backend.NativeBackend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.hooks.InternalHooksApi
 import dev.karmakrafts.kcml.hooks.native.TopLevelPhasesHooks
 import kotlinx.cinterop.ExperimentalForeignApi
@@ -32,8 +35,11 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 @OptIn(ExperimentalForeignApi::class, InternalHooksApi::class)
 internal class NativeBackendImpl( // @formatter:off
     context: IrPluginContext,
-    override val config: CompilerConfiguration
-) : AbstractBackend(context, config), NativeBackend { // @formatter:on
+    override val config: CompilerConfiguration,
+    loggerFactory: LoggerFactory,
+    logger: Logger,
+    loader: PluginLoader
+) : AbstractBackend(context, config, loggerFactory, logger, loader), NativeBackend { // @formatter:on
     override val builtIns: KonanBuiltIns
         get() = TopLevelPhasesHooks.generationState.builtIns
     override val symbols: BackendNativeSymbols

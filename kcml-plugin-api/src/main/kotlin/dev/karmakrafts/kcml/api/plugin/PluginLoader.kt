@@ -16,16 +16,19 @@
 
 package dev.karmakrafts.kcml.api.plugin
 
+import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+
 /**
  * Discovers and provides KCML compiler plugins and their metadata.
  *
- * Implementations coordinate plugin loading with dependency resolution before the loaded plugins
- * register compiler extensions.
+ * KCML discovers plugins before Kotlin's FIR and IR extension points run, orders them by declared
+ * dependencies, and calls each plugin's [CompilerPlugin.load] function. The loader then exposes
+ * the resulting plugin instances, metadata, and per-plugin extension registries to KCML code.
  */
 interface PluginLoader {
     /**
      * The ID of the plugin currently being loaded.
-     * After the load has completed, this value will always be null.
+     * It is `null` before loading starts and after loading completes.
      */
     val loadingPluginId: String?
 
@@ -42,26 +45,44 @@ interface PluginLoader {
      *
      * @param id stable plugin identifier.
      * @return the loaded plugin.
-     * @throws NoSuchElementException if no plugin has [id].
+     * @throws IllegalArgumentException if no plugin has [id].
      */
     fun getPlugin(id: String): CompilerPlugin
 
     /**
      * Finds metadata for a discoverable compiler plugin.
      *
-     * @param id stable plugin identifier.
+     * @param pluginId stable plugin identifier.
      * @return plugin metadata, or `null` when it is unavailable.
      */
-    fun findMetadata(id: String): PluginMetadata?
+    fun findMetadata(pluginId: String): PluginMetadata?
 
     /**
      * Gets metadata for a discoverable compiler plugin.
      *
-     * @param id stable plugin identifier.
+     * @param pluginId stable plugin identifier.
      * @return plugin metadata.
-     * @throws NoSuchElementException if no metadata has [id].
+     * @throws IllegalArgumentException if no metadata has [pluginId].
      */
-    fun getMetadata(id: String): PluginMetadata
+    fun getMetadata(pluginId: String): PluginMetadata
+
+    /**
+     * Finds the extension registry created while a plugin was loaded.
+     *
+     * @param pluginId stable plugin identifier.
+     * @return the plugin's registry, or `null` when that plugin has not been loaded or has no
+     *   registry.
+     */
+    fun findExtensionRegistry(pluginId: String): ExtensionRegistry?
+
+    /**
+     * Gets the extension registry created while a plugin was loaded.
+     *
+     * @param pluginId stable plugin identifier.
+     * @return the plugin's extension registry.
+     * @throws IllegalArgumentException if no registry exists for [pluginId].
+     */
+    fun getExtensionRegistry(pluginId: String): ExtensionRegistry
 
     /** @return identifiers of all discoverable plugins in loader order. */
     fun allPlugins(): List<String>

@@ -24,9 +24,19 @@ package dev.karmakrafts.kcml.api.extension
  */
 interface ExtensionRegistry {
     /**
+     * Stable identifier of the KCML plugin that owns this registry.
+     *
+     * Each loaded plugin receives a separate registry, allowing extensions with the same ID to be
+     * managed independently until KCML dispatches them to the Kotlin compiler.
+     */
+    val pluginId: String
+
+    /**
      * Registers an extension for later compiler-phase dispatch.
      *
      * @param extension the KCML extension to register.
+     * @throws IllegalStateException if KCML has frozen this registry for compiler-phase dispatch.
+     * @throws IllegalArgumentException if an extension with the same ID is already registered.
      */
     fun register(extension: Extension)
 
@@ -34,6 +44,7 @@ interface ExtensionRegistry {
      * Removes a previously registered extension.
      *
      * @param extension the extension to remove.
+     * @throws IllegalStateException if KCML has frozen this registry for compiler-phase dispatch.
      */
     fun unregister(extension: Extension)
 
@@ -50,13 +61,34 @@ interface ExtensionRegistry {
      *
      * @param id the extension identifier.
      * @return the registered extension.
-     * @throws NoSuchElementException if no extension has [id].
+     * @throws IllegalArgumentException if no extension has [id].
      */
     operator fun get(id: String): Extension
+
+    /**
+     * Checks whether this registry contains an extension ID.
+     *
+     * @param id extension identifier to look up.
+     * @return `true` if an extension with [id] is registered.
+     */
+    operator fun contains(id: String): Boolean
+
+    /**
+     * Checks whether this registry contains an extension instance.
+     *
+     * @param extension extension instance to look up.
+     * @return `true` if [extension] is registered.
+     */
+    operator fun contains(extension: Extension): Boolean
 
     /** Returns all registered extensions in registration order. */
     fun all(): List<Extension>
 
-    /** Returns all registered extensions ordered according to their dependency constraints. */
+    /**
+     * Returns all registered extensions ordered according to their dependency constraints.
+     *
+     * @return the extensions in the order KCML uses for Kotlin compiler-phase dispatch.
+     * @throws IllegalStateException if KCML has not yet frozen this registry after plugin loading.
+     */
     fun allSorted(): List<Extension>
 }

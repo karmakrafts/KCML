@@ -20,12 +20,11 @@ import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.IrExtension
-import dev.karmakrafts.kcml.api.util.info
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 
 @ExtensionId("ir_example") // example:ir_example
 internal class ExampleIrExtension : AbstractExtension(), IrExtension {
     override fun process(module: IrModuleFragment, backend: Backend) {
-        backend.messageCollector.info("Processing current IR module fragment")
+        backend.logger.info("Processing current IR module fragment")
     }
 }
