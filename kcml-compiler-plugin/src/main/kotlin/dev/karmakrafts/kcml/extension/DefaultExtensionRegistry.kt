@@ -75,8 +75,7 @@ internal class DefaultExtensionRegistry( // @formatter:off
                 val vertex = addVertex()
                 vertices[id] = vertex
             }
-            for ((id, _) in extensions) {
-                val extension = this@DefaultExtensionRegistry.extensions[id] ?: continue
+            for ((id, extension) in extensions) {
                 val extensionVertex = vertices[id]!!
                 for (dependency in extension.dependencies) {
                     val dependencyId = dependency.id
