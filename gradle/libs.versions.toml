@@ -39,6 +39,7 @@ ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }
 
 [plugins]
 
+kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinBootstrap" }
 kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlinBootstrap" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlinBootstrap" }
