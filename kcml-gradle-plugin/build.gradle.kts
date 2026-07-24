@@ -18,17 +18,23 @@ import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
+import dev.karmakrafts.conventions.GitLabCI
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.writeText
 
 plugins {
+    alias(libs.plugins.karmaConventions)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
     `java-gradle-plugin`
     `maven-publish`
+    signing
 }
+
+group = "dev.karmakrafts.kcml"
+version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 
 configureDokka {
     withKotlin()
