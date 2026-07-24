@@ -17,6 +17,8 @@
 package dev.karmakrafts.kcml.extension
 
 import dev.karmakrafts.kcml.api.extension.FirExtension
+import dev.karmakrafts.kcml.frontend.FrontendImpl
+import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.extensions.ExperimentalTopLevelDeclarationsGenerationApi
 import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
@@ -33,18 +35,21 @@ import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
 internal class FirExtensionAdapter( // @formatter:off
+    val config: CompilerConfiguration,
     session: FirSession,
     val extensions: List<FirExtension>
 ) : FirDeclarationGenerationExtension(session) { // @formatter:on
+    private val frontend: FrontendImpl = FrontendImpl(session, config)
+
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
-        return extensions.flatMap { extension -> extension.generateConstructors(session, context) }
+        return extensions.flatMap { extension -> extension.generateConstructors(frontend, context) }
     }
 
     override fun generateFunctions( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirNamedFunctionSymbol> { // @formatter:on
-        return extensions.flatMap { extension -> extension.generateFunctions(session, callableId, context) }
+        return extensions.flatMap { extension -> extension.generateFunctions(frontend, callableId, context) }
     }
 
     override fun generateNestedClassLikeDeclaration( // @formatter:off
@@ -53,7 +58,7 @@ internal class FirExtensionAdapter( // @formatter:off
         context: NestedClassGenerationContext
     ): FirClassLikeSymbol<*>? { // @formatter:on
         for (extension in extensions) {
-            return extension.generateNestedClassLikeDeclaration(session, owner, name, context) ?: continue
+            return extension.generateNestedClassLikeDeclaration(frontend, owner, name, context) ?: continue
         }
         return null
     }
@@ -62,13 +67,13 @@ internal class FirExtensionAdapter( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirPropertySymbol> { // @formatter:on
-        return extensions.flatMap { extension -> extension.generateProperties(session, callableId, context) }
+        return extensions.flatMap { extension -> extension.generateProperties(frontend, callableId, context) }
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun generateTopLevelClassLikeDeclaration(classId: ClassId): FirClassLikeSymbol<*>? {
         for (extension in extensions) {
-            return extension.generateTopLevelClassLikeDeclaration(session, classId) ?: continue
+            return extension.generateTopLevelClassLikeDeclaration(frontend, classId) ?: continue
         }
         return null
     }
@@ -77,7 +82,7 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: MemberGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { extension -> extension.getCallableNamesForClass(session, classSymbol, context) }
+        return extensions.flatMap { extension -> extension.getCallableNamesForClass(frontend, classSymbol, context) }
             .toSet()
     }
 
@@ -85,21 +90,21 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: NestedClassGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { extension -> extension.getNestedClassifiersNames(session, classSymbol, context) }
+        return extensions.flatMap { extension -> extension.getNestedClassifiersNames(frontend, classSymbol, context) }
             .toSet()
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelCallableIds(): Set<CallableId> {
-        return extensions.flatMap(FirExtension::getTopLevelCallableIds).toSet()
+        return extensions.flatMap { extension -> extension.getTopLevelCallableIds(frontend) }.toSet()
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelClassIds(): Set<ClassId> {
-        return extensions.flatMap(FirExtension::getTopLevelClassIds).toSet()
+        return extensions.flatMap { extension -> extension.getTopLevelClassIds(frontend) }.toSet()
     }
 
     override fun hasPackage(packageFqName: FqName): Boolean {
-        return extensions.any { extension -> extension.hasPackage(session, packageFqName) }
+        return extensions.any { extension -> extension.hasPackage(frontend, packageFqName) }
     }
 }

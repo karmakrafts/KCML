@@ -23,6 +23,7 @@ plugins {
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.shadow)
+    signing
     `maven-publish`
 }
 
@@ -89,4 +90,9 @@ tasks {
 
 publishing {
     setProjectInfo("KCML Compiler Plugin", "Kotlin Compiler Meta Loader for plugin interop")
+    publications {
+        create<MavenPublication>("plugin") {
+            from(components["kotlin"])
+        }
+    }
 }

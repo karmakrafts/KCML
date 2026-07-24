@@ -42,7 +42,7 @@ internal class ExtensionDispatcher( // @formatter:off
         FirExtensionRegistrar.registerExtension(object : FirExtensionRegistrar() {
             override fun ExtensionRegistrarContext.configurePlugin() {
                 +FirDeclarationGenerationExtension.Factory { session ->
-                    FirExtensionAdapter(session, extensions.filterIsInstance<FirExtension>())
+                    FirExtensionAdapter(config, session, extensions.filterIsInstance<FirExtension>())
                 }
             }
         })
