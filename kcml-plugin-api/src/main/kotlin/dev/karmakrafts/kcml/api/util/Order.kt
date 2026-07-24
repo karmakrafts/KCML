@@ -16,6 +16,9 @@
 
 package dev.karmakrafts.kcml.api.util
 
+/**
+ * Defines the [Order] ordering values.
+ */
 enum class Order {
     // @formatter:off
     NONE,

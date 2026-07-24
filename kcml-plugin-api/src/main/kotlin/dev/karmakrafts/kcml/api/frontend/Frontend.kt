@@ -14,41 +14,27 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.frontend
 
-import org.jetbrains.kotlin.backend.common.extensions.DeclarationFinder
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.ir.IrBuiltIns
-import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.fir.FirSession
 
 /**
- * Provides the compiler services available while KCML integrates with a Kotlin backend.
+ * Provides the compiler services available while KCML integrates with Kotlin's FIR frontend.
  *
- * A backend implementation exposes the target-independent IR services used by KCML extensions
- * after FIR analysis has completed.
+ * FIR extensions receive this context to inspect the session and report diagnostics while the
+ * compiler resolves and generates frontend declarations.
  */
-interface Backend {
-    companion object
+interface Frontend {
+    /** FIR session for the current compilation, including symbol providers and type services. */
+    val session: FirSession
 
     /** Compiler configuration for the active Kotlin compilation. */
     val config: CompilerConfiguration
 
-    /** Kotlin IR built-ins used to construct and inspect IR types and declarations. */
-    val irBuiltIns: IrBuiltIns
-
-    /** Resolves declarations from Kotlin built-ins for the active backend. */
-    val builtInsFinder: DeclarationFinder
-
     /** Collects compiler diagnostics emitted by KCML extensions. */
     val messageCollector: MessageCollector
         get() = config.messageCollector
-
-    /**
-     * Returns the declaration finder that resolves declarations defined by an IR source file.
-     *
-     * @param source the IR file whose declarations should be resolved.
-     */
-    fun getFinderForSource(source: IrFile): DeclarationFinder
 }

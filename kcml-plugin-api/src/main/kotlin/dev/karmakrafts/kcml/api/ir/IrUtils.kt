@@ -56,6 +56,11 @@ import org.jetbrains.kotlin.ir.visitors.IrVisitorVoid
 import org.jetbrains.kotlin.ir.visitors.acceptChildrenVoid
 import org.jetbrains.kotlin.ir.visitors.acceptVoid
 
+/**
+ * Finds the nearest declaration container that encloses this declaration in the Kotlin IR tree.
+ *
+ * @return the containing declaration container, or `null` when none exists.
+ */
 fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
     return when (val parent = parent) {
         is IrDeclarationContainer -> parent
@@ -64,6 +69,13 @@ fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
     }
 }
 
+/**
+ * Finds the first descendant of a requested IR element type that satisfies a predicate.
+ *
+ * @param E concrete IR element type to locate.
+ * @param predicate additional condition evaluated for candidate descendants.
+ * @return the first matching descendant in visitor traversal order, or `null`.
+ */
 inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E) -> Boolean = { true }): E? {
     var result: E? = null
     acceptVoid(object : IrVisitorVoid() {
@@ -78,6 +90,14 @@ inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E
     return result
 }
 
+/**
+ * Creates a declaration-aware IR builder for this symbol owner.
+ *
+ * @param context generator context supplied by the Kotlin backend.
+ * @param startOffset source offset for subsequently generated IR, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for subsequently generated IR, or [SYNTHETIC_OFFSET].
+ * @return a builder associated with this declaration's symbol.
+ */
 fun IrSymbolOwner.declarationBuilder( // @formatter:off
     context: IrGeneratorContext,
     startOffset: Int = SYNTHETIC_OFFSET,
@@ -89,6 +109,7 @@ fun IrSymbolOwner.declarationBuilder( // @formatter:off
     endOffset = endOffset
 ) // @formatter:on
 
+/** Creates an IR expression that reads the value represented by this symbol. */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrValueSymbol.load(): IrGetValue = IrGetValueImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
@@ -97,8 +118,15 @@ fun IrValueSymbol.load(): IrGetValue = IrGetValueImpl( // @formatter:off
     symbol = this
 ) // @formatter:on
 
+/** Creates an IR expression that reads this value declaration. */
 fun IrValueDeclaration.load(): IrGetValue = symbol.load()
 
+/**
+ * Creates a composite IR expression that evaluates these statements in order.
+ *
+ * @param type result type assigned to the composite expression.
+ * @return a synthetic-offset IR composite containing these statements.
+ */
 fun List<IrStatement>.createComposite(type: IrType): IrComposite = IrCompositeImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
@@ -107,6 +135,13 @@ fun List<IrStatement>.createComposite(type: IrType): IrComposite = IrCompositeIm
     statements = this
 ) // @formatter:on
 
+/**
+ * Creates an IR block that evaluates these statements in order.
+ *
+ * @param type result type assigned to the block.
+ * @param origin optional Kotlin IR origin identifying how the block was produced.
+ * @return a synthetic-offset IR block containing these statements.
+ */
 fun List<IrStatement>.createBlock(type: IrType, origin: IrStatementOrigin? = null): IrBlock = IrBlockImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
@@ -115,6 +150,13 @@ fun List<IrStatement>.createBlock(type: IrType, origin: IrStatementOrigin? = nul
     statements = this
 ) // @formatter:on
 
+/**
+ * Creates an IR vararg expression from these elements.
+ *
+ * @param irBuiltIns IR built-ins used to construct the array result type.
+ * @param type element type of the vararg.
+ * @return a synthetic-offset vararg whose type is `Array<type>`.
+ */
 fun List<IrVarargElement>.createVararg(irBuiltIns: IrBuiltIns, type: IrType): IrVararg = IrVarargImpl(
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
@@ -123,6 +165,15 @@ fun List<IrVarargElement>.createVararg(irBuiltIns: IrBuiltIns, type: IrType): Ir
     elements = this
 )
 
+/**
+ * Creates an IR constructor call targeting this constructor symbol.
+ *
+ * @param startOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param typeArguments mappings from constructor or class type-parameter names to IR types.
+ * @param valueArguments mappings from constructor value-parameter names to argument expressions.
+ * @return a constructor call with the supplied arguments.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrConstructorSymbol.new(
     startOffset: Int = SYNTHETIC_OFFSET,
@@ -140,6 +191,15 @@ fun IrConstructorSymbol.new(
     putArguments(typeArguments, valueArguments)
 }
 
+/**
+ * Creates an IR constructor call targeting this constructor.
+ *
+ * @param startOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param typeArguments mappings from constructor or class type-parameter names to IR types.
+ * @param valueArguments mappings from constructor value-parameter names to argument expressions.
+ * @return a constructor call with the supplied arguments.
+ */
 fun IrConstructor.new(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
@@ -147,6 +207,11 @@ fun IrConstructor.new(
     valueArguments: Map<String, IrExpression> = emptyMap()
 ): IrConstructorCall = symbol.new(startOffset, endOffset, typeArguments, valueArguments)
 
+/**
+ * Extracts raw constant values from the regular parameters of an annotation constructor call.
+ *
+ * @return a map from annotation parameter names to their unwrapped IR constant values.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrConstructorCall.getAnnotationValues(): Map<String, Any?> {
     val constructor = symbol.owner
@@ -165,6 +230,13 @@ fun IrConstructorCall.getAnnotationValues(): Map<String, Any?> {
     return values
 }
 
+/**
+ * Resolves an enum entry by name from this enum class symbol.
+ *
+ * @param name simple name of the requested enum entry.
+ * @return the matching enum-entry symbol.
+ * @throws IllegalArgumentException if this class has no entry named [name].
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrClassSymbol.getEnumConstant(name: String): IrEnumEntrySymbol {
     return requireNotNull(
@@ -172,6 +244,14 @@ fun IrClassSymbol.getEnumConstant(name: String): IrEnumEntrySymbol {
             .find { it.name.asString() == name }) { "No entry $name in $this" }.symbol
 }
 
+/**
+ * Creates an IR expression for the enum entry selected from a receiver value.
+ *
+ * @param T type from which the entry name is derived.
+ * @param type symbol of the enum class that owns the entry.
+ * @param mapper maps the receiver to the requested enum-entry name.
+ * @return a synthetic-offset IR enum-value expression.
+ */
 inline fun <T> T.getEnumValue(
     type: IrClassSymbol, mapper: T.() -> String
 ): IrGetEnumValueImpl = IrGetEnumValueImpl(

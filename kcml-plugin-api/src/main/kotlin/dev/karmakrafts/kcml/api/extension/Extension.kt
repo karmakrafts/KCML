@@ -16,7 +16,16 @@
 
 package dev.karmakrafts.kcml.api.extension
 
+/**
+ * Base contract for a KCML contribution to one or more Kotlin compiler extension points.
+ *
+ * Implementations are registered by KCML and dispatched to their FIR, IR, or native-intrinsics
+ * adapter according to their specialized extension type.
+ */
 sealed interface Extension {
+    /** Stable identifier used to resolve this extension and its dependencies. */
     val id: String
+
+    /** Dependencies that KCML resolves before dispatching this extension. */
     val dependencies: List<ExtensionDependency>
 }

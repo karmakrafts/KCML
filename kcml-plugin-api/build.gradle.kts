@@ -21,7 +21,6 @@ import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
-    `maven-publish`
 }
 
 configureDokka {

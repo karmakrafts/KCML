@@ -22,27 +22,29 @@ import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.expressions.IrCall
 
 /**
- * Allows augmenting the Kotlin/Native backend with custom intrinsic functions.
+ * Contributes custom intrinsic handling to Kotlin/Native code generation.
+ *
+ * KCML consults implementations while lowering IR calls to LLVM so an extension can replace a
+ * recognized call with its own LLVM value.
  */
 @OptIn(ExperimentalForeignApi::class)
 interface NativeIntrinsicsExtension : Extension {
     /**
-     * Determines whether the given call should be evaluated as a native intrinsic.
-     * The called function may be derived from the given call target.
+     * Determines whether an IR call should be lowered as an intrinsic by this extension.
      *
-     * @param call The call being checked.
-     * @return True if the call should be evaluated as an intrinsic.
+     * @param call IR call being considered by Kotlin/Native code generation.
+     * @param backend KCML context exposing the active native and LLVM backend state.
+     * @return `true` when [process] should lower [call].
      */
     fun shouldProcess(call: IrCall, backend: NativeBackend): Boolean
 
     /**
-     * Evaluates the given call as a native intrinsic and replaces its occurrence
-     * in the final LLVM bitcode with the returned value reference.
+     * Lowers a recognized IR call to an LLVM value.
      *
-     * @param call The call being evaluated.
-     * @param args A list of pointers to the materialized LLVM function arguments.
-     * @return A value reference with which the given call is to be replaced
-     *  in the final LLVM bitcode.
+     * @param call IR call selected by [shouldProcess].
+     * @param args materialized LLVM values for the call arguments.
+     * @param backend KCML context exposing the active native and LLVM backend state.
+     * @return LLVM value that replaces [call] in the generated native code.
      */
     fun process(call: IrCall, args: List<LLVMValueRef>, backend: NativeBackend): LLVMValueRef
 }

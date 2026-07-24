@@ -34,6 +34,15 @@ import org.jetbrains.kotlin.ir.types.getClass
 import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
 import org.jetbrains.kotlin.ir.util.dump
 
+/**
+ * Assigns type and value arguments to an IR function-access expression by parameter name.
+ *
+ * For constructor calls, type parameters declared by the constructed class are also considered.
+ *
+ * @param typeArguments mappings from declared type-parameter names to IR types.
+ * @param valueArguments mappings from declared value-parameter names to argument expressions.
+ * @throws IllegalStateException if an argument name does not resolve on the target function or constructor class.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrFunctionAccessExpression.putArguments( // @formatter:off
     typeArguments: Map<String, IrType>,
@@ -56,6 +65,20 @@ fun IrFunctionAccessExpression.putArguments( // @formatter:off
     }
 }
 
+/**
+ * Creates an IR call to this simple function symbol.
+ *
+ * The helper configures the result type, receiver slots, and named arguments required by Kotlin's
+ * IR call representation.
+ *
+ * @param startOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param typeArguments mappings from the function's type-parameter names to IR types.
+ * @param valueArguments mappings from the function's value-parameter names to argument expressions.
+ * @param dispatchReceiver receiver expression for an instance member call, if required.
+ * @param extensionReceiver receiver expression for an extension function call, if required.
+ * @return a call expression targeting this function symbol.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrSimpleFunctionSymbol.call(
     startOffset: Int = SYNTHETIC_OFFSET,
@@ -82,6 +105,19 @@ fun IrSimpleFunctionSymbol.call(
     putArguments(typeArguments, valueArguments)
 }
 
+/**
+ * Creates an IR call to this function.
+ *
+ * This is the declaration counterpart of [IrSimpleFunctionSymbol.call].
+ *
+ * @param startOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated call, or [SYNTHETIC_OFFSET].
+ * @param typeArguments mappings from the function's type-parameter names to IR types.
+ * @param valueArguments mappings from the function's value-parameter names to argument expressions.
+ * @param dispatchReceiver receiver expression for an instance member call, if required.
+ * @param extensionReceiver receiver expression for an extension function call, if required.
+ * @return a call expression targeting this function.
+ */
 fun IrSimpleFunction.call(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
@@ -91,6 +127,14 @@ fun IrSimpleFunction.call(
     extensionReceiver: IrExpression? = null
 ): IrCall = symbol.call(startOffset, endOffset, typeArguments, valueArguments, dispatchReceiver, extensionReceiver)
 
+/**
+ * Wraps this simple function in a lambda-shaped IR function expression.
+ *
+ * @param irBuiltIns IR built-ins used to derive the function expression's Kotlin function type.
+ * @param startOffset source offset for the generated expression, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated expression, or [SYNTHETIC_OFFSET].
+ * @return an IR function expression with the lambda statement origin.
+ */
 fun IrSimpleFunction.createExpression( // @formatter:off
     irBuiltIns: IrBuiltIns,
     startOffset: Int = SYNTHETIC_OFFSET,

@@ -16,4 +16,10 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+/**
+ * Marks a [Backend] context executing Kotlin's JavaScript IR backend.
+ *
+ * This specialization allows a KCML extension to run only for JavaScript compilations while using
+ * the target-independent services inherited from [Backend].
+ */
 interface JsBackend : Backend

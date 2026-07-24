@@ -20,8 +20,17 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 /**
- * This interface defines the main entry point for each KCML plugin.
+ * Entry point for a KCML compiler plugin.
+ *
+ * KCML invokes this contract while initializing a discovered plugin so it can contribute compiler
+ * extensions for the active Kotlin compilation.
  */
 interface CompilerPlugin {
+    /**
+     * Registers this plugin's KCML extensions.
+     *
+     * @param registry registry that will dispatch the registered extensions to Kotlin compiler phases.
+     * @param config compiler configuration for the active Kotlin compilation.
+     */
     fun registerExtensions(registry: ExtensionRegistry, config: CompilerConfiguration)
 }

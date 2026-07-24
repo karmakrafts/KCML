@@ -18,12 +18,20 @@ package dev.karmakrafts.kcml.api.extension
 
 import dev.karmakrafts.kcml.api.util.Order
 
+/**
+ * Convenience base class that derives extension metadata from KCML annotations.
+ *
+ * Override [id] when no [ExtensionId] annotation is present, and override [dependencies] when
+ * dependencies cannot be expressed with repeatable [ExtensionDependsOn] annotations.
+ */
 abstract class AbstractExtension : Extension {
+    /** Identifier declared by [ExtensionId], or a value supplied by a subclass. */
     override val id: String by lazy {
         this@AbstractExtension::class.getExtensionId()
             ?: error("Extension without @ExtensionId annotation requires id to be specified explicitly")
     }
 
+    /** Dependencies declared with [ExtensionDependsOn] on this extension class. */
     override val dependencies: List<ExtensionDependency> by lazy {
         val type = this@AbstractExtension::class.java
         type.getAnnotationsByType(ExtensionDependsOn::class.java).map { annotation ->

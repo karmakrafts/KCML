@@ -18,6 +18,17 @@ package dev.karmakrafts.kcml.api.extension
 
 import dev.karmakrafts.kcml.api.util.Order
 
+/**
+ * Declares a dependency for a KCML extension class.
+ *
+ * [AbstractExtension] converts each runtime instance of this repeatable annotation into an
+ * [ExtensionDependency] used by KCML to resolve extension availability and dispatch order.
+ *
+ * @param id identifier of the extension on which the annotated extension depends.
+ * @param isRequired whether the annotated extension is invalid when the dependency is unavailable.
+ * @param order relative order in which the dependency runs with respect to the annotated extension.
+ */
+@Repeatable
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class ExtensionDependsOn( // @formatter:off

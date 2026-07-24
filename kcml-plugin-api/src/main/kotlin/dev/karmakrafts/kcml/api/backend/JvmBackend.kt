@@ -16,4 +16,10 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+/**
+ * Marks a [Backend] context executing Kotlin's JVM IR backend.
+ *
+ * This specialization allows a KCML extension to run only for JVM compilations while using the
+ * target-independent services inherited from [Backend].
+ */
 interface JvmBackend : Backend

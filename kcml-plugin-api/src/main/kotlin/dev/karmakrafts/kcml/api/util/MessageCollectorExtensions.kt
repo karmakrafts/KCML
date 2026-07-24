@@ -19,12 +19,33 @@ package dev.karmakrafts.kcml.api.util
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 
+/**
+ * Reports an informational diagnostic through Kotlin's compiler message collector.
+ *
+ * @param message diagnostic text for the compiler output.
+ */
 fun MessageCollector.info(message: String) = report(CompilerMessageSeverity.INFO, message)
 
+/**
+ * Reports a warning diagnostic through Kotlin's compiler message collector.
+ *
+ * @param message diagnostic text for the compiler output.
+ */
 fun MessageCollector.warn(message: String) = report(CompilerMessageSeverity.WARNING, message)
 
+/**
+ * Reports an error diagnostic through Kotlin's compiler message collector.
+ *
+ * @param message diagnostic text for the compiler output.
+ */
 fun MessageCollector.error(message: String) = report(CompilerMessageSeverity.ERROR, message)
 
+/**
+ * Reports an exception diagnostic through Kotlin's compiler message collector.
+ *
+ * @param message context that explains the failure.
+ * @param error exception whose stack trace is appended to the diagnostic.
+ */
 fun MessageCollector.error(message: String, error: Throwable) {
     report(CompilerMessageSeverity.EXCEPTION, "$message: ${error.stackTraceToString()}")
 }

@@ -19,6 +19,18 @@ package dev.karmakrafts.kcml.api.extension
 import dev.karmakrafts.kcml.api.backend.Backend
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 
+/**
+ * Processes Kotlin IR through KCML after frontend analysis.
+ *
+ * KCML invokes this callback for the module fragment at the applicable backend phase, allowing an
+ * extension to inspect or transform declarations before target code generation continues.
+ */
 interface IrExtension : Extension {
+    /**
+     * Processes the IR module for the current compilation target.
+     *
+     * @param module Kotlin IR module fragment available for inspection or transformation.
+     * @param backend KCML context exposing compiler services for the active target backend.
+     */
     fun process(module: IrModuleFragment, backend: Backend)
 }

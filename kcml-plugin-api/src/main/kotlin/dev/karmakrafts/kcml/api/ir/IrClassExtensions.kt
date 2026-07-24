@@ -30,6 +30,17 @@ import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
 import org.jetbrains.kotlin.ir.util.constructors
 import org.jetbrains.kotlin.ir.util.superClass
 
+/**
+ * Adds a primary constructor suitable for a generated Kotlin object declaration.
+ *
+ * The constructor delegates to the class's direct superclass constructor and invokes the Kotlin IR
+ * instance-initializer call required for initialized object instances.
+ *
+ * @param pluginContext IR plugin context used to create the constructor body and resolve built-ins.
+ * @param startOffset source offset for the generated constructor, or [SYNTHETIC_OFFSET].
+ * @param endOffset source offset for the generated constructor, or [SYNTHETIC_OFFSET].
+ * @return the newly added primary constructor.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrClass.addDefaultObjectConstructor( // @formatter:off
     pluginContext: IrPluginContext,
@@ -66,6 +77,11 @@ fun IrClass.addDefaultObjectConstructor( // @formatter:off
     }
 }
 
+/**
+ * Creates an IR expression that reads the singleton instance of this object class.
+ *
+ * @return a synthetic-offset object-value expression.
+ */
 fun IrClassSymbol.getObjectInstance(): IrGetObjectValueImpl = IrGetObjectValueImpl(
     startOffset = SYNTHETIC_OFFSET, endOffset = SYNTHETIC_OFFSET, type = defaultType, symbol = this@getObjectInstance
 )

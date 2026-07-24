@@ -22,11 +22,23 @@ import org.jetbrains.kotlin.ir.declarations.IrParameterKind
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.typeWith
 
+/**
+ * Builds the Kotlin function type represented by this IR function's regular parameters and return type.
+ *
+ * @param irBuiltIns IR built-ins that provide the appropriate `FunctionN` class.
+ * @return the corresponding non-reflective Kotlin function type.
+ */
 fun IrFunction.getFunctionType(irBuiltIns: IrBuiltIns): IrType {
     val paramTypes = parameters.filter { it.kind == IrParameterKind.Regular }.map { it.type }
     return irBuiltIns.functionN(paramTypes.size).typeWith(paramTypes + returnType)
 }
 
+/**
+ * Builds the reflective Kotlin function type represented by this IR function's regular parameters and return type.
+ *
+ * @param irBuiltIns IR built-ins that provide the appropriate `KFunctionN` class.
+ * @return the corresponding reflective Kotlin function type.
+ */
 fun IrFunction.getKFunctionType(irBuiltIns: IrBuiltIns): IrType {
     val paramTypes = parameters.filter { it.kind == IrParameterKind.Regular }.map { it.type }
     return irBuiltIns.kFunctionN(paramTypes.size).typeWith(paramTypes + returnType)

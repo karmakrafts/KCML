@@ -16,16 +16,47 @@
 
 package dev.karmakrafts.kcml.api.extension
 
+/**
+ * Stores the KCML extensions participating in a compiler invocation.
+ *
+ * The registry is responsible for extension identity and exposes both registration order and the
+ * dependency-respecting order used by the compiler-plugin dispatcher.
+ */
 interface ExtensionRegistry {
+    /**
+     * Registers an extension for later compiler-phase dispatch.
+     *
+     * @param extension the KCML extension to register.
+     */
     fun register(extension: Extension)
 
+    /**
+     * Removes a previously registered extension.
+     *
+     * @param extension the extension to remove.
+     */
     fun unregister(extension: Extension)
 
+    /**
+     * Finds the registered extension with an identifier.
+     *
+     * @param id the extension identifier.
+     * @return the registered extension, or `null` when it is absent.
+     */
     fun find(id: String): Extension?
 
+    /**
+     * Gets the registered extension with an identifier.
+     *
+     * @param id the extension identifier.
+     * @return the registered extension.
+     * @throws NoSuchElementException if no extension has [id].
+     */
     operator fun get(id: String): Extension
 
+    /** Returns all registered extensions in registration order. */
     fun all(): List<Extension>
 
+    /** Returns all registered extensions ordered according to their dependency constraints. */
     fun allSorted(): List<Extension>
 }

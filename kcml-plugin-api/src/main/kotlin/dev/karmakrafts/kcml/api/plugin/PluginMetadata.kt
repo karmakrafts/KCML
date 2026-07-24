@@ -18,10 +18,25 @@ package dev.karmakrafts.kcml.api.plugin
 
 import io.github.z4kn4fein.semver.Version
 
+/**
+ * Describes a KCML compiler plugin discovered by a [PluginLoader].
+ *
+ * The loader uses this metadata to expose plugin identity, display information, compatibility, and
+ * dependency ordering without requiring consumers to instantiate the plugin.
+ */
 interface PluginMetadata {
+    /** Stable plugin identifier used by the loader and dependency declarations. */
     val id: String
+
+    /** Optional human-readable plugin name. */
     val name: String?
+
+    /** Optional semantic version of this plugin distribution. */
     val version: Version?
+
+    /** Optional URL where users can report problems with this plugin. */
     val issueTrackerUrl: String?
+
+    /** Plugins that must be available before this plugin is loaded. */
     val dependencies: List<PluginDependency>
 }

@@ -16,6 +16,13 @@
 
 package dev.karmakrafts.kcml.api.extension
 
+/**
+ * Assigns a stable identifier to a KCML extension class.
+ *
+ * [AbstractExtension] reads this runtime annotation to provide its default [Extension.id].
+ *
+ * @param id identifier used by KCML dependency resolution and extension lookup.
+ */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
 annotation class ExtensionId(val id: String)

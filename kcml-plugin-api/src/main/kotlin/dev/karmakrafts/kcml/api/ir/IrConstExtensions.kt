@@ -32,6 +32,15 @@ import org.jetbrains.kotlin.ir.expressions.IrVararg
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.target
 
+/**
+ * Unwraps an IR representation of a Kotlin compile-time constant into its runtime value.
+ *
+ * This supports annotation argument forms emitted by Kotlin IR, including fields, enum entries,
+ * class literals, arrays, varargs, and conversion calls around primitive constants.
+ *
+ * @return the raw value, or `null` when this element is not a supported constant representation.
+ * @throws IllegalStateException if an error expression or a non-expression annotation vararg element is encountered.
+ */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 fun IrElement?.unwrapRawConstValue(): Any? {
     return when (this) {
@@ -66,6 +75,14 @@ fun IrElement?.unwrapRawConstValue(): Any? {
     }
 }
 
+/**
+ * Unwraps an IR constant and converts it to a requested Kotlin type.
+ *
+ * Enum constants are resolved from the enum-entry name represented in IR.
+ *
+ * @param T expected Kotlin value type.
+ * @return the converted constant value, or `null` when it is absent or has a different type.
+ */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified T> IrElement?.unwrapConstValue(): T? {
     val value = unwrapRawConstValue()
@@ -74,6 +91,14 @@ inline fun <reified T> IrElement?.unwrapConstValue(): T? {
     else value) as? T
 }
 
+/**
+ * Unwraps an IR array or vararg constant and converts each element to a requested Kotlin type.
+ *
+ * Enum constants are resolved from their IR entry names.
+ *
+ * @param T expected Kotlin value type for each array element.
+ * @return converted values, or an empty list when this element does not represent a constant array.
+ */
 @Suppress("UNCHECKED_CAST")
 inline fun <reified T> IrElement?.unwrapConstValues(): List<T?> {
     val values = unwrapRawConstValue() as List<Any?>? ?: return emptyList()
