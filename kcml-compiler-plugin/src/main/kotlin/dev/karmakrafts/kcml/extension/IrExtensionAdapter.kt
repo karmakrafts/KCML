@@ -17,7 +17,6 @@
 package dev.karmakrafts.kcml.extension
 
 import dev.karmakrafts.kcml.api.backend.Backend
-import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.IrExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -31,23 +30,13 @@ internal class IrExtensionAdapter( // @formatter:off
     private val loader: PluginLoader,
     private val config: CompilerConfiguration,
     private val loggerFactory: LoggerFactory,
-    private val extensions: List<IrExtension>,
-    private val registries: Map<String, ExtensionRegistry>
+    private val extensions: List<Pair<String, IrExtension>>,
 ) : IrGenerationExtension { // @formatter:on
-    private fun findPluginId(extension: IrExtension): String {
-        for ((pluginId, registry) in registries) {
-            if (extension !in registry) continue
-            return pluginId
-        }
-        error("Could not determine plugin ID for extension $extension")
-    }
-
     override fun generate( // @formatter:off
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext
     ) { // @formatter:on
-        for (extension in extensions) {
-            val pluginId = findPluginId(extension)
+        for ((pluginId, extension) in extensions) {
             val logger = loggerFactory.getForPlugin(pluginId)
             val backend = Backend.create(pluginContext, config, loggerFactory, logger, loader)
             extension.process(moduleFragment, backend)

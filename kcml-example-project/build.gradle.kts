@@ -31,3 +31,11 @@ kotlin {
 dependencies {
     kcml(projects.kcmlExamplePlugin)
 }
+
+val pluginJarTask = project(":kcml-example-plugin").tasks.named<Jar>("jar")
+
+tasks {
+    named("prepareKotlinIdeaImport") {
+        dependsOn(pluginJarTask)
+    }
+}

@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.extension
 
-import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -42,19 +41,9 @@ internal class FirExtensionAdapter( // @formatter:off
     val config: CompilerConfiguration,
     val loggerFactory: LoggerFactory,
     session: FirSession,
-    val extensions: List<FirExtension>,
-    val registries: Map<String, ExtensionRegistry>
+    val extensions: List<Pair<String, FirExtension>>
 ) : FirDeclarationGenerationExtension(session) { // @formatter:on
-    private fun findPluginId(extension: FirExtension): String {
-        for ((pluginId, registry) in registries) {
-            if (extension !in registry) continue
-            return pluginId
-        }
-        error("Could not determine plugin ID for extension $extension")
-    }
-
-    private fun getFrontendForExtension(extension: FirExtension, session: FirSession): FrontendImpl {
-        val pluginId = findPluginId(extension)
+    private fun createFrontend(pluginId: String, session: FirSession): FrontendImpl {
         val logger = loggerFactory.getForPlugin(pluginId)
         return FrontendImpl( // @formatter:off
             session = session,
@@ -66,8 +55,8 @@ internal class FirExtensionAdapter( // @formatter:off
     }
 
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.generateConstructors(frontend, context)
         }
     }
@@ -76,8 +65,8 @@ internal class FirExtensionAdapter( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirNamedFunctionSymbol> { // @formatter:on
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.generateFunctions(frontend, callableId, context)
         }
     }
@@ -87,8 +76,8 @@ internal class FirExtensionAdapter( // @formatter:off
         name: Name,
         context: NestedClassGenerationContext
     ): FirClassLikeSymbol<*>? { // @formatter:on
-        for (extension in extensions) {
-            val frontend = getFrontendForExtension(extension, session)
+        for ((pluginId, extension) in extensions) {
+            val frontend = createFrontend(pluginId, session)
             return extension.generateNestedClassLikeDeclaration(frontend, owner, name, context) ?: continue
         }
         return null
@@ -98,16 +87,16 @@ internal class FirExtensionAdapter( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirPropertySymbol> { // @formatter:on
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.generateProperties(frontend, callableId, context)
         }
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun generateTopLevelClassLikeDeclaration(classId: ClassId): FirClassLikeSymbol<*>? {
-        for (extension in extensions) {
-            val frontend = getFrontendForExtension(extension, session)
+        for ((pluginId, extension) in extensions) {
+            val frontend = createFrontend(pluginId, session)
             return extension.generateTopLevelClassLikeDeclaration(frontend, classId) ?: continue
         }
         return null
@@ -117,8 +106,8 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: MemberGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.getCallableNamesForClass(frontend, classSymbol, context)
         }.toSet()
     }
@@ -127,31 +116,31 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: NestedClassGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.getNestedClassifiersNames(frontend, classSymbol, context)
         }.toSet()
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelCallableIds(): Set<CallableId> {
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.getTopLevelCallableIds(frontend)
         }.toSet()
     }
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelClassIds(): Set<ClassId> {
-        return extensions.flatMap { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.flatMap { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.getTopLevelClassIds(frontend)
         }.toSet()
     }
 
     override fun hasPackage(packageFqName: FqName): Boolean {
-        return extensions.any { extension ->
-            val frontend = getFrontendForExtension(extension, session)
+        return extensions.any { (pluginId, extension) ->
+            val frontend = createFrontend(pluginId, session)
             extension.hasPackage(frontend, packageFqName)
         }
     }

@@ -33,9 +33,11 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 @OptIn(ExperimentalCompilerApi::class)
 internal class ExtensionDispatcher( // @formatter:off
     private val loader: PluginLoader,
-    private val registries: Map<String, ExtensionRegistry>
+    registries: Map<String, ExtensionRegistry>
 ) { // @formatter:on
-    private val extensions: List<Extension> = registries.values.flatMap(ExtensionRegistry::allSorted)
+    private val extensions: List<Pair<String, Extension>> = registries.flatMap { (pluginId, registry) ->
+        registry.allSorted().map { extension -> pluginId to extension }
+    }
 
     /**
      * Registers all adapters required to wire through existing compiler extension APIs
@@ -49,14 +51,16 @@ internal class ExtensionDispatcher( // @formatter:off
         FirExtensionRegistrar.registerExtension(object : FirExtensionRegistrar() {
             override fun ExtensionRegistrarContext.configurePlugin() {
                 +FirDeclarationGenerationExtension.Factory { session ->
-                    val firExtensions = extensions.filterIsInstance<FirExtension>()
-                    FirExtensionAdapter(loader, config, loggerFactory, session, firExtensions, registries)
+                    val firExtensions = extensions.filter { (_, extension) -> extension is FirExtension }
+                        .map { (pluginId, extension) -> pluginId to extension as FirExtension }
+                    FirExtensionAdapter(loader, config, loggerFactory, session, firExtensions)
                 }
             }
         })
-        val irExtensions = extensions.filterIsInstance<IrExtension>()
+        val irExtensions = extensions.filter { (_, extension) -> extension is IrExtension }
+            .map { (pluginId, extension) -> pluginId to extension as IrExtension }
         IrGenerationExtension.registerExtension(
-            IrExtensionAdapter(loader, config, loggerFactory, irExtensions, registries)
+            IrExtensionAdapter(loader, config, loggerFactory, irExtensions)
         )
     }
 }
