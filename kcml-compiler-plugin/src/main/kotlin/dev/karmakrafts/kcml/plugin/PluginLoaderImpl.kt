@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.util.error
 import dev.karmakrafts.kcml.api.util.info
+import dev.karmakrafts.kcml.api.util.verbose
 import dev.karmakrafts.kcml.api.util.warn
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
@@ -41,6 +42,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
 import java.util.*
+import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class)
 internal object PluginLoaderImpl : PluginLoader {
@@ -99,7 +101,11 @@ internal object PluginLoaderImpl : PluginLoader {
         messageCollector.info("Loading KCML plugins")
         val parentClassLoader = PluginLoaderImpl::class.java.classLoader
         val classLoader = URLClassLoader(
-            config.kcmlPluginClasspaths.map { it.toUri().toURL() }.toTypedArray(), parentClassLoader
+            config.kcmlPluginClasspaths.map { path ->
+                val absolutePath = path.absolute().normalize()
+                messageCollector.verbose("Loading classpath dependency $absolutePath")
+                absolutePath.toUri().toURL()
+            }.toTypedArray(), parentClassLoader
         )
         val candidates = ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
         messageCollector.info("Found ${candidates.size} KCML plugin candidates")

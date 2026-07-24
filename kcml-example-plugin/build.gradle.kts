@@ -20,6 +20,7 @@ import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.kapt)
+    java
 }
 
 configureJava(libs.versions.java)

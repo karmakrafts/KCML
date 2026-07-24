@@ -24,6 +24,13 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
  *
  * @param message diagnostic text for the compiler output.
  */
+fun MessageCollector.verbose(message: String) = report(CompilerMessageSeverity.LOGGING, message)
+
+/**
+ * Reports an informational diagnostic through Kotlin's compiler message collector.
+ *
+ * @param message diagnostic text for the compiler output.
+ */
 fun MessageCollector.info(message: String) = report(CompilerMessageSeverity.INFO, message)
 
 /**
