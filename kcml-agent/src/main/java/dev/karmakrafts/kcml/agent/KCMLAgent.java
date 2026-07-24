@@ -20,7 +20,6 @@ import dev.karmakrafts.kcml.agent.log.FileLogger;
 import dev.karmakrafts.kcml.agent.log.Logger;
 import dev.karmakrafts.kcml.agent.log.NoopLogger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
@@ -36,39 +35,28 @@ public final class KCMLAgent {
         final var options = new HashMap<String, String>();
         final var argChunks = args.split(":");
         for (final var argChunk : argChunks) {
-            if (!argChunk.contains("=")) {
-                // We know this is a value-less option
-                options.put(argChunk, null);
-                continue;
-            }
-            // We know we have a value to parse
             final var pair = argChunk.split("=");
             options.put(pair[0], pair[1]);
         }
         return options;
     }
 
-    private static @NotNull Logger createLogger(final @NotNull Map<String, @Nullable String> options) {
+    private static @NotNull Logger createLogger(final @NotNull Map<String, String> options) {
         final var logFilePath = options.get("log_file_path");
         Logger logger = NoopLogger.INSTANCE;
-        if (logFilePath != null && !logFilePath.isBlank()) {
-            final var fileLogger = new FileLogger();
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    fileLogger.saveTo(Path.of(logFilePath));
-                }
-                catch (Throwable error) {
-                    // Can't really do anything here
-                }
-            }));
-            logger = fileLogger;
+        if (logFilePath != null) {
+            logger = new FileLogger(Path.of(logFilePath));
         }
         return logger;
     }
 
     public static void agentmain(final String args, final Instrumentation instrumentation) {
         final var options = parseArgs(args);
-        final var logger = createLogger(options);
-        logger.info("Initializing KCML compiler agent..");
+        try (final var logger = createLogger(options)) {
+            logger.info("Initializing KCML compiler agent..");
+        }
+        catch (Throwable error) {
+            // We can't really do anything here :/
+        }
     }
 }

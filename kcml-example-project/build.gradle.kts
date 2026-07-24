@@ -22,6 +22,10 @@ plugins {
     id("dev.karmakrafts.kcml.kcml-gradle-plugin")
 }
 
+kcml {
+    agentLogging = true
+}
+
 kotlin {
     defaultCompilerOptions()
     withJvm()

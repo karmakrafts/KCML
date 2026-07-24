@@ -40,4 +40,8 @@ public final class NoopLogger implements Logger {
     @Override
     public void error(final @Nullable String message) {
     }
+
+    @Override
+    public void close() {
+    }
 }

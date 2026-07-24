@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.agent.log;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public interface Logger {
+public interface Logger extends AutoCloseable {
     void debug(final @Nullable String message);
 
     void info(final @Nullable String message);

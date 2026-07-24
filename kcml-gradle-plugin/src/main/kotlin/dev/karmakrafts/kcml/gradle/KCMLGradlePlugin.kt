@@ -37,11 +37,17 @@ open class KCMLGradlePlugin @Inject constructor(
     override fun apply(target: Project) {
         val logger = target.logger
         logger.info("KCML ${BuildInfo.version}")
-        target.extensions.create("kcml", KCMLExtension::class.java, target.objects)
+        val extension = target.extensions.create("kcml", KCMLExtension::class.java, target)
         logger.info("Created KCML project extension")
         target.configurations.create(CONFIGURATION_NAME) // Custom configuration for declaring KCML plugin dependencies
         logger.info("Created KCML plugin configuration")
         logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
+        target.afterEvaluate {
+            if (extension.agentLogging.get()) {
+                val agentLogFilePath = extension.agentLogFilePath.get().asFile.absolutePath
+                logger.lifecycle("Enabled KCML compiler agent logging to $agentLogFilePath")
+            }
+        }
     }
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
@@ -53,7 +59,13 @@ open class KCMLGradlePlugin @Inject constructor(
             it.file.toPath().absolutePathString()
         }
         return providerFactory.provider {
-            listOf(SubpluginOption("pluginClasspaths", pluginClasspaths))
+            buildList {
+                add(SubpluginOption("pluginClasspaths", pluginClasspaths))
+                if (extension.agentLogging.get()) {
+                    val agentLogFilePath = extension.agentLogFilePath.get().asFile.absolutePath
+                    add(SubpluginOption("agentLogFilePath", agentLogFilePath))
+                }
+            }
         }
     }
 

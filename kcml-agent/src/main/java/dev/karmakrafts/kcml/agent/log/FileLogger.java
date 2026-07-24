@@ -16,18 +16,22 @@
 
 package dev.karmakrafts.kcml.agent.log;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 
 public final class FileLogger implements Logger {
     private final ArrayList<String> lines = new ArrayList<>();
+    private final Path path;
+
+    public FileLogger(final Path path) {
+        this.path = path;
+    }
 
     @Override
     public void debug(final @Nullable String message) {
@@ -53,12 +57,16 @@ public final class FileLogger implements Logger {
         lines.add(String.format("[ERROR] %s", actualMessage));
     }
 
-    public void saveTo(final @NotNull Path path) throws IOException {
-        try (final var writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(path)))) {
+    @Override
+    public void close() throws Exception {
+        Files.deleteIfExists(path);
+        try (final var writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(path,
+            StandardOpenOption.CREATE_NEW)))) {
             for (final var line : lines) {
                 writer.append(line);
                 writer.newLine();
             }
         }
+        lines.clear();
     }
 }

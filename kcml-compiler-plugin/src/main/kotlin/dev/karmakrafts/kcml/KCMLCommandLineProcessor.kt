@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
+import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
@@ -31,21 +32,28 @@ import kotlin.io.path.Path
 class KCMLCommandLineProcessor : CommandLineProcessor {
     companion object {
         private const val PLUGIN_CLASSPATHS: String = "pluginClasspaths"
+        private const val AGENT_LOG_FILE_PATH: String = "agentLogFilePath"
     }
 
     override val pluginId: String get() = KCMLConstants.PLUGIN_ID
 
-    override val pluginOptions: Collection<AbstractCliOption> = listOf(
+    override val pluginOptions: Collection<AbstractCliOption> = listOf( // @formatter:off
         CliOption(
             optionName = PLUGIN_CLASSPATHS,
             valueDescription = "<string>",
             description = "File paths to all JARs added to the KCML plugin class loader"
+        ),
+        CliOption(
+            optionName = AGENT_LOG_FILE_PATH,
+            valueDescription = "string",
+            description = "Path to the file the KCML compiler agent will log to"
         )
-    )
+    ) // @formatter:on
 
     override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
         when (option.optionName) {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
+            AGENT_LOG_FILE_PATH -> configuration.kcmlAgentLogFilePath = Path(value)
         }
     }
 }

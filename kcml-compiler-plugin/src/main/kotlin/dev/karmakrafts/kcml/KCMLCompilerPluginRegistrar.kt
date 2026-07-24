@@ -19,16 +19,23 @@ package dev.karmakrafts.kcml
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
+import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import kotlin.io.path.absolutePathString
 
 @Suppress("UNUSED")
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        AgentInjector.inject()
+        AgentInjector.inject(buildMap {
+            val agentLogFilePath = configuration.kcmlAgentLogFilePath
+            if (agentLogFilePath != null) {
+                this["log_file_path"] = agentLogFilePath.absolutePathString()
+            }
+        })
         registerDisposable(AgentInjector::cleanup)
         with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
