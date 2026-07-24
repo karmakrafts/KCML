@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.agent.util;
 
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 
@@ -28,12 +29,12 @@ public final class NonLoadingClassWriter extends ClassWriter {
         super(flags);
     }
 
-    public NonLoadingClassWriter(final ClassReader classReader, final int flags) {
+    public NonLoadingClassWriter(final @NotNull ClassReader classReader, final int flags) {
         super(classReader, flags);
     }
 
     @Override
-    protected String getCommonSuperClass(final String type1, final String type2) {
+    protected String getCommonSuperClass(final @NotNull String type1, final @NotNull String type2) {
         return ASMTypes.OBJECT.getInternalName();
     }
 }

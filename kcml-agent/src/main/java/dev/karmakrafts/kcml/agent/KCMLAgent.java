@@ -16,13 +16,20 @@
 
 package dev.karmakrafts.kcml.agent;
 
+import dev.karmakrafts.kcml.agent.log.FileLogger;
+import dev.karmakrafts.kcml.agent.log.Logger;
+import dev.karmakrafts.kcml.agent.log.NoopLogger;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import java.lang.instrument.Instrumentation;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public final class KCMLAgent {
-    private static Map<String, String> parseArgs(final String args) {
+    private static @NotNull Map<String, String> parseArgs(final @NotNull String args) {
         if (args.isBlank()) {
             return Collections.emptyMap();
         }
@@ -41,7 +48,27 @@ public final class KCMLAgent {
         return options;
     }
 
+    private static @NotNull Logger createLogger(final @NotNull Map<String, @Nullable String> options) {
+        final var logFilePath = options.get("log_file_path");
+        Logger logger = NoopLogger.INSTANCE;
+        if (logFilePath != null && !logFilePath.isBlank()) {
+            final var fileLogger = new FileLogger();
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    fileLogger.saveTo(Path.of(logFilePath));
+                }
+                catch (Throwable error) {
+                    // Can't really do anything here
+                }
+            }));
+            logger = fileLogger;
+        }
+        return logger;
+    }
+
     public static void agentmain(final String args, final Instrumentation instrumentation) {
         final var options = parseArgs(args);
+        final var logger = createLogger(options);
+        logger.info("Initializing KCML compiler agent..");
     }
 }

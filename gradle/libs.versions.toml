@@ -15,6 +15,7 @@ semver = "3.1.0" # https://github.com/z4kn4fein/kotlin-semver/releases
 ow2asm = "9.10.1" # https://gitlab.ow2.org/asm/asm/-/tags
 shadow = "9.6.0" # https://github.com/GradleUp/shadow/releases
 kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
+annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
 
 [libraries]
 
@@ -33,6 +34,7 @@ autoService-annotations = { module = "com.google.auto.service:auto-service-annot
 iridium = { module = "dev.karmakrafts.iridium:iridium", version.ref = "iridium" }
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 kotlinGraphs = { module = "io.github.alexandrepiveteau:kotlin-graphs", version.ref = "kotlinGraphs" }
+annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
 
 ow2-asm-core = { module = "org.ow2.asm:asm", version.ref = "ow2asm" }
 ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }

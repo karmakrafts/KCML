@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.agent.util;
 
+import org.jetbrains.annotations.NotNull;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
@@ -30,11 +31,11 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 public final class ASMUtils {
-    public static Stream<AbstractInsnNode> stream(final InsnList list) {
+    public static @NotNull Stream<AbstractInsnNode> stream(final @NotNull InsnList list) {
         return StreamSupport.stream(Spliterators.spliterator(list.iterator(), list.size(), 0), false);
     }
 
-    public static FieldInsnNode loadObjectClass(final Type type) {
+    public static @NotNull FieldInsnNode loadObjectClass(final @NotNull Type type) {
         return new FieldInsnNode(Opcodes.GETSTATIC, type.getInternalName(), "INSTANCE", type.getDescriptor());
     }
 
@@ -47,10 +48,10 @@ public final class ASMUtils {
      * @param paramTypes The parameter types of the function.
      * @return A list of all instructions to reflectively invoke the given function.
      */
-    public static InsnList reflectiveCall(final MethodNode caller,
-                                          final String name,
-                                          final Type returnType,
-                                          final Type... paramTypes) {
+    public static @NotNull InsnList reflectiveCall(final @NotNull MethodNode caller,
+                                                   final @NotNull String name,
+                                                   final @NotNull Type returnType,
+                                                   final @NotNull Type... paramTypes) {
         final var instructions = new InsnList();
 
         // Save call arguments (reduce args, leave only instance on top of stack)
@@ -154,7 +155,7 @@ public final class ASMUtils {
      * @param type The type to check the topmost reference against.
      * @return A list of all instructions to reflectively check the instance type.
      */
-    public static InsnList reflectiveInstanceof(final Type type) {
+    public static @NotNull InsnList reflectiveInstanceof(final @NotNull Type type) {
         final var instructions = new InsnList();
         instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
             ASMTypes.OBJECT.getInternalName(),
@@ -172,9 +173,9 @@ public final class ASMUtils {
         return instructions;
     }
 
-    public static InsnList instantiate(final Type type,
-                                       final List<Type> constructorParams,
-                                       final Consumer<InsnList> constructorCallback) {
+    public static @NotNull InsnList instantiate(final @NotNull Type type,
+                                                final @NotNull List<Type> constructorParams,
+                                                final @NotNull Consumer<InsnList> constructorCallback) {
         final var instructions = new InsnList();
         instructions.add(new TypeInsnNode(Opcodes.NEW, type.getInternalName()));
         instructions.add(new InsnNode(Opcodes.DUP));
@@ -186,7 +187,7 @@ public final class ASMUtils {
         return instructions;
     }
 
-    public static int findLocal(final MethodNode method, final String name) {
+    public static int findLocal(final @NotNull MethodNode method, final @NotNull String name) {
         final var locals = Objects.requireNonNull(method.localVariables);
         for (final var local : locals) {
             if (!local.name.equals(name)) {
@@ -197,11 +198,12 @@ public final class ASMUtils {
         throw new IllegalArgumentException(String.format("Could not find local '%s' in method %s", name, method.name));
     }
 
-    public static Predicate<AbstractInsnNode> firstLocalStore(final int index) {
+    public static @NotNull Predicate<AbstractInsnNode> firstLocalStore(final int index) {
         return insn -> insn instanceof VarInsnNode varInsn && varInsn.var == index;
     }
 
-    public static Predicate<AbstractInsnNode> firstLocalStore(final MethodNode method, final String name) {
+    public static @NotNull Predicate<AbstractInsnNode> firstLocalStore(final @NotNull MethodNode method,
+                                                                       final @NotNull String name) {
         return firstLocalStore(findLocal(method, name));
     }
 }
