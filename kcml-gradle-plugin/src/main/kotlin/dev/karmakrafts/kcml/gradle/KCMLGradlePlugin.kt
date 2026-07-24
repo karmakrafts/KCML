@@ -19,6 +19,9 @@ package dev.karmakrafts.kcml.gradle
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompilerOptions
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
+import org.jetbrains.kotlin.gradle.dsl.KotlinNativeCompilerOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
@@ -32,6 +35,7 @@ open class KCMLGradlePlugin @Inject constructor(
 ) : KotlinCompilerPluginSupportPlugin {
     companion object {
         private const val CONFIGURATION_NAME: String = "kcml"
+        private val moduleNameRegex: Regex = Regex("""[.:-]""")
     }
 
     override fun apply(target: Project) {
@@ -50,6 +54,15 @@ open class KCMLGradlePlugin @Inject constructor(
         }
     }
 
+    private fun getModuleName(compilation: KotlinCompilation<*>): String? {
+        return when (val options = compilation.compileTaskProvider.get().compilerOptions) {
+            is KotlinJvmCompilerOptions -> options.moduleName.orNull
+            is KotlinNativeCompilerOptions -> options.moduleName.orNull
+            is KotlinJsCompilerOptions -> options.moduleName.orNull
+            else -> null
+        }
+    }
+
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
         val configuration = project.configurations.getByName(CONFIGURATION_NAME)
@@ -58,12 +71,16 @@ open class KCMLGradlePlugin @Inject constructor(
         val pluginClasspaths = resolvedArtifacts.joinToString(";") {
             it.file.toPath().absolutePathString()
         }
+        val moduleName = getModuleName(kotlinCompilation)
         return providerFactory.provider {
             buildList {
                 add(SubpluginOption("pluginClasspaths", pluginClasspaths))
                 if (extension.agentLogging.get()) {
                     val agentLogFilePath = extension.agentLogFilePath.get().asFile.absolutePath
                     add(SubpluginOption("agentLogFilePath", agentLogFilePath))
+                }
+                if (moduleName?.isNotEmpty() == true) {
+                    add(SubpluginOption("moduleName", moduleName.replace(moduleNameRegex, "_")))
                 }
             }
         }

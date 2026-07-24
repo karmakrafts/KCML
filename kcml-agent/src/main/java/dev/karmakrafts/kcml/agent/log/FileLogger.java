@@ -59,9 +59,11 @@ public final class FileLogger implements Logger {
 
     @Override
     public void close() throws Exception {
-        Files.deleteIfExists(path);
         try (final var writer = new BufferedWriter(new OutputStreamWriter(Files.newOutputStream(path,
-            StandardOpenOption.CREATE_NEW)))) {
+            StandardOpenOption.CREATE,
+            StandardOpenOption.APPEND)))) {
+            writer.append("=".repeat(60));
+            writer.newLine();
             for (final var line : lines) {
                 writer.append(line);
                 writer.newLine();

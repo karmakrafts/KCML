@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.agent.log;
 
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 public interface Logger extends AutoCloseable {
@@ -28,19 +27,19 @@ public interface Logger extends AutoCloseable {
 
     void error(final @Nullable String message);
 
-    default void debug(final @Nullable String message, final @NotNull Throwable error) {
+    default void debug(final @Nullable String message, final Throwable error) {
         debug(String.format("%s: %s", message, error));
     }
 
-    default void info(final @Nullable String message, final @NotNull Throwable error) {
+    default void info(final @Nullable String message, final Throwable error) {
         info(String.format("%s: %s", message, error));
     }
 
-    default void warn(final @Nullable String message, final @NotNull Throwable error) {
+    default void warn(final @Nullable String message, final Throwable error) {
         warn(String.format("%s: %s", message, error));
     }
 
-    default void error(final @Nullable String message, final @NotNull Throwable error) {
+    default void error(final @Nullable String message, final Throwable error) {
         error(String.format("%s: %s", message, error));
     }
 }

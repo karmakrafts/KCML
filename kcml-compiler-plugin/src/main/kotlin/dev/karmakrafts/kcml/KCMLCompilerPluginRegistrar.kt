@@ -20,6 +20,7 @@ import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
 import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
+import dev.karmakrafts.kcml.util.kcmlModuleName
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -34,6 +35,10 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
             val agentLogFilePath = configuration.kcmlAgentLogFilePath
             if (agentLogFilePath != null) {
                 this["log_file_path"] = agentLogFilePath.absolutePathString()
+            }
+            val moduleName = configuration.kcmlModuleName
+            if (moduleName?.isNotEmpty() == true) {
+                this["module_name"] = moduleName
             }
         })
         registerDisposable(AgentInjector::cleanup)

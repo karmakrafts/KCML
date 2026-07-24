@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
+import dev.karmakrafts.kcml.util.kcmlModuleName
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
@@ -33,6 +34,7 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
     companion object {
         private const val PLUGIN_CLASSPATHS: String = "pluginClasspaths"
         private const val AGENT_LOG_FILE_PATH: String = "agentLogFilePath"
+        private const val MODULE_NAME: String = "moduleName"
     }
 
     override val pluginId: String get() = KCMLConstants.PLUGIN_ID
@@ -46,7 +48,14 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
         CliOption(
             optionName = AGENT_LOG_FILE_PATH,
             valueDescription = "string",
-            description = "Path to the file the KCML compiler agent will log to"
+            description = "Path to the file the KCML compiler agent will log to",
+            required = false
+        ),
+        CliOption(
+            optionName = MODULE_NAME,
+            valueDescription = "<string>",
+            description = "Name of the module currently being compiled",
+            required = false
         )
     ) // @formatter:on
 
@@ -54,6 +63,7 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
         when (option.optionName) {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
             AGENT_LOG_FILE_PATH -> configuration.kcmlAgentLogFilePath = Path(value)
+            MODULE_NAME -> configuration.kcmlModuleName = value
         }
     }
 }

@@ -16,12 +16,10 @@
 
 package dev.karmakrafts.kcml.agent.transformer;
 
-import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
-import org.jetbrains.annotations.NotNull;
+import dev.karmakrafts.kcml.agent.log.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
-import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
 import java.lang.instrument.ClassFileTransformer;
@@ -34,12 +32,18 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
     static {
         BLACKLIST.add("java/");
         BLACKLIST.add("jdk/");
+        BLACKLIST.add("com/sun/");
         BLACKLIST.add("org/objectweb/");
-        BLACKLIST.add("org/jetbrains/annotations/");
         BLACKLIST.add("dev/karmakrafts/kcml/");
     }
 
-    private static boolean isClassBlacklisted(final @NotNull String className) {
+    protected final Logger logger;
+
+    protected AbstractClassTransformer(final Logger logger) {
+        this.logger = logger;
+    }
+
+    private static boolean isClassBlacklisted(final String className) {
         for (final var prefix : BLACKLIST) {
             if (!className.startsWith(prefix)) {
                 continue;
@@ -49,26 +53,30 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
         return false;
     }
 
-    protected abstract boolean shouldTransform(final @NotNull String className);
+    protected abstract boolean shouldTransform(final String className);
 
-    protected abstract void transform(final @NotNull ClassNode classNode);
+    protected abstract void transform(final ClassNode classNode);
 
     @Override
-    public byte[] transform(final @NotNull Module module,
+    public byte[] transform(final Module module,
                             final @Nullable ClassLoader loader,
-                            final @NotNull String className,
+                            final String className,
                             final @Nullable Class<?> classBeingRedefined,
-                            final @NotNull ProtectionDomain protectionDomain,
+                            final ProtectionDomain protectionDomain,
                             final byte[] classfileBuffer) {
-        if (isClassBlacklisted(className)) {
+        if (className == null || isClassBlacklisted(className)) {
             return classfileBuffer;
         }
+        if (classfileBuffer == null || classfileBuffer.length == 0) {
+            return new byte[0];
+        }
         if (shouldTransform(className)) {
+            logger.info(String.format("Transforming class %s..", className));
             final var reader = new ClassReader(classfileBuffer);
-            final var classNode = new ClassNode(Opcodes.ASM5);
+            final var classNode = new ClassNode();
             reader.accept(classNode, 0);
             transform(classNode);
-            final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_MAXS | ClassWriter.COMPUTE_FRAMES);
+            final var writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
             classNode.accept(writer);
             return writer.toByteArray();
         }

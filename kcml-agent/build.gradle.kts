@@ -58,6 +58,7 @@ tasks {
         entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar
         archiveClassifier = ""
         relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")
+        relocate("org.jetbrains.annotations", "${rootProject.group}.shaded.org.jetbrains.annotations")
         manifest {
             attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgent"
             attributes["Can-Redefine-Classes"] = true

@@ -23,6 +23,7 @@ import java.nio.file.Path
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
     val agentLogFilePath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentLogFilePath")
+    val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
 }
 
 internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
@@ -35,4 +36,10 @@ internal var CompilerConfiguration.kcmlAgentLogFilePath: Path?
     get() = get(KCMLConfigurationKeys.agentLogFilePath)
     set(value) {
         put(KCMLConfigurationKeys.agentLogFilePath, value ?: return)
+    }
+
+internal var CompilerConfiguration.kcmlModuleName: String?
+    get() = get(KCMLConfigurationKeys.moduleName)
+    set(value) {
+        put(KCMLConfigurationKeys.moduleName, value ?: return)
     }

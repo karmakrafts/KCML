@@ -15,7 +15,11 @@
  */
 
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
+import dev.karmakrafts.conventions.kotlin.withBrowser
 import dev.karmakrafts.conventions.kotlin.withJvm
+import dev.karmakrafts.conventions.kotlin.withNative
+import dev.karmakrafts.conventions.kotlin.withNodeJs
+import dev.karmakrafts.conventions.kotlin.withWeb
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -29,7 +33,19 @@ kcml {
 kotlin {
     defaultCompilerOptions()
     withJvm()
+    withNative()
+    withWeb {
+        withBrowser()
+        withNodeJs()
+    }
     applyDefaultHierarchyTemplate()
+    sourceSets {
+        commonTest {
+            dependencies {
+                implementation(libs.kotlin.test)
+            }
+        }
+    }
 }
 
 dependencies {

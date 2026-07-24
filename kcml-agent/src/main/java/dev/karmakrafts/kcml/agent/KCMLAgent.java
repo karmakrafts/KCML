@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.agent;
 import dev.karmakrafts.kcml.agent.log.FileLogger;
 import dev.karmakrafts.kcml.agent.log.Logger;
 import dev.karmakrafts.kcml.agent.log.NoopLogger;
-import org.jetbrains.annotations.NotNull;
+import dev.karmakrafts.kcml.agent.transformer.TopLevelPhasesTransformer;
 
 import java.lang.instrument.Instrumentation;
 import java.nio.file.Path;
@@ -28,7 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public final class KCMLAgent {
-    private static @NotNull Map<String, String> parseArgs(final @NotNull String args) {
+    private static Map<String, String> parseArgs(final String args) {
         if (args.isBlank()) {
             return Collections.emptyMap();
         }
@@ -36,12 +36,15 @@ public final class KCMLAgent {
         final var argChunks = args.split(":");
         for (final var argChunk : argChunks) {
             final var pair = argChunk.split("=");
+            if (pair.length != 2) {
+                continue; // We ignore any invalid arguments
+            }
             options.put(pair[0], pair[1]);
         }
         return options;
     }
 
-    private static @NotNull Logger createLogger(final @NotNull Map<String, String> options) {
+    private static Logger createLogger(final Map<String, String> options) {
         final var logFilePath = options.get("log_file_path");
         Logger logger = NoopLogger.INSTANCE;
         if (logFilePath != null) {
@@ -52,8 +55,24 @@ public final class KCMLAgent {
 
     public static void agentmain(final String args, final Instrumentation instrumentation) {
         final var options = parseArgs(args);
-        try (final var logger = createLogger(options)) {
-            logger.info("Initializing KCML compiler agent..");
+        try {
+            final var logger = createLogger(options);
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    logger.close();
+                }
+                catch (Throwable error) {
+                    // We can't really do anything here :/
+                }
+            }));
+            final var moduleName = options.get("module_name");
+            if (moduleName != null) {
+                logger.info(String.format("Initializing KCML compiler agent for module '%s'..", moduleName));
+            }
+            else {
+                logger.info("Initializing KCML compiler agent for unknown module..");
+            }
+            instrumentation.addTransformer(new TopLevelPhasesTransformer(logger));
         }
         catch (Throwable error) {
             // We can't really do anything here :/
