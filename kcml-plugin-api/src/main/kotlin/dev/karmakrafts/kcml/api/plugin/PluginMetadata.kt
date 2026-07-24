@@ -18,6 +18,9 @@ package dev.karmakrafts.kcml.api.plugin
 
 import io.github.z4kn4fein.semver.Version
 
+@PublishedApi
+internal val defaultPluginVersion: Version = Version()
+
 /**
  * Describes a KCML compiler plugin discovered by a [PluginLoader].
  *
@@ -40,3 +43,7 @@ interface PluginMetadata {
     /** Plugins that must be available before this plugin is loaded. */
     val dependencies: List<PluginDependency>
 }
+
+inline val PluginMetadata.nameOrId: String get() = name ?: id
+
+inline val PluginMetadata.versionOrDefault: Version get() = version ?: defaultPluginVersion

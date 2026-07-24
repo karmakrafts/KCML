@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
+import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.api.util.error
 import dev.karmakrafts.kcml.api.util.info
 import dev.karmakrafts.kcml.api.util.verbose
@@ -90,7 +91,7 @@ internal object PluginLoaderImpl : PluginLoader {
                 metadata[pluginId] = json.decodeFromStream<SerializablePluginMetadata>(it)
             }
         } catch (_: Throwable) {
-            messageCollector.warn("KCML plugin with ID '$pluginId' is missing metadata, this should be fixed")
+            messageCollector.warn("KCML plugin with ID '$pluginId' has missing or malformed metadata, this should be fixed")
         }
     }
 
@@ -124,7 +125,9 @@ internal object PluginLoaderImpl : PluginLoader {
             plugins[pluginId] = plugin
         }
         messageCollector.info("Loaded ${plugins.size} KCML plugins")
-        // Sort all plugins into their load order
+        // Load all plugins
+        val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
+        messageCollector.info("Sorted plugins into load order: $sortedNames")
         for ((pluginId, plugin) in sortedPlugins) {
             try {
                 loadingPluginId = pluginId

@@ -24,17 +24,8 @@ import kotlinx.serialization.Serializable
 @Serializable
 internal data class SerializablePluginMetadata(
     override val id: String,
-    override val name: String?,
-    override val version: Version?,
-    @SerialName("issue_tracker_url") override val issueTrackerUrl: String?,
-    override val dependencies: List<SerializablePluginDependency>
-) : PluginMetadata {
-    companion object {
-        @PublishedApi
-        internal val defaultVersion: Version = Version()
-    }
-
-    inline val nameOrId: String get() = name ?: id
-
-    inline val versionOrDefault: Version get() = version ?: defaultVersion
-}
+    override val name: String? = null,
+    override val version: Version? = null,
+    @SerialName("issue_tracker_url") override val issueTrackerUrl: String? = null,
+    override val dependencies: List<SerializablePluginDependency> = emptyList()
+) : PluginMetadata
