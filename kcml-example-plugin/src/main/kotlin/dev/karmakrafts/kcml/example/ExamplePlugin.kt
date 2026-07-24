@@ -1,0 +1,33 @@
+/*
+ * Copyright 2026 Karma Krafts
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package dev.karmakrafts.kcml.example
+
+import com.google.auto.service.AutoService
+import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
+import dev.karmakrafts.kcml.api.plugin.Plugin
+import org.jetbrains.kotlin.config.CompilerConfiguration
+
+@Suppress("UNUSED")
+@AutoService(CompilerPlugin::class)
+@Plugin("example")
+class ExamplePlugin : CompilerPlugin {
+    override fun registerExtensions(registry: ExtensionRegistry, config: CompilerConfiguration) {
+        registry.register(ExampleFirExtension())
+        registry.register(ExampleIrExtension())
+    }
+}
