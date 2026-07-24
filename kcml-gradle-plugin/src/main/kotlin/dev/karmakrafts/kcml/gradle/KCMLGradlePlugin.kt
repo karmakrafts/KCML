@@ -48,14 +48,12 @@ open class KCMLGradlePlugin @Inject constructor(
         val project = kotlinCompilation.target.project
         val configuration = project.configurations.getByName(CONFIGURATION_NAME)
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
-        val pluginClasspaths = configuration.resolvedConfiguration.resolvedArtifacts.joinToString(";") {
+        val resolvedArtifacts = configuration.resolvedConfiguration.resolvedArtifacts
+        val pluginClasspaths = resolvedArtifacts.joinToString(";") {
             it.file.toPath().absolutePathString()
         }
         return providerFactory.provider {
-            listOf(
-                SubpluginOption("pluginClasspaths", pluginClasspaths),
-                SubpluginOption("agentMonitor", extension.agentMonitor.toString())
-            )
+            listOf(SubpluginOption("pluginClasspaths", pluginClasspaths))
         }
     }
 

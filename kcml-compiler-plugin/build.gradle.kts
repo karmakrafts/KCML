@@ -31,6 +31,7 @@ configureJava(rootProject.libs.versions.java)
 
 java {
     withSourcesJar()
+    withJavadocJar() // We don't use Dokka here but we still need a javadoc JAR
 }
 
 kotlin {
@@ -65,16 +66,16 @@ dependencies {
     testImplementation(libs.iridium)
 }
 
+val agentJarTask = project(":kcml-agent").tasks.named("shadowJar")
+
 tasks {
     test {
         useJUnitPlatform()
         maxParallelForks = Runtime.getRuntime().availableProcessors()
     }
-}
-
-val agentJarTask = project(":kcml-agent").tasks.named("shadowJar")
-
-tasks {
+    jar {
+        archiveClassifier = "slim"
+    }
     shadowJar {
         configurations = setOf(shadeImplementation, shadeApi)
         archiveClassifier = ""
@@ -92,7 +93,7 @@ publishing {
     setProjectInfo("KCML Compiler Plugin", "Kotlin Compiler Meta Loader for plugin interop")
     publications {
         create<MavenPublication>("plugin") {
-            from(components["kotlin"])
+            from(components["shadow"])
         }
     }
 }

@@ -17,11 +17,10 @@
 package dev.karmakrafts.kcml.gradle
 
 import org.gradle.api.model.ObjectFactory
-import org.gradle.api.provider.Property
 import javax.inject.Inject
 
 abstract class KCMLExtension @Inject internal constructor(
     private val objectFactory: ObjectFactory
 ) {
-    val agentMonitor: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(false)
+
 }

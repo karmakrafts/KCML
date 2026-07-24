@@ -38,12 +38,6 @@ plugins {
 }
 
 configureJava(libs.versions.java)
-
-java {
-    withSourcesJar()
-    withJavadocJar()
-}
-
 val shadeImplementation = configurations.create("shadeImplementation")
 
 configurations {

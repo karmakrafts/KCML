@@ -17,10 +17,13 @@
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
+import dev.karmakrafts.conventions.setProjectInfo
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
+    signing
+    `maven-publish`
 }
 
 configureDokka {
@@ -43,4 +46,13 @@ dependencies {
     // Re-export Kotlin/Native compiler and LLVM APIs
     api(libs.kotlin.native.compiler.embeddable)
     api(libs.semver)
+}
+
+publishing {
+    setProjectInfo("KCML Plugin API", "Plugin API for the Kotlin Compiler Meta Loader")
+    publications {
+        create<MavenPublication>("api") {
+            from(components["kotlin"])
+        }
+    }
 }

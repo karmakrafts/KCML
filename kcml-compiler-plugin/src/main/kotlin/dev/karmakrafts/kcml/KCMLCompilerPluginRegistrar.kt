@@ -17,19 +17,23 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
+import dev.karmakrafts.kcml.api.util.info
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.messageCollector
 
 @Suppress("UNUSED")
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
+        configuration.messageCollector.info("Bootstrapping KCML agent..")
         AgentInjector.inject()
         registerDisposable(AgentInjector::cleanup)
+        configuration.messageCollector.info("Initializing KCML plugin loader..")
         with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
 

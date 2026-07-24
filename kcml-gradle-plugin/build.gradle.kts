@@ -19,6 +19,10 @@ import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
 import dev.karmakrafts.conventions.GitLabCI
+import dev.karmakrafts.conventions.apache2License
+import dev.karmakrafts.conventions.defaultDependencyLocking
+import dev.karmakrafts.conventions.setRepository
+import dev.karmakrafts.conventions.signPublications
 import kotlin.io.path.createDirectories
 import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
@@ -35,6 +39,7 @@ plugins {
 
 group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
+if (GitLabCI.isCI) defaultDependencyLocking()
 
 configureDokka {
     withKotlin()
@@ -81,7 +86,7 @@ gradlePlugin {
     }
     plugins {
         create("gradlePlugin") {
-            id = "$group.${rootProject.name}-gradle-plugin"
+            id = "$group.kcml-gradle-plugin"
             implementationClass = "$group.gradle.KCMLGradlePlugin"
             displayName = "KCML Gradle Plugin"
             description = "Gradle plugin for applying the KCML compiler plugin"
@@ -90,7 +95,14 @@ gradlePlugin {
     }
 }
 
+signing {
+    signPublications()
+}
+
 publishing {
+    apache2License()
+    setRepository("github.com", "karmakrafts/kcml")
+    with(GitLabCI) { karmaKraftsDefaults() }
     setProjectInfo(
         name = "KCML Gradle Plugin",
         description = "Gradle plugin for the Kotlin Compiler Meta Loader",

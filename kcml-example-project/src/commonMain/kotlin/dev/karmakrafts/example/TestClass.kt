@@ -14,20 +14,6 @@
  * limitations under the License.
  */
 
-import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
-import dev.karmakrafts.conventions.kotlin.withJvm
+package dev.karmakrafts.example
 
-plugins {
-    alias(libs.plugins.kotlin.multiplatform)
-    id("dev.karmakrafts.kcml.kcml-gradle-plugin")
-}
-
-kotlin {
-    defaultCompilerOptions()
-    withJvm()
-    applyDefaultHierarchyTemplate()
-}
-
-dependencies {
-    kcml(projects.kcmlExamplePlugin)
-}
+class TestClass {}
