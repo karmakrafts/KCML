@@ -104,11 +104,12 @@ internal object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    internal fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
-        check(!isLoadComplete) { "Plugins already have been loaded" }
-        // Load all plugins and their associated metadata by plugin ID
+    private fun setupLogging(config: CompilerConfiguration) {
         loggerFactory = DefaultLoggerFactory(this@PluginLoaderImpl, config.messageCollector)
         logger = loggerFactory("KCML")
+    }
+
+    private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = PluginLoaderImpl::class.java.classLoader
         val classLoader = URLClassLoader(
@@ -118,8 +119,10 @@ internal object PluginLoaderImpl : PluginLoader {
                 absolutePath.toUri().toURL()
             }.toTypedArray(), parentClassLoader
         )
-        val candidates = ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
-        logger.info("Found ${candidates.size} plugin candidates")
+        return ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
+    }
+
+    private fun loadMetadata(candidates: List<CompilerPlugin>) {
         for (plugin in candidates) {
             val pluginClass = plugin::class.java
             if (!pluginClass.isAnnotationPresent(Plugin::class.java)) {
@@ -134,10 +137,9 @@ internal object PluginLoaderImpl : PluginLoader {
             tryLoadMetadata(pluginClass, pluginId)
             plugins[pluginId] = plugin
         }
-        logger.info("Loaded ${plugins.size} plugins")
-        // Load all plugins
-        val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
-        logger.info("Sorted plugins into load order: $sortedNames")
+    }
+
+    private fun loadPlugins(config: CompilerConfiguration) {
         for ((pluginId, plugin) in sortedPlugins) {
             try {
                 loadingPluginId = pluginId
@@ -155,6 +157,21 @@ internal object PluginLoaderImpl : PluginLoader {
             }
         }
         loadingPluginId = null // Only used during the load phase
+    }
+
+    internal fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
+        check(!isLoadComplete) { "Plugins already have been loaded" }
+        setupLogging(config)
+        // Load all plugin candidates and instantiate them through ServiceLoader
+        val candidates = loadCandidates(config)
+        logger.info("Found ${candidates.size} plugin candidates")
+        // Try to load metadata for all plugins
+        loadMetadata(candidates)
+        // Log plugin load order for debugging purposes
+        val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
+        logger.info("Sorted plugins into load order: $sortedNames")
+        // Load all plugins in the proper order
+        loadPlugins(config)
         // Register adapters for extension dispatcher
         extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
         extensionDispatcher.registerAdapters(this, config, loggerFactory)
