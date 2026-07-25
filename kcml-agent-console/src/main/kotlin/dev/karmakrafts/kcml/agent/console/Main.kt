@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.agent.console
 
+import com.formdev.flatlaf.FlatDarkLaf
 import sun.misc.Unsafe
 import java.awt.Toolkit
 import javax.swing.SwingUtilities
@@ -38,10 +39,10 @@ object Main {
     fun main(args: Array<String>) {
         val options = parseArgs(args)
         updateAppClassName()
+        FlatDarkLaf.setup()
         val window = AgentConsole()
         // TODO: make configurable in GUI
         val server = ConsoleServer( // @formatter:off
-            host = options["host"] ?: "127.0.0.1",
             port = options["port"]?.toIntOrNull() ?: 9876,
             callback = window::log
         ) // @formatter:on

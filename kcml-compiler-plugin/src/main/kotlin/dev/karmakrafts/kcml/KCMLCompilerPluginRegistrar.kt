@@ -19,7 +19,10 @@ package dev.karmakrafts.kcml
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
+import dev.karmakrafts.kcml.util.AgentLoggingMode
 import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
+import dev.karmakrafts.kcml.util.kcmlAgentLogServerPort
+import dev.karmakrafts.kcml.util.kcmlAgentLoggingMode
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -30,17 +33,28 @@ import kotlin.io.path.absolutePathString
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
+    private fun buildAgentArgs(configuration: CompilerConfiguration): Map<String, String> = buildMap {
+        val loggingMode = configuration.kcmlAgentLoggingMode
+        this["log_mode"] = loggingMode.name
+        when (loggingMode) {
+            AgentLoggingMode.FILE -> configuration.kcmlAgentLogFilePath?.let { path ->
+                this["log_file_path"] = path.absolutePathString()
+            }
+
+            AgentLoggingMode.REMOTE -> {
+                configuration.kcmlAgentLogServerPort?.let { port -> this["log_server_port"] = port.toString() }
+            }
+
+            else -> {}
+        }
+        val moduleName = configuration.kcmlModuleName
+        if (moduleName?.isNotEmpty() == true) {
+            this["module_name"] = moduleName
+        }
+    }
+
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        AgentInjector.inject(buildMap {
-            val agentLogFilePath = configuration.kcmlAgentLogFilePath
-            if (agentLogFilePath != null) {
-                this["log_file_path"] = agentLogFilePath.absolutePathString()
-            }
-            val moduleName = configuration.kcmlModuleName
-            if (moduleName?.isNotEmpty() == true) {
-                this["module_name"] = moduleName
-            }
-        })
+        AgentInjector.inject(buildAgentArgs(configuration))
         registerDisposable(AgentInjector::cleanup)
         with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }

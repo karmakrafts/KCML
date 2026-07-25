@@ -22,7 +22,10 @@ import java.nio.file.Path
 
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
+    val agentLoggingMode: CompilerConfigurationKey<AgentLoggingMode> =
+        CompilerConfigurationKey.create("kcmlAgentLoggingMode")
     val agentLogFilePath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentLogFilePath")
+    val agentLogServerPort: CompilerConfigurationKey<Int> = CompilerConfigurationKey.create("kcmlAgentLogServerPort")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
 }
 
@@ -32,10 +35,22 @@ internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
         put(KCMLConfigurationKeys.pluginClasspaths, value)
     }
 
+internal var CompilerConfiguration.kcmlAgentLoggingMode: AgentLoggingMode
+    get() = get(KCMLConfigurationKeys.agentLoggingMode) ?: AgentLoggingMode.NONE
+    set(value) {
+        put(KCMLConfigurationKeys.agentLoggingMode, value)
+    }
+
 internal var CompilerConfiguration.kcmlAgentLogFilePath: Path?
     get() = get(KCMLConfigurationKeys.agentLogFilePath)
     set(value) {
         put(KCMLConfigurationKeys.agentLogFilePath, value ?: return)
+    }
+
+internal var CompilerConfiguration.kcmlAgentLogServerPort: Int?
+    get() = get(KCMLConfigurationKeys.agentLogServerPort)
+    set(value) {
+        put(KCMLConfigurationKeys.agentLogServerPort, value ?: return)
     }
 
 internal var CompilerConfiguration.kcmlModuleName: String?

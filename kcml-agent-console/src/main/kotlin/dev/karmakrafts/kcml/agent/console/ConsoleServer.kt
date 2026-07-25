@@ -25,22 +25,22 @@ import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import java.net.InetAddress
 import java.net.ServerSocket
 import kotlin.concurrent.atomics.AtomicBoolean
 
 internal class ConsoleServer( // @formatter:off
-    host: String,
     port: Int,
     private val callback: (String) -> Unit
 ) : AutoCloseable { // @formatter:on
-    private val socket: ServerSocket = ServerSocket(port, 10, InetAddress.getByName(host))
+    private val socket: ServerSocket = ServerSocket(port, 10, InetAddress.getLoopbackAddress())
     private val coroutineScope: CoroutineScope =
         CoroutineScope(Dispatchers.IO + SupervisorJob() + CoroutineName("KCML Agent Console Server"))
     private val isRunning: AtomicBoolean = AtomicBoolean(true)
 
     init {
-        println("Starting console server at $host:$port")
+        println("Starting console server at localhost:$port")
         startNextConnectionJob() // Start initial connection job
     }
 
@@ -53,7 +53,9 @@ internal class ConsoleServer( // @formatter:off
                         startNextConnectionJob() // When this task accepts a new connection, spin up a new one
                         clientSocket.getInputStream().bufferedReader().use { reader ->
                             while (isRunning.load()) { // While we are running, try to pipe content into the console
-                                callback(reader.readLine())
+                                val line = reader.readLine()
+                                while (line == null) yield()
+                                callback(line)
                             }
                         }
                     }

@@ -36,6 +36,7 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.swing)
+    implementation(libs.flatlaf)
 }
 
 application {

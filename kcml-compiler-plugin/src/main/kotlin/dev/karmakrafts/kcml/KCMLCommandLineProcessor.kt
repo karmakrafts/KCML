@@ -17,7 +17,10 @@
 package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
+import dev.karmakrafts.kcml.util.AgentLoggingMode
 import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
+import dev.karmakrafts.kcml.util.kcmlAgentLogServerPort
+import dev.karmakrafts.kcml.util.kcmlAgentLoggingMode
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
@@ -33,7 +36,9 @@ import kotlin.io.path.Path
 class KCMLCommandLineProcessor : CommandLineProcessor {
     companion object {
         private const val PLUGIN_CLASSPATHS: String = "pluginClasspaths"
+        private const val AGENT_LOGGING_MODE: String = "agentLoggingMode"
         private const val AGENT_LOG_FILE_PATH: String = "agentLogFilePath"
+        private const val AGENT_LOG_SERVER_PORT: String = "agentLogServerPort"
         private const val MODULE_NAME: String = "moduleName"
     }
 
@@ -46,9 +51,21 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
             description = "File paths to all JARs added to the KCML plugin class loader"
         ),
         CliOption(
+            optionName = AGENT_LOGGING_MODE,
+            valueDescription = "<NONE|FILE|REMOTE>",
+            description = "The logging mode of the KCML compiler agent",
+            required = false
+        ),
+        CliOption(
             optionName = AGENT_LOG_FILE_PATH,
-            valueDescription = "string",
+            valueDescription = "<string>",
             description = "Path to the file the KCML compiler agent will log to",
+            required = false
+        ),
+        CliOption(
+            optionName = AGENT_LOG_SERVER_PORT,
+            valueDescription = "<int>",
+            description = "The port of the KCML agent console log server",
             required = false
         ),
         CliOption(
@@ -62,7 +79,12 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
     override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
         when (option.optionName) {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
+            AGENT_LOGGING_MODE -> configuration.kcmlAgentLoggingMode = AgentLoggingMode.entries.first { mode ->
+                mode.name.equals(value, true)
+            }
+
             AGENT_LOG_FILE_PATH -> configuration.kcmlAgentLogFilePath = Path(value)
+            AGENT_LOG_SERVER_PORT -> configuration.kcmlAgentLogServerPort = value.toInt()
             MODULE_NAME -> configuration.kcmlModuleName = value
         }
     }

@@ -8,7 +8,7 @@ kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
 kcml = "1.0.0"
 iridium = "1.13.2" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
-kotlinx-coroutines = "1.11.0"
+kotlinx-coroutines = "1.11.0" # https://github.com/Kotlin/kotlinx.coroutines/releases
 dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
 karmaConventions = "1.18.3" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
@@ -17,6 +17,7 @@ ow2asm = "9.10.1" # https://gitlab.ow2.org/asm/asm/-/tags
 shadow = "9.6.0" # https://github.com/GradleUp/shadow/releases
 kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
 annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
+flatlaf = "3.7.2" # https://github.com/JFormDesigner/FlatLaf/releases
 
 [libraries]
 
@@ -37,6 +38,7 @@ iridium = { module = "dev.karmakrafts.iridium:iridium", version.ref = "iridium" 
 semver = { module = "io.github.z4kn4fein:semver", version.ref = "semver" }
 kotlinGraphs = { module = "io.github.alexandrepiveteau:kotlin-graphs", version.ref = "kotlinGraphs" }
 annotations = { module = "org.jetbrains:annotations", version.ref = "annotations" }
+flatlaf = { module = "com.formdev:flatlaf", version.ref = "flatlaf" }
 
 ow2-asm-core = { module = "org.ow2.asm:asm", version.ref = "ow2asm" }
 ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }

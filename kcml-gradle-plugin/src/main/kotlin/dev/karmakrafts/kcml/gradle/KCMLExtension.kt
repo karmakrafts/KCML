@@ -31,7 +31,9 @@ abstract class KCMLExtension @Inject internal constructor(
     // @formatter:off
     val agentLogFilePath: RegularFileProperty = objectFactory.fileProperty()
         .convention { project.file("kcml_agent_log.log") }
-    val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java)
-        .convention(false)
+    val agentLogServerPort: Property<Int> = objectFactory.property(Int::class.java)
+        .convention(9876)
+    val agentLoggingMode: Property<AgentLoggingMode> = objectFactory.property(AgentLoggingMode::class.java)
+        .convention(AgentLoggingMode.NONE)
     // @formatter:on
 }

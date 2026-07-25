@@ -41,17 +41,11 @@ open class KCMLGradlePlugin @Inject constructor(
     override fun apply(target: Project) {
         val logger = target.logger
         logger.info("KCML ${BuildInfo.version}")
-        val extension = target.extensions.create("kcml", KCMLExtension::class.java, target)
+        target.extensions.create("kcml", KCMLExtension::class.java, target)
         logger.info("Created KCML project extension")
         target.configurations.create(CONFIGURATION_NAME) // Custom configuration for declaring KCML plugin dependencies
         logger.info("Created KCML plugin configuration")
         logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
-        target.afterEvaluate {
-            if (extension.agentLogging.get()) {
-                val agentLogFilePath = extension.agentLogFilePath.get().asFile.absolutePath
-                logger.lifecycle("Enabled KCML compiler agent logging to $agentLogFilePath")
-            }
-        }
     }
 
     private fun getModuleName(compilation: KotlinCompilation<*>): String? {
@@ -72,12 +66,22 @@ open class KCMLGradlePlugin @Inject constructor(
             it.file.toPath().absolutePathString()
         }
         val moduleName = getModuleName(kotlinCompilation)
+        val loggingMode = extension.agentLoggingMode.get()
         return providerFactory.provider {
             buildList {
                 add(SubpluginOption("pluginClasspaths", pluginClasspaths))
-                if (extension.agentLogging.get()) {
-                    val agentLogFilePath = extension.agentLogFilePath.get().asFile.absolutePath
-                    add(SubpluginOption("agentLogFilePath", agentLogFilePath))
+                add(SubpluginOption("agentLoggingMode", loggingMode.name))
+                // Only pass relevant agent flags when needed
+                when (loggingMode) {
+                    AgentLoggingMode.FILE -> {
+                        add(SubpluginOption("agentLogFilePath", extension.agentLogFilePath.get().asFile.absolutePath))
+                    }
+
+                    AgentLoggingMode.REMOTE -> {
+                        add(SubpluginOption("agentLogServerPort", extension.agentLogServerPort.get().toString()))
+                    }
+
+                    else -> {}
                 }
                 if (moduleName?.isNotEmpty() == true) {
                     add(SubpluginOption("moduleName", moduleName.replace(moduleNameRegex, "_")))

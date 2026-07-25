@@ -20,6 +20,7 @@ import dev.karmakrafts.conventions.kotlin.withJvm
 import dev.karmakrafts.conventions.kotlin.withNative
 import dev.karmakrafts.conventions.kotlin.withNodeJs
 import dev.karmakrafts.conventions.kotlin.withWeb
+import dev.karmakrafts.kcml.gradle.AgentLoggingMode
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -27,7 +28,7 @@ plugins {
 }
 
 kcml {
-    agentLogging = true
+    agentLoggingMode = AgentLoggingMode.REMOTE
 }
 
 kotlin {
