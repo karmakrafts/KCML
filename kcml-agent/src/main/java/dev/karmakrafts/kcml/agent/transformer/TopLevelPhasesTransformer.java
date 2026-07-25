@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.agent.transformer;
 
 import dev.karmakrafts.kcml.agent.log.Logger;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodNode;
 
 public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
     public TopLevelPhasesTransformer(final Logger logger) {
@@ -29,10 +30,16 @@ public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
         return className.equals("org/jetbrains/kotlin/backend/konan/driver/phases/TopLevelPhasesKt");
     }
 
+    private void transformRunAllLowerings(final MethodNode methodNode) {
+        logger.info(String.format("Transforming %s%s", methodNode.name, methodNode.desc));
+    }
+
     @Override
     protected void transform(final ClassNode classNode) {
-        for (final var method : classNode.methods) {
-            logger.info(String.format("%s.%s%s", classNode.name, method.name, method.desc));
+        for (final var methodNode : classNode.methods) {
+            switch (methodNode.name) {
+                case "runBackend$lambda$0$runAllLowerings" -> transformRunAllLowerings(methodNode);
+            }
         }
     }
 }
