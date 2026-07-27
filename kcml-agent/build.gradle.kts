@@ -34,6 +34,7 @@ import dev.karmakrafts.conventions.configureJava
 
 plugins {
     alias(libs.plugins.shadow)
+    alias(libs.plugins.kotlin.jvm)
     java
 }
 
@@ -50,9 +51,14 @@ dependencies {
     shadeImplementation(libs.ow2.asm.core)
     shadeImplementation(libs.ow2.asm.tree)
     shadeImplementation(libs.annotations)
+
+    testImplementation(libs.kotlin.test)
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
     shadowJar {
         configurations = setOf(shadeImplementation)
         entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar

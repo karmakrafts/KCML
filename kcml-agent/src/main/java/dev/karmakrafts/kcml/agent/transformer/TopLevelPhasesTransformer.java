@@ -23,6 +23,7 @@ import org.objectweb.asm.tree.MethodNode;
 public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
     public TopLevelPhasesTransformer(final Logger logger) {
         super(logger);
+        logger.info("Created TopLevelPhasesTransformer");
     }
 
     @Override

@@ -24,7 +24,7 @@ import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.name.CallableId
 
-@ExtensionId("fir_example") // example:fir_example
+@ExtensionId("fir_example")
 internal class ExampleFirExtension : AbstractExtension(), FirExtension {
     override fun generateFunctions( // @formatter:off
         frontend: Frontend,

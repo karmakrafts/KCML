@@ -17,7 +17,6 @@
 package dev.karmakrafts.kcml.gradle
 
 import org.gradle.api.Project
-import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import javax.inject.Inject
@@ -29,11 +28,9 @@ abstract class KCMLExtension @Inject internal constructor(
         get() = project.objects
 
     // @formatter:off
-    val agentLogFilePath: RegularFileProperty = objectFactory.fileProperty()
-        .convention { project.file("kcml_agent_log.log") }
-    val agentLogServerPort: Property<Int> = objectFactory.property(Int::class.java)
+    val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java)
+        .convention(false)
+    val agentCommPort: Property<Int> = objectFactory.property(Int::class.java)
         .convention(9876)
-    val agentLoggingMode: Property<AgentLoggingMode> = objectFactory.property(AgentLoggingMode::class.java)
-        .convention(AgentLoggingMode.NONE)
     // @formatter:on
 }

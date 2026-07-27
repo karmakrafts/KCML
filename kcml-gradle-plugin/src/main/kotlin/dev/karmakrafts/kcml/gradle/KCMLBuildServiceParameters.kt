@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.util
+package dev.karmakrafts.kcml.gradle
 
-enum class AgentLoggingMode {
-    // @formatter:off
-    NONE,
-    FILE,
-    REMOTE
-    // @formatter:on
+import org.gradle.api.provider.Property
+import org.gradle.api.services.BuildServiceParameters
+
+internal interface KCMLBuildServiceParameters : BuildServiceParameters {
+    val agentCommPort: Property<Int>
 }

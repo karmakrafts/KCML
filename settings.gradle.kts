@@ -57,7 +57,6 @@ nmcpSettings {
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include("kcml-agent")
-include("kcml-agent-console")
 include("kcml-compiler-plugin")
 include("kcml-plugin-api")
 include("kcml-example-plugin")

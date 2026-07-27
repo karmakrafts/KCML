@@ -14,22 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.log;
+package dev.karmakrafts.kcml.gradle
 
-import java.util.Arrays;
-import java.util.Optional;
-
-public enum LoggingMode {
-    // @formatter:off
-    NONE,
-    FILE,
-    REMOTE;
-    // @formatter:on
-
-    public static Optional<LoggingMode> byName(final String name) {
-        if (name == null) {
-            return Optional.empty();
-        }
-        return Arrays.stream(values()).filter(mode -> mode.name().equalsIgnoreCase(name)).findFirst();
-    }
+internal object PluginIds {
+    const val KOTLIN_MP: String = "org.jetbrains.kotlin.multiplatform"
 }

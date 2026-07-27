@@ -52,6 +52,10 @@ configureJava(rootProject.libs.versions.java)
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+    compileOnly(libs.kotlinx.serialization.core)
+    compileOnly(libs.kotlinx.serialization.json)
+
+    testImplementation(libs.kotlin.test)
 }
 
 kotlin {
@@ -64,6 +68,9 @@ kotlin {
 }
 
 tasks {
+    test {
+        useJUnitPlatform()
+    }
     val createVersionFile = register("createVersionFile") {
         group = "build"
         description = "Generate the version file embedded in the finished plugin JAR"

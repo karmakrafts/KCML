@@ -16,10 +16,18 @@
 
 package dev.karmakrafts.kcml.gradle
 
-enum class AgentLoggingMode {
-    // @formatter:off
-    NONE,
-    FILE,
-    REMOTE
-    // @formatter:on
+import org.gradle.api.DefaultTask
+import org.gradle.api.provider.Property
+import org.gradle.api.services.ServiceReference
+import org.gradle.api.tasks.TaskAction
+
+// A little hack for Kotlin/Native to keep the KCMLBuildService alive until after linking
+abstract class KCMLPostBuildTask : DefaultTask() {
+    @get:ServiceReference
+    internal abstract val buildService: Property<KCMLBuildService>
+
+    @TaskAction
+    fun performAction() {
+        buildService.get() // Simply get the reference to keep service alive
+    }
 }

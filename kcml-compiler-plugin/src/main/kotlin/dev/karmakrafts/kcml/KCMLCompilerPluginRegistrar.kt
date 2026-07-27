@@ -19,33 +19,23 @@ package dev.karmakrafts.kcml
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.AgentInjector
-import dev.karmakrafts.kcml.util.AgentLoggingMode
-import dev.karmakrafts.kcml.util.kcmlAgentLogFilePath
-import dev.karmakrafts.kcml.util.kcmlAgentLogServerPort
-import dev.karmakrafts.kcml.util.kcmlAgentLoggingMode
+import dev.karmakrafts.kcml.util.kcmlAgentCommPort
+import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import kotlin.io.path.absolutePathString
 
 @Suppress("UNUSED")
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     private fun buildAgentArgs(configuration: CompilerConfiguration): Map<String, String> = buildMap {
-        val loggingMode = configuration.kcmlAgentLoggingMode
-        this["log_mode"] = loggingMode.name
-        when (loggingMode) {
-            AgentLoggingMode.FILE -> configuration.kcmlAgentLogFilePath?.let { path ->
-                this["log_file_path"] = path.absolutePathString()
+        if (configuration.kcmlAgentLogging) {
+            this["logging"] = "true"
+            configuration.kcmlAgentCommPort?.let { port ->
+                this["comm_port"] = port.toString()
             }
-
-            AgentLoggingMode.REMOTE -> {
-                configuration.kcmlAgentLogServerPort?.let { port -> this["log_server_port"] = port.toString() }
-            }
-
-            else -> {}
         }
         val moduleName = configuration.kcmlModuleName
         if (moduleName?.isNotEmpty() == true) {

@@ -16,12 +16,13 @@
 
 package dev.karmakrafts.kcml.agent;
 
-import dev.karmakrafts.kcml.agent.log.*;
+import dev.karmakrafts.kcml.agent.log.Logger;
+import dev.karmakrafts.kcml.agent.log.NoopLogger;
+import dev.karmakrafts.kcml.agent.log.RemoteLogger;
 import dev.karmakrafts.kcml.agent.transformer.TopLevelPhasesTransformer;
+import dev.karmakrafts.kcml.agent.util.AgentCommClient;
 
-import java.io.IOException;
 import java.lang.instrument.Instrumentation;
-import java.nio.file.Path;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -43,46 +44,25 @@ public final class KCMLAgent {
         return options;
     }
 
-    private static Logger createLogger(final Map<String, String> options) throws IOException {
-        final var loggingMode = LoggingMode.byName(options.get("log_mode")).orElse(LoggingMode.NONE);
+    private static Logger createLogger(final Map<String, String> options, final AgentCommClient commClient) {
+        var moduleName = options.get("module_name");
+        if (moduleName == null) {
+            moduleName = "Unknown";
+        }
         Logger logger = NoopLogger.INSTANCE;
-        switch (loggingMode) {
-            case FILE -> {
-                final var logFilePath = options.get("log_file_path");
-                if (logFilePath == null) {
-                    return logger;
-                }
-                logger = new FileLogger(Path.of(logFilePath));
-            }
-            case REMOTE -> {
-                final var logServerPort = options.get("log_server_port");
-                var port = 9876;
-                if (logServerPort != null) {
-                    port = Integer.parseInt(logServerPort);
-                }
-                var moduleName = options.get("module_name");
-                if (moduleName == null) {
-                    moduleName = "Unknown";
-                }
-                logger = new RemoteLogger(port, moduleName);
-            }
+        final var logging = options.get("logging");
+        if (logging != null && logging.equalsIgnoreCase("true")) {
+            logger = new RemoteLogger(commClient, moduleName);
         }
         return logger;
     }
 
     public static void agentmain(final String args, final Instrumentation instrumentation) {
         final var options = parseArgs(args);
+        final var commPort = Integer.parseInt(options.get("comm_port"));
         try {
-            final var logger = createLogger(options);
-            // This might be delayed because the Kotlin compiler may be hosted within the Gradle daemon or the KCD
-            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    logger.close();
-                }
-                catch (Throwable error) {
-                    // We can't really do anything here :/
-                }
-            }));
+            final var commClient = new AgentCommClient(commPort);
+            final var logger = createLogger(options, commClient);
             logger.info("Initializing KCML compiler agent");
             instrumentation.addTransformer(new TopLevelPhasesTransformer(logger));
         }

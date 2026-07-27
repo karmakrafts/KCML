@@ -22,10 +22,8 @@ import java.nio.file.Path
 
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
-    val agentLoggingMode: CompilerConfigurationKey<AgentLoggingMode> =
-        CompilerConfigurationKey.create("kcmlAgentLoggingMode")
-    val agentLogFilePath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentLogFilePath")
-    val agentLogServerPort: CompilerConfigurationKey<Int> = CompilerConfigurationKey.create("kcmlAgentLogServerPort")
+    val agentLogging: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentLogging")
+    val agentCommPort: CompilerConfigurationKey<Int> = CompilerConfigurationKey.create("kcmlAgentCommPort")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
 }
 
@@ -35,22 +33,16 @@ internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
         put(KCMLConfigurationKeys.pluginClasspaths, value)
     }
 
-internal var CompilerConfiguration.kcmlAgentLoggingMode: AgentLoggingMode
-    get() = get(KCMLConfigurationKeys.agentLoggingMode) ?: AgentLoggingMode.NONE
+internal var CompilerConfiguration.kcmlAgentLogging: Boolean
+    get() = get(KCMLConfigurationKeys.agentLogging) ?: false
     set(value) {
-        put(KCMLConfigurationKeys.agentLoggingMode, value)
+        put(KCMLConfigurationKeys.agentLogging, value)
     }
 
-internal var CompilerConfiguration.kcmlAgentLogFilePath: Path?
-    get() = get(KCMLConfigurationKeys.agentLogFilePath)
+internal var CompilerConfiguration.kcmlAgentCommPort: Int?
+    get() = get(KCMLConfigurationKeys.agentCommPort)
     set(value) {
-        put(KCMLConfigurationKeys.agentLogFilePath, value ?: return)
-    }
-
-internal var CompilerConfiguration.kcmlAgentLogServerPort: Int?
-    get() = get(KCMLConfigurationKeys.agentLogServerPort)
-    set(value) {
-        put(KCMLConfigurationKeys.agentLogServerPort, value ?: return)
+        put(KCMLConfigurationKeys.agentCommPort, value ?: return)
     }
 
 internal var CompilerConfiguration.kcmlModuleName: String?

@@ -14,30 +14,20 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.log;
+package dev.karmakrafts.kcml.gradle
 
-import org.jetbrains.annotations.Nullable;
+import org.gradle.api.DefaultTask
+import org.gradle.api.provider.Property
+import org.gradle.api.services.ServiceReference
+import org.gradle.api.tasks.TaskAction
 
-public final class NoopLogger implements Logger {
-    public static final NoopLogger INSTANCE = new NoopLogger();
+// A little hack for Kotlin/Native to keep the KCMLBuildService alive until after linking
+abstract class KCMLPreBuildTask : DefaultTask() {
+    @get:ServiceReference
+    internal abstract val buildService: Property<KCMLBuildService>
 
-    // @formatter:off
-    private NoopLogger() {}
-    // @formatter:on
-
-    @Override
-    public void debug(final @Nullable String message) {
-    }
-
-    @Override
-    public void info(final @Nullable String message) {
-    }
-
-    @Override
-    public void warn(final @Nullable String message) {
-    }
-
-    @Override
-    public void error(final @Nullable String message) {
+    @TaskAction
+    fun performAction() {
+        buildService.get() // Simply get the reference to keep service alive
     }
 }

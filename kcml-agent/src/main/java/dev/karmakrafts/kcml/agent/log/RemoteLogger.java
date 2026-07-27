@@ -16,71 +16,39 @@
 
 package dev.karmakrafts.kcml.agent.log;
 
+import dev.karmakrafts.kcml.agent.util.AgentCommClient;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.net.InetAddress;
-import java.net.Socket;
-
 public final class RemoteLogger implements Logger {
-    private final Socket socket;
-    private final PrintWriter writer;
+    private final AgentCommClient client;
     private final String moduleName;
 
-    public RemoteLogger(final int port, final String moduleName) throws IOException {
-        socket = new Socket(InetAddress.getLoopbackAddress(), port);
-        writer = new PrintWriter(socket.getOutputStream(), true);
+    public RemoteLogger(final AgentCommClient client, final String moduleName) {
+        this.client = client;
         this.moduleName = moduleName;
     }
 
     @Override
     public void debug(final @Nullable String message) {
-        try {
-            final var actualMessage = message != null ? message : "null";
-            writer.println(String.format("[DEBUG][%s] %s", moduleName, actualMessage));
-        }
-        catch (Throwable error) {
-            // Cannot do anything
-        }
+        final var actualMessage = message != null ? message : "null";
+        client.log(String.format("[DEBUG][%s] %s", moduleName, actualMessage));
     }
 
     @Override
     public void info(final @Nullable String message) {
-        try {
-            final var actualMessage = message != null ? message : "null";
-            writer.println(String.format("[INFO-][%s] %s", moduleName, actualMessage));
-        }
-        catch (Throwable error) {
-            // Cannot do anything
-        }
+        final var actualMessage = message != null ? message : "null";
+        client.log(String.format("[INFO-][%s] %s", moduleName, actualMessage));
     }
 
     @Override
     public void warn(final @Nullable String message) {
-        try {
-            final var actualMessage = message != null ? message : "null";
-            writer.println(String.format("[WARN-][%s] %s", moduleName, actualMessage));
-        }
-        catch (Throwable error) {
-            // Cannot do anything
-        }
+        final var actualMessage = message != null ? message : "null";
+        client.log(String.format("[WARN-][%s] %s", moduleName, actualMessage));
     }
 
     @Override
     public void error(final @Nullable String message) {
-        try {
-            final var actualMessage = message != null ? message : "null";
-            writer.println(String.format("[ERROR][%s] %s", moduleName, actualMessage));
-        }
-        catch (Throwable error) {
-            // Cannot do anything
-        }
-    }
-
-    @Override
-    public void close() throws Exception {
-        writer.close();
-        socket.close();
+        final var actualMessage = message != null ? message : "null";
+        client.log(String.format("[ERROR][%s] %s", moduleName, actualMessage));
     }
 }
