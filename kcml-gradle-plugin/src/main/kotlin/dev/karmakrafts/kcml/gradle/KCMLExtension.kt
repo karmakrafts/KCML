@@ -30,7 +30,16 @@ abstract class KCMLExtension @Inject internal constructor(
     // @formatter:off
     val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java)
         .convention(false)
-    val agentCommPort: Property<Int> = objectFactory.property(Int::class.java)
-        .convention(9876)
+    val agentPortRangeStart: Property<Int> = objectFactory.property(Int::class.java)
+        .convention(11000)
+    val agentPortRangeEnd: Property<Int> = objectFactory.property(Int::class.java)
+        .convention(11999)
     // @formatter:on
+
+    internal val agentPort: Int by lazy {
+        val portRangeStart = agentPortRangeStart.get()
+        val portRangeEnd = agentPortRangeEnd.get()
+        AgentCommServer.findAvailablePort(portRangeStart, portRangeEnd)
+            ?: error("Could not find available port for KCML agent comm server")
+    }
 }

@@ -30,7 +30,6 @@ internal abstract class KCMLBuildService : BuildService<KCMLBuildServiceParamete
 
     init {
         logger.info("Starting KCML build service..")
-
     }
 
     override fun close() {

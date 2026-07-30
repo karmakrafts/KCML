@@ -49,9 +49,10 @@ open class KCMLGradlePlugin @Inject constructor(
         logger.info("KCML ${BuildInfo.version}")
         val extension = target.extensions.create("kcml", KCMLExtension::class.java, target)
         target.gradle.sharedServices.registerIfAbsent(KCMLBuildService.NAME, KCMLBuildService::class.java) { service ->
-            // Wire Gradle level configuration into KCML build service
-            service.parameters.agentCommPort.value(extension.agentCommPort)
-        }.get() // Bypass lazy service initialization and force service init
+            val port = extension.agentPort
+            logger.info("Using port $port for KCML agent comm server")
+            service.parameters.agentCommPort.value(port)
+        }
         logger.info("Created KCML project extension")
         target.configurations.create(CONFIGURATION_NAME) // Custom configuration for declaring KCML plugin dependencies
         logger.info("Created KCML plugin configuration")
@@ -138,7 +139,7 @@ open class KCMLGradlePlugin @Inject constructor(
         return providerFactory.provider {
             buildList {
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
-                add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentCommPort.get().toString()))
+                add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))
                 if (moduleName?.isNotEmpty() == true) { // @formatter:off
                     add(SubpluginOption(OPT_MODULE_NAME, moduleName.replace('.', '_')

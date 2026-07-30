@@ -20,16 +20,47 @@ import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.net.BindException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.random.Random
+import kotlin.time.Clock
 
 internal class AgentCommServer( // @formatter:off
     port: Int,
     private val messageConsumer: (String) -> Unit = Logging.getLogger(AgentCommServer::class.java)::info
 ) : AutoCloseable { // @formatter:on
+    companion object {
+        fun isPortInUse(port: Int): Boolean = try {
+            ServerSocket(port).close()
+            false
+        } catch (_: BindException) {
+            true
+        } catch (_: Throwable) {
+            false
+        }
+
+        fun findAvailablePort( // @formatter:off
+            rangeStart: Int,
+            rangeEnd: Int,
+            maxAttempts: Int = 100
+        ): Int? { // @formatter:on
+            val random = Random(Clock.System.now().epochSeconds)
+            var port = random.nextInt(rangeStart, rangeEnd)
+            var attempts = 1
+            while (isPortInUse(port) && attempts++ < maxAttempts) {
+                port = random.nextInt(rangeStart, rangeEnd)
+            }
+            return when {
+                isPortInUse(port) -> null
+                else -> port
+            }
+        }
+    }
+
     private val logger: Logger = Logging.getLogger(AgentCommServer::class.java)
 
     private class Connection(
