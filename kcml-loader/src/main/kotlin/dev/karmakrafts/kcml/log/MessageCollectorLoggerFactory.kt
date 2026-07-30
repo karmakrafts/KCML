@@ -17,12 +17,12 @@
 package dev.karmakrafts.kcml.log
 
 import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 
-internal class LinkerLogger(
-    override val name: String
-) : Logger {
-    override fun debug(message: String) = println("[DEBUG] $message")
-    override fun info(message: String) = println("[INFO-] $message")
-    override fun warn(message: String) = println("[WARN-] $message")
-    override fun error(message: String) = System.err.println("[ERROR-] $message")
+class MessageCollectorLoggerFactory( // @formatter:off
+    loader: PluginLoader,
+    val messageCollector: MessageCollector
+) : CachedLoggerFactory(loader) { // @formatter:on
+    override fun create(name: String): Logger = MessageCollectorLogger(messageCollector, name)
 }

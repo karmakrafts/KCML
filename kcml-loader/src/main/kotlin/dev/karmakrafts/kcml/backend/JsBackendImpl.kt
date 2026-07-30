@@ -29,4 +29,4 @@ internal class JsBackendImpl( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractBackend(context, config, loggerFactory, logger, loader), JsBackend // @formatter:on
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), JsBackend // @formatter:on

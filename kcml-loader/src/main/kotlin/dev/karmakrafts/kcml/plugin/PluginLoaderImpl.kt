@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
-import dev.karmakrafts.kcml.log.CompilerLoggerFactory
+import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
@@ -46,7 +46,7 @@ import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class)
 object PluginLoaderImpl : PluginLoader {
-    private lateinit var loggerFactory: CompilerLoggerFactory
+    private lateinit var loggerFactory: MessageCollectorLoggerFactory
     override lateinit var logger: Logger
 
     lateinit var classLoader: URLClassLoader
@@ -106,7 +106,7 @@ object PluginLoaderImpl : PluginLoader {
     }
 
     private fun setupLogging(config: CompilerConfiguration) {
-        loggerFactory = CompilerLoggerFactory(this, config.messageCollector)
+        loggerFactory = MessageCollectorLoggerFactory(this, config.messageCollector)
         logger = loggerFactory("KCML")
     }
 

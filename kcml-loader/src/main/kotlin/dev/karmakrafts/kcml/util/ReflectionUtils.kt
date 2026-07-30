@@ -16,10 +16,29 @@
 
 package dev.karmakrafts.kcml.util
 
-object ReflectionUtils {
-    inline fun <reified T> getField(name: String, instance: Any? = null): T {
-        val type = T::class.java
+internal object ReflectionUtils {
+    inline fun <reified C : Any, reified T> getField(name: String, instance: Any? = null): T {
+        val type = instance?.javaClass ?: C::class.java
         val field = type.getDeclaredField(name)
+        field.isAccessible = true
+        val value = field.get(instance) as T
+        field.isAccessible = false
+        return value
+    }
+
+    private tailrec fun findSuperClass(clazz: Class<*>, name: String): Class<*> {
+        val superClass = clazz.superclass
+        return when {
+            superClass == null -> error("Could not find super class '$name' in hierarchy of $clazz")
+            name in superClass.name -> superClass
+            else -> findSuperClass(superClass, name)
+        }
+    }
+
+    inline fun <reified C, reified T> getSuperField(superClassName: String, name: String, instance: Any? = null): T {
+        val type = instance?.javaClass ?: C::class.java
+        val superType = findSuperClass(type, superClassName)
+        val field = superType.getDeclaredField(name)
         field.isAccessible = true
         val value = field.get(instance) as T
         field.isAccessible = false

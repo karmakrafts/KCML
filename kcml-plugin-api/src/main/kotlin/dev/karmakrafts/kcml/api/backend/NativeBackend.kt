@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.api.backend
 
 /**
- * Marks a [Backend] context executing Kotlin's native IR backend.
+ * Marks a [IrBackend] context executing Kotlin's native IR backend.
  *
  * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
+ * target-independent services inherited from [IrBackend].
  */
-interface NativeBackend : Backend
+interface NativeBackend : IrBackend

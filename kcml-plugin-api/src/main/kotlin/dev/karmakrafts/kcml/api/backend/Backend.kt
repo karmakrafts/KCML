@@ -19,12 +19,7 @@ package dev.karmakrafts.kcml.api.backend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import org.jetbrains.kotlin.backend.common.extensions.DeclarationFinder
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.ir.IrBuiltIns
-import org.jetbrains.kotlin.ir.declarations.IrFile
 
 /**
  * Provides the compiler services available while KCML integrates with a Kotlin backend.
@@ -51,21 +46,4 @@ interface Backend {
      * Registries have already been populated before IR extensions are dispatched.
      */
     val loader: PluginLoader
-
-    /** Kotlin IR built-ins used to construct and inspect IR types and declarations. */
-    val irBuiltIns: IrBuiltIns
-
-    /** Resolves declarations from Kotlin built-ins for the active backend. */
-    val builtInsFinder: DeclarationFinder
-
-    /** Collects compiler diagnostics emitted by KCML extensions. */
-    val messageCollector: MessageCollector
-        get() = config.messageCollector
-
-    /**
-     * Returns the declaration finder that resolves declarations defined by an IR source file.
-     *
-     * @param source the IR file whose declarations should be resolved.
-     */
-    fun getFinderForSource(source: IrFile): DeclarationFinder
 }

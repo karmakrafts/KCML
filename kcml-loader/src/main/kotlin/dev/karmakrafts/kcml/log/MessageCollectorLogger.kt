@@ -23,7 +23,7 @@ import dev.karmakrafts.kcml.api.util.verbose
 import dev.karmakrafts.kcml.api.util.warn
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 
-internal class CompilerLogger( // @formatter:off
+internal class MessageCollectorLogger( // @formatter:off
     val messageCollector: MessageCollector,
     override val name: String
 ) : Logger { // @formatter:on

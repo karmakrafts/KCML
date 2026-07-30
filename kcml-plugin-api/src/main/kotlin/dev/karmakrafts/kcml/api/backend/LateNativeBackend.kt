@@ -34,7 +34,7 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
  * LLVM objects used while Kotlin/Native lowers IR to native code.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface LateNativeBackend : NativeBackend {
+interface LateNativeBackend : Backend {
     /** Kotlin/Native built-ins for the active Konan compilation. */
     val builtIns: KonanBuiltIns
 

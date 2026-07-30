@@ -29,4 +29,4 @@ internal class WasmBackendImpl( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractBackend(context, config, loggerFactory, logger, loader), WasmBackend // @formatter:on
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), WasmBackend // @formatter:on

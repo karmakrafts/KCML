@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.log
+package dev.karmakrafts.kcml.hooks
 
-import dev.karmakrafts.kcml.api.log.Logger
-import dev.karmakrafts.kcml.api.plugin.PluginLoader
-
-internal class LinkerLoggerFactory(
-    loader: PluginLoader
-) : CachedLoggerFactory(loader) {
-    override fun create(name: String): Logger = LinkerLogger(name)
-}
+@Retention(AnnotationRetention.SOURCE)
+annotation class ActualType(val value: String)

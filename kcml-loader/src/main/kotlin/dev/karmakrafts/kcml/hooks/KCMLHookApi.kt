@@ -14,15 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.log
+package dev.karmakrafts.kcml.hooks
 
-import dev.karmakrafts.kcml.api.log.Logger
-import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-
-class CompilerLoggerFactory( // @formatter:off
-    loader: PluginLoader,
-    val messageCollector: MessageCollector
-) : CachedLoggerFactory(loader) { // @formatter:on
-    override fun create(name: String): Logger = CompilerLogger(messageCollector, name)
-}
+@RequiresOptIn("The API you are trying to use should only be used by generated code")
+@Retention(AnnotationRetention.BINARY)
+annotation class KCMLHookApi
