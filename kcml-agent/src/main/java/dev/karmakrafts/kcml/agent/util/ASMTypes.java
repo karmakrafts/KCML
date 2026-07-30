@@ -26,36 +26,6 @@ public final class ASMTypes {
     public static final Type STRING = Type.getObjectType("java/lang/String");
     public static final Type METHOD = Type.getObjectType("java/lang/reflect/Method");
 
-    public static final class Common {
-        public static final Type COMMON_BACKEND_CONTEXT = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/common/CommonBackendContext");
-        public static final Type BACKEND_SYMBOLS = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/common/ir/BackendSymbols");
-    }
-
-    public static final class Konan {
-        public static final Type NATIVE_GENERATION_STATE = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/NativeGenerationState");
-        public static final Type CONTEXT = Type.getObjectType("org/jetbrains/kotlin/backend/konan/Context");
-        public static final Type KONAN_BUILTINS = Type.getObjectType("org/jetbrains/kotlin/backend/konan/KonanBuiltIns");
-        public static final Type KONAN_BACKEND_CONTEXT = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/KonanBackendContext");
-        public static final Type BACKEND_NATIVE_SYMBOLS = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/ir/BackendNativeSymbols");
-        public static final Type NATIVE_SECOND_STAGE_COMPILATION_CONFIG = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/NativeSecondStageCompilationConfig");
-        public static final Type CODEGEN_LLVM_HELPERS = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/llvm/CodegenLlvmHelpers");
-        public static final Type BASIC_LLVM_HELPERS = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/llvm/BasicLlvmHelpers");
-        public static final Type NATIVE_PHASE_CONTEXT = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/konan/driver/NativePhaseContext");
-    }
-
-    public static final class CInterop {
-        public static final Type CPOINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
-    }
-
     public static final class KCML {
         public static final Type TOP_LEVEL_PHASES_HOOKS = Type.getObjectType(
             "dev/karmakrafts/kcml/hooks/TopLevelPhasesHooks");
