@@ -45,7 +45,7 @@ import java.util.*
 import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class)
-class PluginLoaderImpl : PluginLoader {
+object PluginLoaderImpl : PluginLoader {
     private lateinit var loggerFactory: CompilerLoggerFactory
     override lateinit var logger: Logger
 
@@ -161,7 +161,7 @@ class PluginLoaderImpl : PluginLoader {
     }
 
     fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
-        check(!isLoadComplete) { "Plugins already have been loaded" }
+        if (isLoadComplete) return
         setupLogging(config)
         // Load all plugin candidates and instantiate them through ServiceLoader
         val candidates = loadCandidates(config)

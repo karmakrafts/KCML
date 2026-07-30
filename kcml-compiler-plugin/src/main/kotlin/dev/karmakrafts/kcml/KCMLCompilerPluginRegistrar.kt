@@ -52,7 +52,7 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
         val agentArgs = buildAgentArgs(configuration)
         AgentInjector(KCMLBootstrap.tempDirectory).inject(agentArgs)
         registerDisposable(KCMLBootstrap::cleanup)
-        with(PluginLoaderImpl()) { loadAndInvoke(configuration) }
+        with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
 
     override val pluginId: String get() = KCMLConstants.PLUGIN_ID
