@@ -65,6 +65,7 @@ tasks {
         archiveClassifier = ""
         relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")
         relocate("org.jetbrains.annotations", "${rootProject.group}.shaded.org.jetbrains.annotations")
+        relocate("org.intellij.lang.annotations", "${rootProject.group}.shaded.org.intellij.lang.annotations")
         manifest {
             attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgent"
             attributes["Can-Redefine-Classes"] = true

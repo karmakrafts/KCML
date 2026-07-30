@@ -40,7 +40,7 @@ public final class ASMUtils {
 
     /**
      * Reflectively calls a function with the given signature.
-     * Stack: [instance, args...] -> [result]
+     * Stack: [instance|Class, args...] -> [result]
      *
      * @param name       The name of the function.
      * @param returnType The return type of the function.
@@ -48,16 +48,20 @@ public final class ASMUtils {
      * @return A list of all instructions to reflectively invoke the given function.
      */
     public static InsnList reflectiveCall(final MethodNode caller,
+                                          final boolean isStatic,
                                           final String name,
                                           final Type returnType,
                                           final Type... paramTypes) {
         final var instructions = new InsnList();
 
-        // Save call arguments (reduce args, leave only instance on top of stack)
+        // {instance|Class, args...}
+        // Save call arguments (reduce args, leave only instance/Class on top of stack)
         instructions.add(new LdcInsnNode(paramTypes.length)); // Number of arguments
         instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY, ASMTypes.OBJECT.getInternalName()));
+        // {instance|Class, args..., Object[]}
         final var callArgsIndex = caller.maxLocals++;
         instructions.add(new VarInsnNode(Opcodes.ASTORE, callArgsIndex));
+        // {instance|Class, args...}
         for (var i = 0; i < paramTypes.length; i++) {
             instructions.add(new VarInsnNode(Opcodes.ALOAD, callArgsIndex));
             instructions.add(new InsnNode(Opcodes.SWAP)); // current arg, array ref -> array ref, current arg
@@ -65,15 +69,24 @@ public final class ASMUtils {
             instructions.add(new InsnNode(Opcodes.SWAP)); // array ref, current arg, index -> array ref, index, current arg
             instructions.add(new InsnNode(Opcodes.AASTORE));
         }
+        // {instance|Class}
 
-        // Retrieve instance class and save both instance and class
-        instructions.add(new InsnNode(Opcodes.DUP));
-        final var instanceIndex = caller.maxLocals++;
-        instructions.add(new VarInsnNode(Opcodes.ASTORE, instanceIndex));
-        instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
-            ASMTypes.OBJECT.getInternalName(),
-            "getClass",
-            Type.getMethodDescriptor(ASMTypes.CLASS)));
+        // Retrieve instance class and save both instance and class if the call is not static;
+        // Otherwise the Class is already on top of the stack now
+        var instanceIndex = -1;
+        if (!isStatic) {
+            instructions.add(new InsnNode(Opcodes.DUP));
+            // {instance, instance}
+            instanceIndex = caller.maxLocals++;
+            instructions.add(new VarInsnNode(Opcodes.ASTORE, instanceIndex));
+            // {instance}
+            instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
+                ASMTypes.OBJECT.getInternalName(),
+                "getClass",
+                Type.getMethodDescriptor(ASMTypes.CLASS)));
+            // {Class}
+        }
+        // {Class}
 
         // Push method name & create parameter type array
         instructions.add(new LdcInsnNode(name));
@@ -90,7 +103,7 @@ public final class ASMUtils {
         instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
             ASMTypes.CLASS.getInternalName(),
             "getDeclaredMethod",
-            Type.getMethodDescriptor(ASMTypes.METHOD, ASMTypes.CLASS_ARRAY)));
+            Type.getMethodDescriptor(ASMTypes.METHOD, ASMTypes.STRING, ASMTypes.CLASS_ARRAY)));
         final var methodIndex = caller.maxLocals++;
         instructions.add(new VarInsnNode(Opcodes.ASTORE, methodIndex));
 
@@ -121,7 +134,12 @@ public final class ASMUtils {
 
         // The method is accessible from here on
         instructions.add(new VarInsnNode(Opcodes.ALOAD, methodIndex));
-        instructions.add(new VarInsnNode(Opcodes.ALOAD, instanceIndex));
+        if (instanceIndex != -1) {
+            instructions.add(new VarInsnNode(Opcodes.ALOAD, instanceIndex));
+        }
+        else {
+            instructions.add(new InsnNode(Opcodes.ACONST_NULL)); // Static methods don't require an instance
+        }
         instructions.add(new VarInsnNode(Opcodes.ALOAD, callArgsIndex));
         instructions.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL,
             ASMTypes.METHOD.getInternalName(),
@@ -172,6 +190,39 @@ public final class ASMUtils {
         return instructions;
     }
 
+    public static InsnList getClassIndirect(final Type type) {
+        final var instructions = new InsnList();
+        instructions.add(new LdcInsnNode(type.getClassName()));
+        instructions.add(new MethodInsnNode( // @formatter:off
+            Opcodes.INVOKESTATIC,
+            ASMTypes.CLASS.getInternalName(),
+            "forName",
+            Type.getMethodDescriptor(ASMTypes.CLASS, ASMTypes.STRING)
+        )); // @formatter:on
+        return instructions;
+    }
+
+    public static MethodNode createDefaultConstructor() {
+        final var descriptor = Type.getMethodDescriptor(Type.VOID_TYPE);
+        final var method = new MethodNode( // @formatter:off
+            Opcodes.ACC_PUBLIC,
+            "<init>",
+            descriptor,
+            descriptor,
+            null
+        ); // @formatter:on
+        final var body = method.instructions;
+        body.add(new VarInsnNode(Opcodes.ALOAD, 0)); // Load this reference
+        body.add(new MethodInsnNode( // @formatter:off
+            Opcodes.INVOKESPECIAL,
+            ASMTypes.OBJECT.getInternalName(),
+            "<init>",
+            Type.getMethodDescriptor(Type.VOID_TYPE),
+            false
+        )); // @formatter:on
+        return method;
+    }
+
     public static InsnList instantiate(final Type type,
                                        final List<Type> constructorParams,
                                        final Consumer<InsnList> constructorCallback) {
@@ -184,6 +235,19 @@ public final class ASMUtils {
             "<init>",
             Type.getMethodDescriptor(Type.VOID_TYPE, constructorParams.toArray(Type[]::new))));
         return instructions;
+    }
+
+    public static MethodInsnNode getProperty(final Type owner,
+                                             final Type type,
+                                             final String name,
+                                             final boolean isInterface) {
+        return new MethodInsnNode( // @formatter:off
+            isInterface ? Opcodes.INVOKEINTERFACE : Opcodes.INVOKEVIRTUAL,
+            owner.getInternalName(),
+            String.format("get%s", StringUtils.capitalize(name)),
+            Type.getMethodDescriptor(type),
+            isInterface
+        ); // @formatter:on
     }
 
     public static int findLocal(final MethodNode method, final String name) {

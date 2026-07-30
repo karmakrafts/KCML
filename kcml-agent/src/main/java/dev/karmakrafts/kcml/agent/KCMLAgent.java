@@ -26,6 +26,7 @@ import java.lang.instrument.Instrumentation;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public final class KCMLAgent {
     private static Map<String, String> parseArgs(final String args) {
@@ -63,8 +64,14 @@ public final class KCMLAgent {
         try {
             final var commClient = new AgentCommClient(commPort);
             final var logger = createLogger(options, commClient);
-            logger.info("Initializing KCML compiler agent");
+            logger.info("Initializing KCML compiler agent..");
+
+            logger.info("Registering class transformers");
+            final var startTime = System.nanoTime();
             instrumentation.addTransformer(new TopLevelPhasesTransformer(logger));
+            final var endTime = System.nanoTime();
+            logger.info(String.format("Registered class transformers in %dms",
+                TimeUnit.MILLISECONDS.convert(endTime - startTime, TimeUnit.NANOSECONDS)));
         }
         catch (Throwable error) {
             // We can't really do anything here :/

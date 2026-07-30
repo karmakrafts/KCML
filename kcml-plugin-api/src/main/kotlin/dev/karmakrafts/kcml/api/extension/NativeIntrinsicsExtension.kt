@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-import dev.karmakrafts.kcml.api.backend.NativeBackend
+import dev.karmakrafts.kcml.api.backend.LateNativeBackend
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -36,7 +36,7 @@ interface NativeIntrinsicsExtension : Extension {
      * @param backend KCML context exposing the active native and LLVM backend state.
      * @return `true` when [process] should lower [call].
      */
-    fun shouldProcess(call: IrCall, backend: NativeBackend): Boolean
+    fun shouldProcess(call: IrCall, backend: LateNativeBackend): Boolean
 
     /**
      * Lowers a recognized IR call to an LLVM value.
@@ -46,5 +46,5 @@ interface NativeIntrinsicsExtension : Extension {
      * @param backend KCML context exposing the active native and LLVM backend state.
      * @return LLVM value that replaces [call] in the generated native code.
      */
-    fun process(call: IrCall, args: List<LLVMValueRef>, backend: NativeBackend): LLVMValueRef
+    fun process(call: IrCall, args: List<LLVMValueRef>, backend: LateNativeBackend): LLVMValueRef
 }

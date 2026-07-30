@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.agent.transformer;
 
 import dev.karmakrafts.kcml.agent.log.Logger;
+import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -41,6 +42,7 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
 
     protected AbstractClassTransformer(final Logger logger) {
         this.logger = logger;
+        logger.info(String.format("Created %s", this.getClass().getSimpleName()));
     }
 
     private static boolean isClassBlacklisted(final String className) {
@@ -55,7 +57,7 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
 
     protected abstract boolean shouldTransform(final String className);
 
-    protected abstract void transform(final ClassNode classNode);
+    protected abstract boolean transform(final ClassNode classNode);
 
     @Override
     public byte[] transform(final Module module,
@@ -75,10 +77,21 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
             final var reader = new ClassReader(classfileBuffer);
             final var classNode = new ClassNode();
             reader.accept(classNode, 0);
-            transform(classNode);
-            final var writer = new ClassWriter(ClassWriter.COMPUTE_MAXS);
-            classNode.accept(writer);
-            return writer.toByteArray();
+            try {
+                if (transform(classNode)) {
+                    final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES);
+                    classNode.accept(writer);
+                    final var transformedBytes = writer.toByteArray();
+                    logger.info(String.format("Transformed %d bytes of data for %s",
+                        transformedBytes.length,
+                        className));
+                    return transformedBytes;
+                }
+                return classfileBuffer;
+            }
+            catch (Throwable error) {
+                logger.error(String.format("Could not transform class %s: %s", className, error));
+            }
         }
         return classfileBuffer;
     }

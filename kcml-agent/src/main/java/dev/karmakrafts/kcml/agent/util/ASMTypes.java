@@ -24,55 +24,40 @@ public final class ASMTypes {
     public static final Type OBJECT = Type.getObjectType("java/lang/Object");
     public static final Type OBJECT_ARRAY = Type.getType("[Ljava/lang/Object;");
     public static final Type STRING = Type.getObjectType("java/lang/String");
-    public static final Type CHAR_SEQUENCE = Type.getObjectType("java/lang/CharSequence");
-    public static final Type LIST = Type.getObjectType("java/util/List");
-    public static final Type MAP = Type.getObjectType("java/util/Map");
-    public static final Type ITERATOR = Type.getObjectType("java/util/Iterator");
     public static final Type METHOD = Type.getObjectType("java/lang/reflect/Method");
-    public static final Type PAIR = Type.getObjectType("kotlin/Pair");
 
-    public static final Type SYNTHETIC_IR_FILE_ENTRY = Type.getObjectType("dev/karmakrafts/kcml/ir/SyntheticIrFileEntry");
-    public static final Type NATIVE_IR_DECLARATION_ORIGIN = Type.getObjectType(
-        "dev/karmakrafts/kcml/ir/NativeIrDeclarationOrigin");
+    public static final class Common {
+        public static final Type COMMON_BACKEND_CONTEXT = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/common/CommonBackendContext");
+        public static final Type BACKEND_SYMBOLS = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/common/ir/BackendSymbols");
+    }
 
-    public static final Type FUNCTION_GENERATION_CONTEXT = Type.getObjectType(
-        "org/jetbrains/kotlin/backend/konan/llvm/FunctionGenerationContext");
-    public static final Type LLVM_CALLABLE = Type.getObjectType("org/jetbrains/kotlin/backend/konan/llvm");
-    public static final Type C_POINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
-    public static final Type FIR_2_IR_ACTUALIZED_RESULT = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/pipeline/Fir2IrActualizedResult");
-    public static final Type MODULE_COMPILER_ANALYZED_OUTPUT = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/pipeline/ModuleCompilerAnalyzedOutput");
-    public static final Type SCOPE_SESSION = Type.getObjectType("org/jetbrains/kotlin/fir/resolve/ScopeSession");
-    public static final Type FQ_NAME = Type.getObjectType("org/jetbrains/kotlin/name/FqName");
-    public static final Type METADATA_SOURCE = Type.getObjectType("org/jetbrains/kotlin/ir/declarations/MetadataSource");
-    public static final Type KT_SOURCE_FILE = Type.getObjectType("org/jetbrains/kotlin/KtSourceFile");
-    public static final Type KT_IN_MEMORY_SOURCE_FILE = Type.getObjectType(
-        "org/jetbrains/kotlin/KtInMemoryTextSourceFile");
+    public static final class Konan {
+        public static final Type NATIVE_GENERATION_STATE = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/NativeGenerationState");
+        public static final Type CONTEXT = Type.getObjectType("org/jetbrains/kotlin/backend/konan/Context");
+        public static final Type KONAN_BUILTINS = Type.getObjectType("org/jetbrains/kotlin/backend/konan/KonanBuiltIns");
+        public static final Type KONAN_BACKEND_CONTEXT = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/KonanBackendContext");
+        public static final Type BACKEND_NATIVE_SYMBOLS = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/ir/BackendNativeSymbols");
+        public static final Type NATIVE_SECOND_STAGE_COMPILATION_CONFIG = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/NativeSecondStageCompilationConfig");
+        public static final Type CODEGEN_LLVM_HELPERS = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/llvm/CodegenLlvmHelpers");
+        public static final Type BASIC_LLVM_HELPERS = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/llvm/BasicLlvmHelpers");
+        public static final Type NATIVE_PHASE_CONTEXT = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/driver/NativePhaseContext");
+    }
 
-    public static final Type IR_DECLARATION_ORIGIN = Type.getObjectType(
-        "org/jetbrains/kotlin/ir/declarations/IrDeclarationOrigin");
-    public static final Type IR_MODULE_FRAGMENT = Type.getObjectType(
-        "org/jetbrains/kotlin/ir/declarations/IrModuleFragment");
-    public static final Type IR_FILE = Type.getObjectType("org/jetbrains/kotlin/ir/declarations/IrFile");
-    public static final Type IR_FILE_ENTRY = Type.getObjectType("org/jetbrains/kotlin/ir/IrFileEntry");
-    public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");
-    public static final Type IR_SIMPLE_FUNCTION = Type.getObjectType(
-        "org/jetbrains/kotlin/ir/declarations/IrSimpleFunction");
+    public static final class CInterop {
+        public static final Type CPOINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
+    }
 
-    public static final Type FIR_MODULE_DATA = Type.getObjectType("org/jetbrains/kotlin/fir/FirModuleData");
-    public static final Type FIR_MODULE_DATA_KT = Type.getObjectType("org/jetbrains/kotlin/fir/FirModuleDataKt");
-    public static final Type FIR_SESSION = Type.getObjectType("org/jetbrains/kotlin/fir/FirSession");
-    public static final Type FIR_FILE_BUILDER = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/declarations/builder/FirFileBuilder");
-    public static final Type FIR_PACKAGE_DIRECTIVE_BUILDER = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/builder/FirPackageDirectiveBuilder");
-    public static final Type FIR_PACKAGE_DIRECTIVE = Type.getObjectType("org/jetbrains/kotlin/fir/FirPackageDirective");
-    public static final Type FIR_FILE = Type.getObjectType("org/jetbrains/kotlin/fir/declarations/FirFile");
-    public static final Type FIR_DECLARATION_ORIGIN = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/declarations/FirDeclarationOrigin");
-    public static final Type FIR_SYNTHETIC_PLUGIN_FILE = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/declarations/FirDeclarationOrigin$Synthetic$PluginFile");
-    public static final Type FIR_FILE_METADATA_SOURCE = Type.getObjectType(
-        "org/jetbrains/kotlin/fir/backend/FirMetadataSource$File");
+    public static final class KCML {
+        public static final Type TOP_LEVEL_PHASES_HOOKS = Type.getObjectType(
+            "dev/karmakrafts/kcml/hooks/TopLevelPhasesHooks");
+    }
 }

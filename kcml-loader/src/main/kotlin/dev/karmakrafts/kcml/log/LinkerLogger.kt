@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.log
 
-/**
- * Marks a [Backend] context executing Kotlin's native IR backend.
- *
- * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
- */
-interface NativeBackend : Backend
+import dev.karmakrafts.kcml.api.log.Logger
+
+internal class LinkerLogger(
+    override val name: String
+) : Logger {
+    override fun debug(message: String) = println("[DEBUG] $message")
+    override fun info(message: String) = println("[INFO-] $message")
+    override fun warn(message: String) = println("[WARN-] $message")
+    override fun error(message: String) = System.err.println("[ERROR-] $message")
+}

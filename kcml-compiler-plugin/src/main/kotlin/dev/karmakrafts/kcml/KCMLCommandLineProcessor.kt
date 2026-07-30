@@ -68,6 +68,9 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
     ) // @formatter:on
 
     override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
+        KCMLBootstrap.init(configuration)
+        KCMLBootstrap.injectLoader()
+        // ------------------------------ KCML class loading boundary ------------------------------
         when (option.optionName) {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
             AGENT_LOGGING -> configuration.kcmlAgentLogging = value.lowercase().toBooleanStrictOrNull() == true

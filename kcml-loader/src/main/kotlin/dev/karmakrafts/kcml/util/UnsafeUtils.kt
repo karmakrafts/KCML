@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.util
 
-/**
- * Marks a [Backend] context executing Kotlin's native IR backend.
- *
- * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
- */
-interface NativeBackend : Backend
+import sun.misc.Unsafe
+
+object UnsafeUtils {
+    val unsafe: Unsafe = try {
+        val clazz = Unsafe::class.java
+        val field = clazz.getDeclaredField("theUnsafe")
+        field.isAccessible = true
+        val instance = field.get(null)
+        field.isAccessible = false
+        instance as Unsafe
+    } catch (error: Throwable) {
+        error(error.message ?: "Unknown error")
+    }
+}

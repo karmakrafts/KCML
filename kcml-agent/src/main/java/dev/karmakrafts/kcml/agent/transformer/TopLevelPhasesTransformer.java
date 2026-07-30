@@ -17,13 +17,16 @@
 package dev.karmakrafts.kcml.agent.transformer;
 
 import dev.karmakrafts.kcml.agent.log.Logger;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.MethodNode;
+import dev.karmakrafts.kcml.agent.util.ASMTypes;
+import dev.karmakrafts.kcml.agent.util.ASMTypes.KCML;
+import dev.karmakrafts.kcml.agent.util.ASMUtils;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.*;
 
 public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
     public TopLevelPhasesTransformer(final Logger logger) {
         super(logger);
-        logger.info("Created TopLevelPhasesTransformer");
     }
 
     @Override
@@ -31,16 +34,32 @@ public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
         return className.equals("org/jetbrains/kotlin/backend/konan/driver/phases/TopLevelPhasesKt");
     }
 
-    private void transformRunAllLowerings(final MethodNode methodNode) {
+    private boolean transformRunAfterLowerings(final MethodNode methodNode) {
         logger.info(String.format("Transforming %s%s", methodNode.name, methodNode.desc));
+        // Create the injection
+        final var injection = new InsnList();
+        final var generationState = ASMUtils.findLocal(methodNode, "generationState");
+        injection.add(new VarInsnNode(Opcodes.ALOAD, generationState));
+        injection.add(new MethodInsnNode( // @formatter:off
+            Opcodes.INVOKESTATIC,
+            KCML.TOP_LEVEL_PHASES_HOOKS.getInternalName(),
+            "onRunAfterLowerings",
+            Type.getMethodDescriptor(Type.VOID_TYPE, ASMTypes.OBJECT),
+            false
+        )); // @formatter:on
+        final var needle = methodNode.instructions.getFirst();
+        methodNode.instructions.insertBefore(needle, injection);
+        return true;
     }
 
     @Override
-    protected void transform(final ClassNode classNode) {
+    protected boolean transform(final ClassNode classNode) {
+        var wasChanged = false;
         for (final var methodNode : classNode.methods) {
             switch (methodNode.name) {
-                case "runBackend$lambda$0$runAllLowerings" -> transformRunAllLowerings(methodNode);
+                case "runBackend$lambda$0$runAfterLowerings" -> wasChanged |= transformRunAfterLowerings(methodNode);
             }
         }
+        return wasChanged;
     }
 }

@@ -41,9 +41,7 @@ kotlin {
 }
 
 dependencies {
-    // Re-export Kotlin compiler APIs
     api(libs.kotlin.compiler.embeddable)
-    // Re-export Kotlin/Native compiler and LLVM APIs
     api(libs.kotlin.native.compiler.embeddable)
     api(libs.semver)
 }

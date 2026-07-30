@@ -14,25 +14,19 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.log
+package dev.karmakrafts.kcml.backend
 
+import dev.karmakrafts.kcml.api.backend.NativeBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import dev.karmakrafts.kcml.api.plugin.nameOrId
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
+import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.config.CompilerConfiguration
 
-internal class DefaultLoggerFactory( // @formatter:off
-    val loader: PluginLoader,
-    val messageCollector: MessageCollector
-) : LoggerFactory { // @formatter:on
-    private val loggers: HashMap<String, LoggerAdapter> = HashMap()
-
-    override operator fun invoke(name: String): Logger = loggers.getOrPut(name) {
-        LoggerAdapter(messageCollector, name)
-    }
-
-    override fun getForPlugin(pluginId: String): Logger {
-        return this(loader.findMetadata(pluginId)?.nameOrId ?: pluginId)
-    }
-}
+internal class NativeBackendImpl( // @formatter:off
+    context: IrPluginContext,
+    override val config: CompilerConfiguration,
+    loggerFactory: LoggerFactory,
+    logger: Logger,
+    loader: PluginLoader
+) : AbstractBackend(context, config, loggerFactory, logger, loader), NativeBackend // @formatter:on

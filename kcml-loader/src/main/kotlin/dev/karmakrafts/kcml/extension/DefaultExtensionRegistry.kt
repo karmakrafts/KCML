@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.extension
 import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.log.Logger
-import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.util.connectVertices
 import io.github.alexandrepiveteau.graphs.DirectedGraph
 import io.github.alexandrepiveteau.graphs.Vertex
@@ -27,6 +27,7 @@ import io.github.alexandrepiveteau.graphs.algorithms.topologicalSort
 import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 
 internal class DefaultExtensionRegistry( // @formatter:off
+    private val loader: PluginLoader,
     override val pluginId: String,
     private val logger: Logger
 ) : ExtensionRegistry { // @formatter:on
@@ -81,7 +82,7 @@ internal class DefaultExtensionRegistry( // @formatter:off
                     val dependencyId = dependency.id
                     if (dependencyId !in extensions) {
                         if (dependency.required) {
-                            logger.error("KCML extension '$id' for plugin with ID '${PluginLoaderImpl.loadingPluginId}' is missing required dependency '$dependencyId'")
+                            logger.error("KCML extension '$id' for plugin with ID '${loader.loadingPluginId}' is missing required dependency '$dependencyId'")
                         }
                         continue
                     }
@@ -101,19 +102,19 @@ internal class DefaultExtensionRegistry( // @formatter:off
             for (vertex in sortedVertices) {
                 val id = vertices.entries.find { it.value == vertex }?.key
                 if (id == null) {
-                    logger.error("Could not find KCML extension with ID '$id' for plugin with ID '${PluginLoaderImpl.loadingPluginId}' while sorting")
+                    logger.error("Could not find KCML extension with ID '$id' for plugin with ID '${loader.loadingPluginId}' while sorting")
                     continue
                 }
                 val instance = extensions[id]
                 if (instance == null) {
-                    logger.error("Could not retrieve KCML extension instance with id '$id' for plugin with ID '${PluginLoaderImpl.loadingPluginId}'")
+                    logger.error("Could not retrieve KCML extension instance with id '$id' for plugin with ID '${loader.loadingPluginId}'")
                     continue
                 }
                 sorted[id] = instance
             }
         } catch (error: IllegalArgumentException) {
             logger.error(
-                "Detected dependency cycle while sorting KCML extensions for plugin with ID '${PluginLoaderImpl.loadingPluginId}'",
+                "Detected dependency cycle while sorting KCML extensions for plugin with ID '${loader.loadingPluginId}'",
                 error
             )
         }

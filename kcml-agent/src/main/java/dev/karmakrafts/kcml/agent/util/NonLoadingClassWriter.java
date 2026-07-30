@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.agent.util;
 
-/**
- * Marks a [Backend] context executing Kotlin's native IR backend.
- *
- * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
- */
-interface NativeBackend : Backend
+import org.objectweb.asm.ClassWriter;
+
+public final class NonLoadingClassWriter extends ClassWriter {
+    public NonLoadingClassWriter(final int flags) {
+        super(flags);
+    }
+
+    @Override
+    protected String getCommonSuperClass(final String type1, final String type2) {
+        return ASMTypes.OBJECT.getInternalName();
+    }
+}

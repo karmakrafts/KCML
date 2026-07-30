@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
-import dev.karmakrafts.kcml.log.DefaultLoggerFactory
+import dev.karmakrafts.kcml.log.CompilerLoggerFactory
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
@@ -45,10 +45,11 @@ import java.util.*
 import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class)
-internal object PluginLoaderImpl : PluginLoader {
-    private lateinit var loggerFactory: DefaultLoggerFactory
-    private lateinit var logger: Logger
+class PluginLoaderImpl : PluginLoader {
+    private lateinit var loggerFactory: CompilerLoggerFactory
+    override lateinit var logger: Logger
 
+    lateinit var classLoader: URLClassLoader
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
@@ -57,11 +58,11 @@ internal object PluginLoaderImpl : PluginLoader {
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
     private val extensionDispatcher: ExtensionDispatcher by lazy {
-        ExtensionDispatcher(this@PluginLoaderImpl, extensionRegistries)
+        ExtensionDispatcher(this, extensionRegistries)
     }
 
     private fun getOrCreateExtensionRegistry(pluginId: String): DefaultExtensionRegistry {
-        return extensionRegistries.getOrPut(pluginId) { DefaultExtensionRegistry(pluginId, logger) }
+        return extensionRegistries.getOrPut(pluginId) { DefaultExtensionRegistry(this, pluginId, logger) }
     }
 
     override fun findPlugin(id: String): CompilerPlugin? = plugins[id]
@@ -105,14 +106,14 @@ internal object PluginLoaderImpl : PluginLoader {
     }
 
     private fun setupLogging(config: CompilerConfiguration) {
-        loggerFactory = DefaultLoggerFactory(this@PluginLoaderImpl, config.messageCollector)
+        loggerFactory = CompilerLoggerFactory(this, config.messageCollector)
         logger = loggerFactory("KCML")
     }
 
     private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = PluginLoaderImpl::class.java.classLoader
-        val classLoader = URLClassLoader(
+        classLoader = URLClassLoader(
             config.kcmlPluginClasspaths.map { path ->
                 val absolutePath = path.absolute().normalize()
                 logger.debug("Loading classpath dependency $absolutePath")
@@ -149,7 +150,7 @@ internal object PluginLoaderImpl : PluginLoader {
                     config = config,
                     loggerFactory = loggerFactory,
                     logger = loggerFactory(metadata[pluginId]?.nameOrId ?: pluginId),
-                    loader = this@PluginLoaderImpl
+                    loader = this
                 )
                 ) // @formatter:on
             } catch (error: Throwable) {
@@ -159,7 +160,7 @@ internal object PluginLoaderImpl : PluginLoader {
         loadingPluginId = null // Only used during the load phase
     }
 
-    internal fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
+    fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
         check(!isLoadComplete) { "Plugins already have been loaded" }
         setupLogging(config)
         // Load all plugin candidates and instantiate them through ServiceLoader

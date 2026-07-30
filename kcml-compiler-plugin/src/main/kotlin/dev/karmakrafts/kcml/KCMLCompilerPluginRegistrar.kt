@@ -22,15 +22,19 @@ import dev.karmakrafts.kcml.util.AgentInjector
 import dev.karmakrafts.kcml.util.kcmlAgentCommPort
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import dev.karmakrafts.kcml.util.kcmlModuleName
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.messageCollector
 
 @Suppress("UNUSED")
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
-    private fun buildAgentArgs(configuration: CompilerConfiguration): Map<String, String> = buildMap {
+    private fun buildAgentArgs(
+        configuration: CompilerConfiguration
+    ): Map<String, String> = buildMap {
         if (configuration.kcmlAgentLogging) {
             this["logging"] = "true"
             configuration.kcmlAgentCommPort?.let { port ->
@@ -44,9 +48,11 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     }
 
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        AgentInjector.inject(buildAgentArgs(configuration))
-        registerDisposable(AgentInjector::cleanup)
-        with(PluginLoaderImpl) { loadAndInvoke(configuration) }
+        configuration.messageCollector.report(CompilerMessageSeverity.INFO, "Bootstrapping KCML..")
+        val agentArgs = buildAgentArgs(configuration)
+        AgentInjector(KCMLBootstrap.tempDirectory).inject(agentArgs)
+        registerDisposable(KCMLBootstrap::cleanup)
+        with(PluginLoaderImpl()) { loadAndInvoke(configuration) }
     }
 
     override val pluginId: String get() = KCMLConstants.PLUGIN_ID

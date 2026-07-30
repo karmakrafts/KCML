@@ -14,12 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.util
 
-/**
- * Marks a [Backend] context executing Kotlin's native IR backend.
- *
- * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
- */
-interface NativeBackend : Backend
+object ReflectionUtils {
+    inline fun <reified T> getField(name: String, instance: Any? = null): T {
+        val type = T::class.java
+        val field = type.getDeclaredField(name)
+        field.isAccessible = true
+        val value = field.get(instance) as T
+        field.isAccessible = false
+        return value
+    }
+}

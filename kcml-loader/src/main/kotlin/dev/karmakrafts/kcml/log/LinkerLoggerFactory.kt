@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.log
 
-/**
- * Marks a [Backend] context executing Kotlin's native IR backend.
- *
- * This specialization allows a KCML extension to run only for native compilations while using the
- * target-independent services inherited from [Backend].
- */
-interface NativeBackend : Backend
+import dev.karmakrafts.kcml.api.log.Logger
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
+
+internal class LinkerLoggerFactory(
+    loader: PluginLoader
+) : CachedLoggerFactory(loader) {
+    override fun create(name: String): Logger = LinkerLogger(name)
+}

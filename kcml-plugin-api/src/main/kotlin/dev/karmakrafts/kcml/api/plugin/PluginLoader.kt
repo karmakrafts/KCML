@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.plugin
 
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.log.Logger
 
 /**
  * Discovers and provides KCML compiler plugins and their metadata.
@@ -26,6 +27,8 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
  * the resulting plugin instances, metadata, and per-plugin extension registries to KCML code.
  */
 interface PluginLoader {
+    val logger: Logger
+
     /**
      * The ID of the plugin currently being loaded.
      * It is `null` before loading starts and after loading completes.

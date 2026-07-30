@@ -27,25 +27,25 @@ internal object KCMLConfigurationKeys {
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
 }
 
-internal var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
+var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
     get() = get(KCMLConfigurationKeys.pluginClasspaths) ?: emptyList()
     set(value) {
         put(KCMLConfigurationKeys.pluginClasspaths, value)
     }
 
-internal var CompilerConfiguration.kcmlAgentLogging: Boolean
+var CompilerConfiguration.kcmlAgentLogging: Boolean
     get() = get(KCMLConfigurationKeys.agentLogging) ?: false
     set(value) {
         put(KCMLConfigurationKeys.agentLogging, value)
     }
 
-internal var CompilerConfiguration.kcmlAgentCommPort: Int?
+var CompilerConfiguration.kcmlAgentCommPort: Int?
     get() = get(KCMLConfigurationKeys.agentCommPort)
     set(value) {
         put(KCMLConfigurationKeys.agentCommPort, value ?: return)
     }
 
-internal var CompilerConfiguration.kcmlModuleName: String?
+var CompilerConfiguration.kcmlModuleName: String?
     get() = get(KCMLConfigurationKeys.moduleName)
     set(value) {
         put(KCMLConfigurationKeys.moduleName, value ?: return)

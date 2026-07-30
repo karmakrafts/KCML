@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.hooks
+package dev.karmakrafts.kcml
 
-@Retention(AnnotationRetention.SOURCE)
-internal annotation class UsedAtRuntime
+object KCMLConstants {
+    const val PLUGIN_ID: String = "kcml"
+}

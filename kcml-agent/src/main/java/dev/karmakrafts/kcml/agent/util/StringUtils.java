@@ -14,8 +14,18 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.hooks
+package dev.karmakrafts.kcml.agent.util;
 
-@RequiresOptIn(message = "The API you are trying to use is internal to KCML and may change at any time")
-@Retention(AnnotationRetention.BINARY)
-annotation class InternalHooksApi
+public final class StringUtils {
+    // @formatter:off
+    private StringUtils() {}
+    // @formatter:on
+
+    public static String capitalize(String str) {
+        if (str.isBlank()) {
+            return str;
+        }
+        final var firstChar = Character.toUpperCase(str.charAt(0));
+        return firstChar + str.substring(1);
+    }
+}

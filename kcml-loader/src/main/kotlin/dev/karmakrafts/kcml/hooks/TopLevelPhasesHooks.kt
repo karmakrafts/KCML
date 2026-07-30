@@ -14,8 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml
+package dev.karmakrafts.kcml.hooks
 
-internal object KCMLConstants {
-    const val PLUGIN_ID: String = "kcml"
+object TopLevelPhasesHooks {
+    @JvmStatic
+    fun onRunAfterLowerings(state: Any) {
+
+    }
 }

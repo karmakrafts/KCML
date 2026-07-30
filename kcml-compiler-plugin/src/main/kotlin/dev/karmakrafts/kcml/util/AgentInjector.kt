@@ -17,27 +17,21 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
-import sun.misc.Unsafe
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
-import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.absolutePathString
-import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
 
-internal object AgentInjector {
-    private val agentDirectory: Path = Files.createTempDirectory("kcml")
-    private val agentPath: Path = agentDirectory / "agent.jar"
+class AgentInjector( // @formatter:off
+    directory: Path
+) { // @formatter:on
+    private val agentPath: Path = directory / "agent.jar"
 
     @Suppress("DEPRECATION")
     private fun tryOverwriteAttachPermissions() {
         try {
-            val unsafeClass = Class.forName("sun.misc.Unsafe")
-            val unsafeField = unsafeClass.getDeclaredField("theUnsafe")
-            unsafeField.isAccessible = true
-            val unsafe = unsafeField.get(null) as Unsafe
-            unsafeField.isAccessible = false
+            val unsafe = UnsafeUtils.unsafe
             val hotspotVirtualMachine = Class.forName("sun.tools.attach.HotSpotVirtualMachine")
             val allowAttachSelfField = hotspotVirtualMachine.getDeclaredField("ALLOW_ATTACH_SELF")
             val allowAttachSelfBase = unsafe.staticFieldBase(allowAttachSelfField)
@@ -45,35 +39,28 @@ internal object AgentInjector {
             unsafe.putBooleanVolatile(allowAttachSelfBase, allowAttachSelfOffset, true)
         } catch (_: ClassNotFoundException) {
             // Skip overwriting access flag if class is not found (J9/Graal)
-        } catch (error: Throwable) {
-            error("Could not overwrite attach permissions: ${error.stackTraceToString()}")
         }
     }
 
-    internal fun tryAttachSelf(): VirtualMachine? {
+    internal fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
         tryOverwriteAttachPermissions()
         val pid = ProcessHandle.current().pid().toString()
         val virtualMachines = VirtualMachine.list()
-        val descriptor = virtualMachines.find { pid in it.id() } ?: return null
-        return try {
-            VirtualMachine.attach(descriptor)
-        } catch (_: Throwable) {
-            return null
-        }
+        val descriptor = virtualMachines.first { pid in it.id() }
+        VirtualMachine.attach(descriptor)
     }
 
-    fun inject(options: Map<String, String> = emptyMap()) {
-        this::class.java.getResourceAsStream("/kcml-agent.jar")?.use {
+    fun inject(options: Map<String, String> = emptyMap()): Boolean {
+        requireNotNull(this::class.java.getResourceAsStream("/kcml-agent.jar")) {
+            "Could not find KCML agent JAR in embedded resources"
+        }.use {
             Files.copy(it, agentPath, StandardCopyOption.REPLACE_EXISTING)
         }
-        val vm = tryAttachSelf() ?: error("Could not attach to current VM")
-        val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
-        vm.loadAgent(agentPath.absolutePathString(), args)
-        vm.detach()
-    }
-
-    @OptIn(ExperimentalPathApi::class)
-    fun cleanup() {
-        agentDirectory.deleteRecursively()
+        return tryAttachSelf().fold(onSuccess = { vm ->
+            val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
+            vm.loadAgent(agentPath.absolutePathString(), args)
+            vm.detach()
+            true
+        }, onFailure = { false })
     }
 }
