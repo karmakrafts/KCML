@@ -36,6 +36,7 @@ plugins {
     alias(libs.plugins.shadow)
     alias(libs.plugins.kotlin.jvm)
     java
+    signing
 }
 
 configureJava(libs.versions.java)
