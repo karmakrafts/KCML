@@ -41,6 +41,11 @@ group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 if (GitLabCI.isCI) defaultDependencyLocking()
 
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+}
+
 configureDokka {
     withKotlin()
     withKotlinGradle()
@@ -79,7 +84,7 @@ tasks {
             val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
             path.deleteIfExists()
             path.parent.createDirectories()
-            path.writeText(rootProject.version.toString())
+            path.writeText(version.toString())
         }
         outputs.upToDateWhen { false } // Always re-generate this file
     }
