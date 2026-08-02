@@ -47,7 +47,11 @@ dependencies {
 }
 
 publishing {
-    setProjectInfo("KCML Plugin API", "Plugin API for the Kotlin Compiler Meta Loader")
+    setProjectInfo(
+        name = "KCML Plugin API",
+        description = "Plugin API for the Kotlin Compiler Meta Loader",
+        url = "https://git.karmakrafts.dev/kk/kcml"
+    )
     publications {
         create<MavenPublication>("api") {
             from(components["kotlin"])

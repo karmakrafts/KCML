@@ -15,6 +15,7 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.setProjectInfo
 
 plugins {
     alias(libs.plugins.karmaConventions)
@@ -29,4 +30,17 @@ configureJava(rootProject.libs.versions.java)
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+}
+
+publishing {
+    setProjectInfo(
+        name = "KCML Gradle API",
+        description = "Support plugin API for the Kotlin Compiler Meta Loader Gradle tooling",
+        url = "https://git.karmakrafts.dev/kk/kcml"
+    )
+    publications {
+        create<MavenPublication>("api") {
+            from(components["kotlin"])
+        }
+    }
 }

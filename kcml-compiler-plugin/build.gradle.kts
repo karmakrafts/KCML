@@ -63,7 +63,11 @@ tasks {
 }
 
 publishing {
-    setProjectInfo("KCML Compiler Plugin", "KCML compiler plugin for bootstrapping the KCML loader")
+    setProjectInfo(
+        name = "KCML Compiler Plugin",
+        description = "KCML compiler plugin for bootstrapping the KCML loader",
+        url = "https://git.karmakrafts.dev/kk/kcml"
+    )
     publications {
         create<MavenPublication>("plugin") {
             from(components["kotlin"])
