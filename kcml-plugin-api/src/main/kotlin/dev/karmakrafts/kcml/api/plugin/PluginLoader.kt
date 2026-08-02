@@ -21,85 +21,97 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 
-/**
- * Discovers and provides KCML compiler plugins and their metadata.
- *
- * KCML discovers plugins before Kotlin's FIR and IR extension points run, orders them by declared
- * dependencies, and calls each plugin's [CompilerPlugin.load] function. The loader then exposes
- * the resulting plugin instances, metadata, and per-plugin extension registries to KCML code.
- */
+/** Discovers, loads, and provides compiler plugins. */
 interface PluginLoader {
+    /** Logger for plugin discovery and loading. */
     val logger: Logger
 
     /**
-     * The ID of the plugin currently being loaded.
-     * It is `null` before loading starts and after loading completes.
+     * ID of the plugin currently loading, or `null` otherwise.
      */
     val loadingPluginId: String?
 
     /**
-     * Finds a loaded compiler plugin.
+     * Finds a loaded plugin.
      *
-     * @param id stable plugin identifier.
-     * @return the loaded plugin, or `null` when it is unavailable.
+     * @param id plugin ID.
+     * @return the plugin, or `null` if unavailable.
      */
     fun findPlugin(id: String): CompilerPlugin?
 
     /**
-     * Gets a loaded compiler plugin.
+     * Returns a loaded plugin.
      *
-     * @param id stable plugin identifier.
-     * @return the loaded plugin.
+     * @param id plugin ID.
+     * @return the plugin.
      * @throws IllegalArgumentException if no plugin has [id].
      */
     fun getPlugin(id: String): CompilerPlugin
 
     /**
-     * Finds metadata for a discoverable compiler plugin.
+     * Finds plugin metadata.
      *
-     * @param pluginId stable plugin identifier.
-     * @return plugin metadata, or `null` when it is unavailable.
+     * @param pluginId plugin ID.
+     * @return metadata, or `null` if unavailable.
      */
     fun findMetadata(pluginId: String): PluginMetadata?
 
     /**
-     * Gets metadata for a discoverable compiler plugin.
+     * Returns plugin metadata.
      *
-     * @param pluginId stable plugin identifier.
-     * @return plugin metadata.
+     * @param pluginId plugin ID.
+     * @return metadata.
      * @throws IllegalArgumentException if no metadata has [pluginId].
      */
     fun getMetadata(pluginId: String): PluginMetadata
 
     /**
-     * Finds the extension registry created while a plugin was loaded.
+     * Finds a plugin's extension registry.
      *
-     * @param pluginId stable plugin identifier.
-     * @return the plugin's registry, or `null` when that plugin has not been loaded or has no
-     *   registry.
+     * @param pluginId plugin ID.
+     * @return the registry, or `null` if unavailable.
      */
     fun findExtensionRegistry(pluginId: String): ExtensionRegistry?
 
     /**
-     * Gets the extension registry created while a plugin was loaded.
+     * Returns a plugin's extension registry.
      *
-     * @param pluginId stable plugin identifier.
-     * @return the plugin's extension registry.
+     * @param pluginId plugin ID.
+     * @return the registry.
      * @throws IllegalArgumentException if no registry exists for [pluginId].
      */
     fun getExtensionRegistry(pluginId: String): ExtensionRegistry
 
-    // TODO: document
+    /**
+     * Finds a plugin's message service.
+     *
+     * @param pluginId plugin ID.
+     * @return the message service, or `null` if unavailable.
+     */
     @InternalKcmlApi
     fun findIpm(pluginId: String): IPM?
 
-    // TODO: document
+    /**
+     * Returns a plugin's message service.
+     *
+     * @param pluginId plugin ID.
+     * @return the message service.
+     * @throws IllegalArgumentException if no message service exists for [pluginId].
+     */
     @InternalKcmlApi
     fun getIpm(pluginId: String): IPM
 
-    /** @return identifiers of all discoverable plugins in loader order. */
+    /**
+     * Lists plugin IDs in loader order.
+     *
+     * @return plugin IDs in loader order.
+     */
     fun allPlugins(): List<String>
 
-    /** @return identifiers of all discoverable plugins ordered by dependency constraints. */
+    /**
+     * Lists plugin IDs in dependency order.
+     *
+     * @return plugin IDs in dependency order.
+     */
     fun allPluginsSorted(): List<String>
 }

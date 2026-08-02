@@ -19,60 +19,65 @@ package dev.karmakrafts.kcml.api.ipm
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import java.util.*
 
+/** Handles a received inter-plugin message payload. */
 typealias IPMCallback = IPMData.() -> Unit
 
 /**
- * Inter-plugin messaging, totally not stolen from FML's IMCs.
- * This allows sending messages (events) to other plugins without
- * needing a hard dependency on them.
- * The trade-off is the data not really being typesafe anymore.
+ * Exchanges messages between plugins without a direct dependency.
  *
- * All implementations of this interface must be thread safe.
+ * Implementations must be thread-safe.
  */
 interface IPM {
-    /**
-     * The queue of messages that are invoked as soon as the first handler
-     * is registered for the given message type.
-     */
+    /** Messages awaiting a receiver for their name. */
     @InternalKcmlApi
     val queue: Deque<IPMMessage>
 
-    /**
-     * A map of all callbacks registered for the various message types the
-     * associated plugin can handle.
-     */
+    /** Receivers keyed by message name. */
     @InternalKcmlApi
     val callbacks: MutableMap<String, IPMCallback>
 
     /**
-     * Sends a message of the given type to another plugin with the given ID.
-     * If the target plugin is not present, the call will be ignored.
-     * If the plugin is present, but hasn't made a call to [receive] for the matching
-     * message type yet, the message will be queued until it has.
+     * Sends a message to a plugin. Messages for an unavailable plugin are ignored; messages with
+     * no receiver are queued until one is registered.
+     *
+     * @param pluginId receiving plugin ID.
+     * @param name message name.
+     * @param data message payload.
      */
     fun send(pluginId: String, name: String, data: IPMData)
 
     /**
-     * Same as [send] but for all [dev.karmakrafts.kcml.api.plugin.PluginLoader.allPluginsSorted].
+     * Sends a message to every plugin in dependency order.
+     *
+     * @param name message name.
+     * @param data message payload.
      */
     fun broadcast(name: String, data: IPMData)
 
     /**
-     * Receive messages of the given type for the current plugin.
-     * If messages have been queued for the given type, the callback
-     * will be invoked immediately for all of them.
+     * Registers a receiver for a message name and delivers queued messages for that name.
+     *
+     * @param name message name.
+     * @param callback message receiver.
      */
     fun receive(name: String, callback: IPMCallback)
 }
 
 /**
- * Same as [IPM.send], but with a trailing closure for composing the IPM data.
+ * Sends a message using a payload builder.
+ *
+ * @param pluginId receiving plugin ID.
+ * @param name message name.
+ * @param block adds message payload values.
  */
 inline fun IPM.send(pluginId: String, name: String, block: MutableMap<String, Any>.() -> Unit) =
     send(pluginId, name, IPMData.build(block))
 
 /**
- * Same as [IPM.broadcast], but with a trailing closure for composing the IPM data.
+ * Broadcasts a message using a payload builder.
+ *
+ * @param name message name.
+ * @param block adds message payload values.
  */
 inline fun IPM.broadcast(name: String, block: MutableMap<String, Any>.() -> Unit) =
     broadcast(name, IPMData.build(block))

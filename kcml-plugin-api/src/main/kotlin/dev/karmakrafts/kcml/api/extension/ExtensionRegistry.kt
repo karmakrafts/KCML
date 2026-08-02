@@ -16,79 +16,75 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-/**
- * Stores the KCML extensions participating in a compiler invocation.
- *
- * The registry is responsible for extension identity and exposes both registration order and the
- * dependency-respecting order used by the compiler-plugin dispatcher.
- */
+/** Stores extensions for a compiler invocation. */
 interface ExtensionRegistry {
     /**
-     * Stable identifier of the KCML plugin that owns this registry.
-     *
-     * Each loaded plugin receives a separate registry, allowing extensions with the same ID to be
-     * managed independently until KCML dispatches them to the Kotlin compiler.
+     * ID of the plugin that owns this registry.
      */
     val pluginId: String
 
     /**
-     * Registers an extension for later compiler-phase dispatch.
+     * Registers an extension.
      *
-     * @param extension the KCML extension to register.
-     * @throws IllegalStateException if KCML has frozen this registry for compiler-phase dispatch.
+     * @param extension extension to register.
+     * @throws IllegalStateException if this registry is frozen.
      * @throws IllegalArgumentException if an extension with the same ID is already registered.
      */
     fun register(extension: Extension)
 
     /**
-     * Removes a previously registered extension.
+     * Unregisters an extension.
      *
-     * @param extension the extension to remove.
-     * @throws IllegalStateException if KCML has frozen this registry for compiler-phase dispatch.
+     * @param extension extension to unregister.
+     * @throws IllegalStateException if this registry is frozen.
      */
     fun unregister(extension: Extension)
 
     /**
-     * Finds the registered extension with an identifier.
+     * Finds an extension by ID.
      *
-     * @param id the extension identifier.
-     * @return the registered extension, or `null` when it is absent.
+     * @param id extension ID.
+     * @return the extension, or `null` if absent.
      */
     fun find(id: String): Extension?
 
     /**
-     * Gets the registered extension with an identifier.
+     * Returns an extension by ID.
      *
-     * @param id the extension identifier.
-     * @return the registered extension.
+     * @param id extension ID.
+     * @return the extension.
      * @throws IllegalArgumentException if no extension has [id].
      */
     operator fun get(id: String): Extension
 
     /**
-     * Checks whether this registry contains an extension ID.
+     * Checks whether an extension ID is registered.
      *
-     * @param id extension identifier to look up.
-     * @return `true` if an extension with [id] is registered.
+     * @param id extension ID.
+     * @return `true` if [id] is registered.
      */
     operator fun contains(id: String): Boolean
 
     /**
-     * Checks whether this registry contains an extension instance.
+     * Checks whether an extension is registered.
      *
-     * @param extension extension instance to look up.
+     * @param extension extension to check.
      * @return `true` if [extension] is registered.
      */
     operator fun contains(extension: Extension): Boolean
 
-    /** Returns all registered extensions in registration order. */
+    /**
+     * Returns extensions in registration order.
+     *
+     * @return registered extensions.
+     */
     fun all(): List<Extension>
 
     /**
-     * Returns all registered extensions ordered according to their dependency constraints.
+     * Returns extensions in dependency order.
      *
-     * @return the extensions in the order KCML uses for Kotlin compiler-phase dispatch.
-     * @throws IllegalStateException if KCML has not yet frozen this registry after plugin loading.
+     * @return registered extensions in dependency order.
+     * @throws IllegalStateException if this registry is not frozen.
      */
     fun allSorted(): List<Extension>
 }

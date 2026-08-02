@@ -18,6 +18,12 @@ package dev.karmakrafts.kcml.api.ipm
 
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 
+/**
+ * Queued inter-plugin message.
+ *
+ * @param name message name.
+ * @param data message payload.
+ */
 @InternalKcmlApi
 data class IPMMessage( // @formatter:off
     val name: String,

@@ -16,13 +16,16 @@
 
 package dev.karmakrafts.kcml.api.util
 
-/**
- * Defines the [Order] ordering values.
- */
+/** Specifies an extension's execution order relative to a dependency. */
 enum class Order {
     // @formatter:off
+    /** No ordering constraint. */
     NONE,
+
+    /** Runs before the dependency. */
     BEFORE,
+
+    /** Runs after the dependency. */
     AFTER
     // @formatter:on
 }

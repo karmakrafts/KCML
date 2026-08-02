@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.api
 
+/** Marks unstable KCML API intended for internal integration. */
 @RequiresOptIn(message = "The API you are trying to use is internal to KCML and may change at any time")
 @Retention(AnnotationRetention.BINARY)
 annotation class InternalKcmlApi

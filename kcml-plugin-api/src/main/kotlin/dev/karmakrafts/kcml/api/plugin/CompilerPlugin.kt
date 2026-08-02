@@ -34,6 +34,10 @@ interface CompilerPlugin {
      */
     fun load(context: PluginLoadContext)
 
-    // TODO: document this
+    /**
+     * Processes inter-plugin messages after loading.
+     *
+     * @param ipm this plugin's message service.
+     */
     fun processIpms(ipm: IPM) = Unit
 }
