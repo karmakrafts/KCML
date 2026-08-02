@@ -116,4 +116,9 @@ publishing {
         description = "Gradle plugin for the Kotlin Compiler Meta Loader",
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
+    publications {
+        create<MavenPublication>("gradlePlugin") {
+            from(components["java"])
+        }
+    }
 }

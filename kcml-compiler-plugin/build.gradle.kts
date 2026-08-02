@@ -71,7 +71,7 @@ publishing {
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
     publications {
-        create<MavenPublication>("plugin") {
+        create<MavenPublication>("compilerPlugin") {
             from(components["kotlin"])
         }
     }

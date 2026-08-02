@@ -53,7 +53,7 @@ publishing {
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
     publications {
-        create<MavenPublication>("api") {
+        create<MavenPublication>("pluginApi") {
             from(components["kotlin"])
         }
     }
