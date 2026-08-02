@@ -42,11 +42,11 @@ class AgentInjector( // @formatter:off
         }
     }
 
-    internal fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
+    fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
         tryOverwriteAttachPermissions()
         val pid = ProcessHandle.current().pid().toString()
         val virtualMachines = VirtualMachine.list()
-        val descriptor = virtualMachines.first { pid in it.id() }
+        val descriptor = virtualMachines.first { pid in it.id() || pid in it.displayName() }
         VirtualMachine.attach(descriptor)
     }
 
