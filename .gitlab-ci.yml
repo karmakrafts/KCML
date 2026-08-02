@@ -128,6 +128,7 @@ publish:snapshot:maven:
   rules:
     - *if-main
   script:
+    - ./gradlew :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository :kcml-gradle-plugin:publishAggregationToCentralSnapshots
     - ./gradlew publishAllPublicationsToGitLabRepository publishAggregationToCentralSnapshots
   tags:
     - macos
@@ -137,6 +138,7 @@ publish:release:maven:
   rules:
     - *if-release
   script:
+    - ./gradlew :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository :kcml-gradle-plugin:publishAggregationToCentralPortal
     - ./gradlew publishAllPublicationsToGitLabRepository publishAggregationToCentralPortal
   tags:
     - macos
