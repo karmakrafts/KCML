@@ -54,11 +54,13 @@ tasks {
         maxParallelForks = Runtime.getRuntime().availableProcessors()
     }
     jar {
-        val agentJarTask = project(":kcml-agent").tasks.named<Jar>("shadowJar")
-        val loaderJarTask = project(":kcml-loader").tasks.named<Jar>("shadowJar")
-        dependsOn(agentJarTask, loaderJarTask)
-        from(agentJarTask) { rename { "kcml-agent.jar" } }
-        from(loaderJarTask) { rename { "kcml-loader.jar" } }
+        val agentShadowJarTask = project(":kcml-agent").tasks.named<Jar>("shadowJar")
+        val agentJarTask = project(":kcml-agent").tasks.named<Jar>("jar")
+        val loaderShadowJarTask = project(":kcml-loader").tasks.named<Jar>("shadowJar")
+        val loaderJarTask = project(":kcml-loader").tasks.named<Jar>("jar")
+        dependsOn(agentShadowJarTask, agentJarTask, loaderJarTask, loaderJarTask)
+        from(agentShadowJarTask) { rename { "kcml-agent.jar" } }
+        from(loaderShadowJarTask) { rename { "kcml-loader.jar" } }
     }
 }
 
