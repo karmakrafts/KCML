@@ -41,26 +41,6 @@ group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 if (GitLabCI.isCI) defaultDependencyLocking()
 
-subprojects {
-    apply {
-        plugin<PublishingPlugin>()
-        plugin<SigningPlugin>()
-    }
-
-    group = rootProject.group
-    version = rootProject.version
-
-    publishing {
-        apache2License()
-        setRepository("github.com", "karmakrafts/kcml")
-        with(GitLabCI) { karmaKraftsDefaults() }
-    }
-
-    signing {
-        signPublications()
-    }
-}
-
 configureDokka {
     withKotlin()
     withKotlinGradle()
@@ -74,7 +54,6 @@ dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.kotlinx.serialization.core)
     compileOnly(libs.kotlinx.serialization.json)
-    implementation(projects.kcmlGradleApi)
 
     testImplementation(libs.kotlin.test)
 }

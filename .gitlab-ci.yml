@@ -129,8 +129,6 @@ publish:snapshot:maven:
     - *if-main
   script:
     - ./gradlew
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToGitLabRepository
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToCentralSnapshots
       :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
       :kcml-gradle-plugin:publishAggregationToCentralSnapshots 
       publishAllPublicationsToGitLabRepository 
@@ -144,8 +142,6 @@ publish:release:maven:
     - *if-release
   script:
     - ./gradlew
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToGitLabRepository
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToCentralPortal
       :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
       :kcml-gradle-plugin:publishAggregationToCentralPortal
       publishAllPublicationsToGitLabRepository 

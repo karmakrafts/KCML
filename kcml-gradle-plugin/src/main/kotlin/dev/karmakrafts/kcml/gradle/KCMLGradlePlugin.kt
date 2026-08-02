@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.gradle
 
-import dev.karmakrafts.kcml.gradle.api.KCMLGradleSupportPlugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory

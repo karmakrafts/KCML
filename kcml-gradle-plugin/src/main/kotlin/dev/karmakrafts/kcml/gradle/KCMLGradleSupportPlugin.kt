@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.gradle.api
+package dev.karmakrafts.kcml.gradle
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project

@@ -10,8 +10,7 @@ pluginManagement {
     }
 }
 
-@Suppress("UnstableApiUsage")
-dependencyResolutionManagement {
+@Suppress("UnstableApiUsage") dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
@@ -42,4 +41,3 @@ nmcpSettings {
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
-include("kcml-gradle-api")
