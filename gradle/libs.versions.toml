@@ -5,7 +5,7 @@ java = "21"
 kotlinBootstrap = "2.4.0" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
 kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
 
-kcml = "1.0.1"
+kcml = "1.0.2"
 iridium = "1.13.2" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
