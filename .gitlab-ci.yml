@@ -115,7 +115,9 @@ build:
   script:
     - ./gradlew --stop
     - ./gradlew :kcml-compiler-plugin:publishToMavenLocal --stacktrace # Ensure we can bootstrap
-    - ./gradlew clean build --stacktrace
+    - ./gradlew clean --stacktrace
+    - ./gradlew :kcml-agent:build :kcml-loader:build :kcml-example-plugin:build --stacktrace
+    - ./gradlew :kcml-example-project:build --stacktrace
   tags:
     - macos
 
