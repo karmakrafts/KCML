@@ -45,26 +45,32 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.AtomicReference
 import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
 object PluginLoaderImpl : PluginLoader {
     private lateinit var loggerFactory: MessageCollectorLoggerFactory
-    private lateinit var classLoader: URLClassLoader
+    private val loaderLock: Any = Any()
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
-    private var arePluginsLoaded: Boolean = false
+    private var arePluginsLoaded: AtomicBoolean = AtomicBoolean(false)
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
     internal val extensionDispatcher: ExtensionDispatcher by lazy {
         ExtensionDispatcher(this, extensionRegistries)
     }
 
-    private val ipms: HashMap<String, IPMImpl> = HashMap()
+    private val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
 
-    override lateinit var logger: Logger
-    override var loadingPluginId: String? = null
+    private val _logger: AtomicReference<Logger?> = AtomicReference(null)
+    override val logger: Logger get() = _logger.load()!!
+
+    private val _loadingPluginId: AtomicReference<String?> = AtomicReference(null)
+    override val loadingPluginId: String? get() = _loadingPluginId.load()
 
     private fun getOrCreateIpm(pluginId: String): IPM = ipms.getOrPut(pluginId) {
         IPMImpl(pluginId, this@PluginLoaderImpl)
@@ -102,7 +108,7 @@ object PluginLoaderImpl : PluginLoader {
     override fun allPlugins(): List<String> = plugins.keys.toList()
 
     override fun allPluginsSorted(): List<String> {
-        check(arePluginsLoaded) { "KCML plugins have not been loaded" }
+        check(arePluginsLoaded.load()) { "KCML plugins have not been loaded" }
         return sortedPlugins.keys.toList()
     }
 
@@ -122,13 +128,13 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun setupLogging(config: CompilerConfiguration) {
         loggerFactory = MessageCollectorLoggerFactory(this, config.messageCollector)
-        logger = loggerFactory("KCML")
+        _logger.store(loggerFactory("KCML"))
     }
 
     private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = this::class.java.classLoader
-        classLoader = URLClassLoader(
+        val classLoader = URLClassLoader(
             config.kcmlPluginClasspaths.map { path ->
                 val absolutePath = path.absolute().normalize()
                 logger.debug("Loading classpath dependency $absolutePath")
@@ -146,7 +152,7 @@ object PluginLoaderImpl : PluginLoader {
                 continue
             }
             val pluginId = pluginClass.getAnnotation(Plugin::class.java).id
-            if (pluginId in plugins) {
+            if (plugins.containsKey(pluginId)) {
                 logger.error("Plugin with ID '$pluginId' was loaded more than once, check your plugin dependencies")
                 continue
             }
@@ -158,7 +164,7 @@ object PluginLoaderImpl : PluginLoader {
     private fun loadPlugins(config: CompilerConfiguration) {
         for ((pluginId, plugin) in sortedPlugins) {
             try {
-                loadingPluginId = pluginId
+                _loadingPluginId.store(pluginId)
                 val extensionRegistry = getOrCreateExtensionRegistry(pluginId)
                 plugin.load(PluginLoadContext( // @formatter:off
                     extensionRegistry = extensionRegistry,
@@ -173,7 +179,7 @@ object PluginLoaderImpl : PluginLoader {
                 logger.error("Could not load plugin with ID '$pluginId'", error)
             }
         }
-        loadingPluginId = null // Only used during the load phase
+        _loadingPluginId.store(null)
     }
 
     private fun processIpms() {
@@ -184,31 +190,32 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
-        setupLogging(config)
+    fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) =
+        synchronized(loaderLock) {
+            setupLogging(config)
 
-        if (!arePluginsLoaded) {
-            // Load all plugin candidates and instantiate them through ServiceLoader
-            val candidates = loadCandidates(config)
-            logger.info("Found ${candidates.size} plugin candidates")
-            // Try to load metadata for all plugins
-            loadMetadata(candidates)
-            // Log plugin load order for debugging purposes
-            val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
-            logger.info("Sorted plugins into load order: $sortedNames")
-            // Load all plugins in the proper order
-            loadPlugins(config)
-            // Invoke all inter-plugin messaging
-            processIpms()
-            logger.info("Initialized ${plugins.size} plugins")
-            extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
-            arePluginsLoaded = true
+            if (arePluginsLoaded.compareAndSet(expectedValue = false, newValue = true)) {
+                // Load all plugin candidates and instantiate them through ServiceLoader
+                val candidates = loadCandidates(config)
+                logger.info("Found ${candidates.size} plugin candidates")
+                // Try to load metadata for all plugins
+                loadMetadata(candidates)
+                // Log plugin load order for debugging purposes
+                val sortedNames =
+                    sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
+                logger.info("Sorted plugins into load order: $sortedNames")
+                // Load all plugins in the proper order
+                loadPlugins(config)
+                // Invoke all inter-plugin messaging
+                processIpms()
+                logger.info("Initialized ${plugins.size} plugins")
+                extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
+            }
+
+            // Register adapters for extension dispatcher
+            extensionDispatcher.registerAdapters(this, config, loggerFactory)
+            logger.info("Registered extension adapters")
         }
-
-        // Register adapters for extension dispatcher
-        extensionDispatcher.registerAdapters(this, config, loggerFactory)
-        logger.info("Registered extension adapters")
-    }
 
     private fun buildPluginGraph(): Pair<DirectedGraph, HashMap<String, Vertex>> {
         val vertices = HashMap<String, Vertex>()
