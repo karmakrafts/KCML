@@ -21,7 +21,6 @@ import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.hooks.NativeGenerationStateView
-import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
 import llvm.LLVMModuleRef
@@ -43,17 +42,18 @@ internal data class LateNativeBackendImpl(
     override val loader: PluginLoader
 ) : LateNativeBackend {
     companion object {
-        fun fromStateView(stateView: NativeGenerationStateView, pluginId: String): LateNativeBackendImpl =
-            LateNativeBackendImpl(
-                builtIns = stateView.builtIns,
-                symbols = stateView.symbols,
-                phaseContext = stateView.phaseContext,
-                secondStageConfig = stateView.secondStageConfig,
-                llvmContext = stateView.llvmContext,
-                llvmModule = stateView.llvmModule,
-                loggerFactory = stateView.loggerFactory,
-                logger = stateView.loggerFactory.getForPlugin(pluginId),
-                loader = PluginLoaderImpl
-            )
+        fun fromStateView(
+            stateView: NativeGenerationStateView, pluginId: String, loader: PluginLoader
+        ): LateNativeBackendImpl = LateNativeBackendImpl(
+            builtIns = stateView.builtIns,
+            symbols = stateView.symbols,
+            phaseContext = stateView.phaseContext,
+            secondStageConfig = stateView.secondStageConfig,
+            llvmContext = stateView.llvmContext,
+            llvmModule = stateView.llvmModule,
+            loggerFactory = stateView.loggerFactory,
+            logger = stateView.loggerFactory.getForPlugin(pluginId),
+            loader = loader
+        )
     }
 }

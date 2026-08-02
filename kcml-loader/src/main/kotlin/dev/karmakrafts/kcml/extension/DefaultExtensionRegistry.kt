@@ -77,8 +77,14 @@ internal class DefaultExtensionRegistry( // @formatter:off
                 vertices[id] = vertex
             }
             for ((id, extension) in extensions) {
+                val extensionType = extension::class.java
                 val extensionVertex = vertices[id]!!
                 for (dependency in extension.dependencies) {
+                    val dependencyType = extensions[dependency.id]?.let { ext -> ext::class.java } ?: continue
+                    if (!extensionType.isAssignableFrom(dependencyType)) {
+                        logger.warn("Extension dependency '${dependency.id}' for extension '$id' in plugin '$pluginId' is ignored because its type does not match")
+                        continue
+                    }
                     val dependencyId = dependency.id
                     if (dependencyId !in extensions) {
                         if (dependency.required) {

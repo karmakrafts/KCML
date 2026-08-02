@@ -17,8 +17,8 @@
 package dev.karmakrafts.kcml.hooks
 
 import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.ReflectionUtils
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
@@ -41,15 +41,17 @@ data class NativeGenerationStateView(
     val llvmModule: LLVMModuleRef
 ) {
     companion object {
-        fun fromImplementation(impl: Any): Result<NativeGenerationStateView> = runCatching {
+        fun fromImplementation(
+            impl: Any, loader: PluginLoader
+        ): Result<NativeGenerationStateView> = runCatching {
             // First retrieve NativePhaseConfig and configs non-reflectively
             val phaseContext = impl as NativePhaseContext // NativeGenerationState implements NativePhaseContext
             val nativeConfig = phaseContext.config
             val config = nativeConfig.configuration
             val messageCollector = config.messageCollector
-            val loggerFactory = MessageCollectorLoggerFactory(PluginLoaderImpl, messageCollector)
+            val loggerFactory = MessageCollectorLoggerFactory(loader, messageCollector)
             val logger = loggerFactory("KCML")
-            // Then reflect out the guts of the Konan Context obtailrecject and related fields
+            // Then reflect out the guts of the Konan Context and related fields
             @ActualType("Context") val context = ReflectionUtils.getField<Any, Any>("context", impl)
             val secondStageConfig = ReflectionUtils.getSuperField<Any, NativeSecondStageCompilationConfig>( // @formatter:off
                 superClassName = "BasicNativeBackendPhaseContext",

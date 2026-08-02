@@ -16,6 +16,8 @@
 
 package dev.karmakrafts.kcml.api.plugin
 
+import dev.karmakrafts.kcml.api.ipm.IPM
+
 /**
  * Entry point for a KCML compiler plugin discovered through Java's [java.util.ServiceLoader].
  *
@@ -31,4 +33,7 @@ interface CompilerPlugin {
      *   this plugin contributes extensions.
      */
     fun load(context: PluginLoadContext)
+
+    // TODO: document this
+    fun processIpms(ipm: IPM) = Unit
 }

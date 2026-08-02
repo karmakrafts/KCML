@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.plugin
 
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -42,5 +43,6 @@ data class PluginLoadContext( // @formatter:off
     val config: CompilerConfiguration,
     val loggerFactory: LoggerFactory,
     val logger: Logger,
-    val loader: PluginLoader
+    val loader: PluginLoader,
+    val ipm: IPM
 ) // @formatter:on

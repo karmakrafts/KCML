@@ -37,7 +37,7 @@ object KCMLHooks {
         args: List<LLVMValueRef>
     ): LLVMValueRef? { // @formatter:on
         val state = ReflectionUtils.getField<Any, Any>("generationState", codeGeneratorVisitor)
-        return NativeGenerationStateView.fromImplementation(state).fold(
+        return NativeGenerationStateView.fromImplementation(state, PluginLoaderImpl).fold(
             onSuccess = onSuccess@{ stateView ->
                 stateView.loggerFactory("KCML").info("Code generation visitor stage")
                 // Invoke all native intrinsic extensions
@@ -45,7 +45,7 @@ object KCMLHooks {
                     PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.filter { (_, extension) -> extension is NativeIntrinsicsExtension }
                 for ((pluginId, extension) in extensions) {
                     require(extension is NativeIntrinsicsExtension)
-                    val backend = LateNativeBackendImpl.fromStateView(stateView, pluginId)
+                    val backend = LateNativeBackendImpl.fromStateView(stateView, pluginId, PluginLoaderImpl)
                     try {
                         if (!extension.shouldProcess(call, backend)) continue
                         return@onSuccess extension.process(call, args, backend)
@@ -62,13 +62,13 @@ object KCMLHooks {
 
     @JvmStatic
     fun onRunAfterLowerings(@ActualType("NativeGenerationState") state: Any) {
-        NativeGenerationStateView.fromImplementation(state).fold(
+        NativeGenerationStateView.fromImplementation(state, PluginLoaderImpl).fold(
             onSuccess = { stateView ->
                 stateView.loggerFactory("KCML").info("Post lowering stage")
                 // Invoke all late native extensions' init functions
                 val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions
                 for ((pluginId, extension) in extensions) {
-                    val backend = LateNativeBackendImpl.fromStateView(stateView, pluginId)
+                    val backend = LateNativeBackendImpl.fromStateView(stateView, pluginId, PluginLoaderImpl)
                     try {
                         extension.init(backend)
                     } catch (error: Throwable) {

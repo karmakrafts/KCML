@@ -16,7 +16,9 @@
 
 package dev.karmakrafts.kcml.api.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 
 /**
@@ -86,6 +88,14 @@ interface PluginLoader {
      * @throws IllegalArgumentException if no registry exists for [pluginId].
      */
     fun getExtensionRegistry(pluginId: String): ExtensionRegistry
+
+    // TODO: document
+    @InternalKcmlApi
+    fun findIpm(pluginId: String): IPM?
+
+    // TODO: document
+    @InternalKcmlApi
+    fun getIpm(pluginId: String): IPM
 
     /** @return identifiers of all discoverable plugins in loader order. */
     fun allPlugins(): List<String>

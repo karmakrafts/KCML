@@ -16,7 +16,9 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
@@ -26,6 +28,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
+import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
@@ -44,25 +47,37 @@ import java.net.URLClassLoader
 import java.util.*
 import kotlin.io.path.absolute
 
-@OptIn(ExperimentalCompilerApi::class)
+@OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
 object PluginLoaderImpl : PluginLoader {
     private lateinit var loggerFactory: MessageCollectorLoggerFactory
-    override lateinit var logger: Logger
-
-    lateinit var classLoader: URLClassLoader
+    private lateinit var classLoader: URLClassLoader
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
     private var isLoadComplete: Boolean = false
-    override var loadingPluginId: String? = null
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
     internal val extensionDispatcher: ExtensionDispatcher by lazy {
         ExtensionDispatcher(this, extensionRegistries)
     }
 
+    private val ipms: HashMap<String, IPMImpl> = HashMap()
+
+    override lateinit var logger: Logger
+    override var loadingPluginId: String? = null
+
+    private fun getOrCreateIpm(pluginId: String): IPM = ipms.getOrPut(pluginId) {
+        IPMImpl(pluginId, this@PluginLoaderImpl)
+    }
+
     private fun getOrCreateExtensionRegistry(pluginId: String): DefaultExtensionRegistry {
         return extensionRegistries.getOrPut(pluginId) { DefaultExtensionRegistry(this, pluginId, logger) }
+    }
+
+    override fun findIpm(pluginId: String): IPM? = ipms[pluginId]
+
+    override fun getIpm(pluginId: String): IPM = requireNotNull(findIpm(pluginId)) {
+        "No IPM for plugin with ID '$pluginId'"
     }
 
     override fun findPlugin(id: String): CompilerPlugin? = plugins[id]
@@ -112,7 +127,7 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
         logger.info("Loading plugins")
-        val parentClassLoader = PluginLoaderImpl::class.java.classLoader
+        val parentClassLoader = this::class.java.classLoader
         classLoader = URLClassLoader(
             config.kcmlPluginClasspaths.map { path ->
                 val absolutePath = path.absolute().normalize()
@@ -149,8 +164,9 @@ object PluginLoaderImpl : PluginLoader {
                     extensionRegistry = extensionRegistry,
                     config = config,
                     loggerFactory = loggerFactory,
-                    logger = loggerFactory(metadata[pluginId]?.nameOrId ?: pluginId),
-                    loader = this
+                    logger = loggerFactory.getForPlugin(pluginId),
+                    loader = this,
+                    ipm = getOrCreateIpm(pluginId)
                 )
                 ) // @formatter:on
             } catch (error: Throwable) {
@@ -158,6 +174,14 @@ object PluginLoaderImpl : PluginLoader {
             }
         }
         loadingPluginId = null // Only used during the load phase
+    }
+
+    private fun processIpms() {
+        logger.info("Processing IPMs..")
+        for ((pluginId, plugin) in sortedPlugins) {
+            logger.info("Processing IPMs for plugin '$pluginId'")
+            plugin.processIpms(getIpm(pluginId))
+        }
     }
 
     fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
@@ -173,10 +197,11 @@ object PluginLoaderImpl : PluginLoader {
         logger.info("Sorted plugins into load order: $sortedNames")
         // Load all plugins in the proper order
         loadPlugins(config)
+        // Invoke all inter-plugin messaging
+        processIpms()
         // Register adapters for extension dispatcher
         extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
         extensionDispatcher.registerAdapters(this, config, loggerFactory)
-        // TODO: wire up NativeIntrinsicsExtension
         logger.info("Registered extension adapters")
         // Complete load
         isLoadComplete = true
