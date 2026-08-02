@@ -16,4 +16,6 @@
 
 package dev.karmakrafts.example
 
-class TestClass
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.FUNCTION)
+annotation class CustomIntrinsic

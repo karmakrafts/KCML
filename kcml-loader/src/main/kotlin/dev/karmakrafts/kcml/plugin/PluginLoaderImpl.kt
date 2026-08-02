@@ -57,7 +57,7 @@ object PluginLoaderImpl : PluginLoader {
     override var loadingPluginId: String? = null
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
-    private val extensionDispatcher: ExtensionDispatcher by lazy {
+    internal val extensionDispatcher: ExtensionDispatcher by lazy {
         ExtensionDispatcher(this, extensionRegistries)
     }
 

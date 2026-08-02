@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.example
+package dev.karmakrafts.kcml.api.extension
 
-class TestClass
+import dev.karmakrafts.kcml.api.backend.LateNativeBackend
+
+interface LateNativeExtension : Extension {
+    fun init(backend: LateNativeBackend) = Unit
+}

@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.util;
+package dev.karmakrafts.example
 
-import org.objectweb.asm.ClassWriter;
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-public final class NonLoadingClassWriter extends ClassWriter {
-    public NonLoadingClassWriter(final int flags) {
-        super(flags);
-    }
-
-    @Override
-    protected String getCommonSuperClass(final String type1, final String type2) {
-        return ASMTypes.OBJECT.getInternalName();
+class CustomIntrinsicsTest {
+    @Test
+    fun `Custom intrinsic is lowered to constant value`() {
+        assertEquals(44, customIntrinsic())
     }
 }

@@ -20,7 +20,7 @@ import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
-import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
+import dev.karmakrafts.kcml.api.extension.LateNativeExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -40,11 +40,9 @@ internal class ExtensionDispatcher( // @formatter:off
         registry.allSorted().map { extension -> pluginId to extension }
     }
 
-    val nativeIntrinsicsExtensions: List<Pair<String, NativeIntrinsicsExtension>> by lazy {
+    val lateNativeExtensions: List<Pair<String, LateNativeExtension>> by lazy {
         registries.flatMap { (pluginId, registry) ->
-            registry.allSorted()
-                .filterIsInstance<NativeIntrinsicsExtension>()
-                .map { extension -> pluginId to extension }
+            registry.allSorted().filterIsInstance<LateNativeExtension>().map { extension -> pluginId to extension }
         }
     }
 

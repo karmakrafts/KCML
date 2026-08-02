@@ -16,8 +16,8 @@
 
 package dev.karmakrafts.kcml.agent.transformer;
 
+import dev.karmakrafts.kcml.agent.asm.NonLoadingClassWriter;
 import dev.karmakrafts.kcml.agent.log.Logger;
-import dev.karmakrafts.kcml.agent.util.NonLoadingClassWriter;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;

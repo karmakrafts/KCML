@@ -14,20 +14,35 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.util;
+package dev.karmakrafts.kcml.agent.asm;
 
 import org.objectweb.asm.Type;
 
-public final class ASMTypes {
+public final class Types {
     public static final Type CLASS = Type.getObjectType("java/lang/Class");
     public static final Type CLASS_ARRAY = Type.getType("[Ljava/lang/Class;");
     public static final Type OBJECT = Type.getObjectType("java/lang/Object");
     public static final Type OBJECT_ARRAY = Type.getType("[Ljava/lang/Object;");
     public static final Type STRING = Type.getObjectType("java/lang/String");
     public static final Type METHOD = Type.getObjectType("java/lang/reflect/Method");
+    public static final Type LIST = Type.getObjectType("java/util/List");
+
+    public static final class CInterop {
+        public static final Type C_POINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
+    }
+
+    public static final class Common {
+        public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");
+    }
+
+    public static final class Konan {
+        public static final Type NATIVE_GENERATION_STATE = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/llvm/NativeGenerationState");
+        public static final Type FUNCTION_GENERATION_CONTEXT = Type.getObjectType(
+            "org/jetbrains/kotlin/backend/konan/llvm/FunctionGenerationContext");
+    }
 
     public static final class KCML {
-        public static final Type TOP_LEVEL_PHASES_HOOKS = Type.getObjectType(
-            "dev/karmakrafts/kcml/hooks/TopLevelPhasesHooks");
+        public static final Type KCML_HOOKS = Type.getObjectType("dev/karmakrafts/kcml/hooks/KCMLHooks");
     }
 }

@@ -14,6 +14,16 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.example
+package dev.karmakrafts.kcml.example
 
-class TestClass
+import dev.karmakrafts.kcml.api.backend.LateNativeBackend
+import dev.karmakrafts.kcml.api.extension.AbstractExtension
+import dev.karmakrafts.kcml.api.extension.ExtensionId
+import dev.karmakrafts.kcml.api.extension.LateNativeExtension
+
+@ExtensionId("late_native_example")
+class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
+    override fun init(backend: LateNativeBackend) {
+        backend.logger.info("Hello, world! from the late native extension")
+    }
+}

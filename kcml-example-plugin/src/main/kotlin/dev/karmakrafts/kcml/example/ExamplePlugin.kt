@@ -30,6 +30,8 @@ class ExamplePlugin : CompilerPlugin {
         context.extensionRegistry.apply {
             register(ExampleFirExtension())
             register(ExampleIrExtension())
+            register(ExampleLateNativeExtension())
+            register(ExampleNativeIntrinsicsExtension())
         }
     }
 }

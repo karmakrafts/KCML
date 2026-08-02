@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
  * recognized call with its own LLVM value.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface NativeIntrinsicsExtension : Extension {
+interface NativeIntrinsicsExtension : LateNativeExtension {
     /**
      * Determines whether an IR call should be lowered as an intrinsic by this extension.
      *

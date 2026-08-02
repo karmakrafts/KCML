@@ -19,32 +19,41 @@ package dev.karmakrafts.kcml.agent.transformer;
 import dev.karmakrafts.kcml.agent.asm.ASMUtils;
 import dev.karmakrafts.kcml.agent.asm.BlockBuilder;
 import dev.karmakrafts.kcml.agent.asm.Types;
-import dev.karmakrafts.kcml.agent.asm.Types.Konan;
+import dev.karmakrafts.kcml.agent.asm.Types.CInterop;
+import dev.karmakrafts.kcml.agent.asm.Types.Common;
 import dev.karmakrafts.kcml.agent.log.Logger;
-import org.objectweb.asm.Type;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
-    public TopLevelPhasesTransformer(final Logger logger) {
+public final class CodeGeneratorVisitorTransformer extends AbstractClassTransformer {
+    public CodeGeneratorVisitorTransformer(final Logger logger) {
         super(logger);
     }
 
     @Override
     protected boolean shouldTransform(final String className) {
-        return className.equals("org/jetbrains/kotlin/backend/konan/driver/phases/TopLevelPhasesKt");
+        return className.equals("org/jetbrains/kotlin/backend/konan/llvm/CodeGeneratorVisitor");
     }
 
-    private boolean transformRunAfterLowerings(final MethodNode methodNode) {
+    private boolean transformEvaluateFunctionCall(final MethodNode methodNode) {
         // @formatter:off
         return ASMUtils.stream(methodNode.instructions)
+            .filter(insn -> insn.getOpcode() == Opcodes.NOP) // Target the fallthrough block around L4
             .findFirst()
             .map(needle -> {
                 logger.info(String.format("Transforming %s%s", methodNode.name, methodNode.desc));
                 final var builder = BlockBuilder.create().withContext(methodNode);
-                builder.load(Konan.NATIVE_GENERATION_STATE, "generationState");
-                builder.invokehook("onRunAfterLowerings", Type.VOID_TYPE, Types.OBJECT);
-                methodNode.instructions.insertBefore(needle, builder.getInstructions());
+                builder.loadThis();
+                builder.load(Common.IR_CALL, "callee");
+                builder.load(Types.LIST, "args");
+                builder.invokehook("onEvaluateFunctionCall", CInterop.C_POINTER, Types.OBJECT, Common.IR_CALL, Types.LIST);
+                builder.dup();
+                builder.ifnull("kcml_fallthrough");
+                builder.areturn();
+                builder.label("kcml_fallthrough");
+                builder.pop();
+                methodNode.instructions.insert(needle, builder.getInstructions());
                 return true;
             })
             .orElse(false);
@@ -56,7 +65,7 @@ public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
         var wasChanged = false;
         for (final var methodNode : classNode.methods) {
             wasChanged |= switch (methodNode.name) {
-                case "runBackend$lambda$0$runAfterLowerings" -> transformRunAfterLowerings(methodNode);
+                case "evaluateFunctionCall" -> transformEvaluateFunctionCall(methodNode);
                 default -> false;
             };
         }

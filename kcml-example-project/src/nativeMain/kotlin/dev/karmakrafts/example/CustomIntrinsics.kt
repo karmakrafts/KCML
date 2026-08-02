@@ -16,4 +16,5 @@
 
 package dev.karmakrafts.example
 
-class TestClass
+@CustomIntrinsic
+internal fun customIntrinsic(): Int = throw NotImplementedError("Intrinsic not lowered by KCML example plugin")

@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.agent;
 import dev.karmakrafts.kcml.agent.log.Logger;
 import dev.karmakrafts.kcml.agent.log.NoopLogger;
 import dev.karmakrafts.kcml.agent.log.RemoteLogger;
+import dev.karmakrafts.kcml.agent.transformer.CodeGeneratorVisitorTransformer;
 import dev.karmakrafts.kcml.agent.transformer.TopLevelPhasesTransformer;
 import dev.karmakrafts.kcml.agent.util.AgentCommClient;
 
@@ -69,6 +70,7 @@ public final class KCMLAgent {
             logger.info("Registering class transformers");
             final var startTime = System.nanoTime();
             instrumentation.addTransformer(new TopLevelPhasesTransformer(logger));
+            instrumentation.addTransformer(new CodeGeneratorVisitorTransformer(logger));
             final var endTime = System.nanoTime();
             logger.info(String.format("Registered class transformers in %dms",
                 TimeUnit.MILLISECONDS.convert(endTime - startTime, TimeUnit.NANOSECONDS)));
