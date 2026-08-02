@@ -113,6 +113,7 @@ build:
     - *if-merge-request
     - *if-main
   script:
+    - ./gradlew --stop
     - ./gradlew :kcml-compiler-plugin:publishToMavenLocal --stacktrace # Ensure we can bootstrap
     - ./gradlew clean build --stacktrace
   tags:
