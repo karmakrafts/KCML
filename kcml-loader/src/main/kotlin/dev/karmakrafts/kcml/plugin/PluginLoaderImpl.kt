@@ -46,8 +46,6 @@ import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.concurrent.atomics.AtomicBoolean
-import kotlin.concurrent.atomics.AtomicReference
 import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
@@ -57,7 +55,7 @@ object PluginLoaderImpl : PluginLoader {
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
-    private var arePluginsLoaded: AtomicBoolean = AtomicBoolean(false)
+    private var arePluginsLoaded: Boolean = false
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
     internal val extensionDispatcher: ExtensionDispatcher by lazy {
@@ -66,11 +64,8 @@ object PluginLoaderImpl : PluginLoader {
 
     private val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
 
-    private val _logger: AtomicReference<Logger?> = AtomicReference(null)
-    override val logger: Logger get() = _logger.load()!!
-
-    private val _loadingPluginId: AtomicReference<String?> = AtomicReference(null)
-    override val loadingPluginId: String? get() = _loadingPluginId.load()
+    override lateinit var logger: Logger
+    override var loadingPluginId: String? = null
 
     private fun getOrCreateIpm(pluginId: String): IPM = ipms.getOrPut(pluginId) {
         IPMImpl(pluginId, this@PluginLoaderImpl)
@@ -108,7 +103,7 @@ object PluginLoaderImpl : PluginLoader {
     override fun allPlugins(): List<String> = plugins.keys.toList()
 
     override fun allPluginsSorted(): List<String> {
-        check(arePluginsLoaded.load()) { "KCML plugins have not been loaded" }
+        check(arePluginsLoaded) { "KCML plugins have not been loaded" }
         return sortedPlugins.keys.toList()
     }
 
@@ -128,7 +123,7 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun setupLogging(config: CompilerConfiguration) {
         loggerFactory = MessageCollectorLoggerFactory(this, config.messageCollector)
-        _logger.store(loggerFactory("KCML"))
+        logger = loggerFactory("KCML")
     }
 
     private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
@@ -164,7 +159,7 @@ object PluginLoaderImpl : PluginLoader {
     private fun loadPlugins(config: CompilerConfiguration) {
         for ((pluginId, plugin) in sortedPlugins) {
             try {
-                _loadingPluginId.store(pluginId)
+                loadingPluginId = pluginId
                 val extensionRegistry = getOrCreateExtensionRegistry(pluginId)
                 plugin.load(PluginLoadContext( // @formatter:off
                     extensionRegistry = extensionRegistry,
@@ -179,7 +174,7 @@ object PluginLoaderImpl : PluginLoader {
                 logger.error("Could not load plugin with ID '$pluginId'", error)
             }
         }
-        _loadingPluginId.store(null)
+        loadingPluginId = null
     }
 
     private fun processIpms() {
@@ -194,7 +189,7 @@ object PluginLoaderImpl : PluginLoader {
         synchronized(loaderLock) {
             setupLogging(config)
 
-            if (arePluginsLoaded.compareAndSet(expectedValue = false, newValue = true)) {
+            if (!arePluginsLoaded) {
                 // Load all plugin candidates and instantiate them through ServiceLoader
                 val candidates = loadCandidates(config)
                 logger.info("Found ${candidates.size} plugin candidates")
@@ -210,6 +205,7 @@ object PluginLoaderImpl : PluginLoader {
                 processIpms()
                 logger.info("Initialized ${plugins.size} plugins")
                 extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
+                arePluginsLoaded = true
             }
 
             // Register adapters for extension dispatcher
