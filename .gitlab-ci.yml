@@ -128,8 +128,13 @@ publish:snapshot:maven:
   rules:
     - *if-main
   script:
-    - ./gradlew :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository :kcml-gradle-plugin:publishAggregationToCentralSnapshots
-    - ./gradlew publishAllPublicationsToGitLabRepository publishAggregationToCentralSnapshots
+    - ./gradlew
+      :kcml-gradle-api:publishAllPublicationsToGitLabRepository
+      :kcml-gradle-api:publishAggregationToCentralSnapshots
+      :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
+      :kcml-gradle-plugin:publishAggregationToCentralSnapshots 
+      publishAllPublicationsToGitLabRepository 
+      publishAggregationToCentralSnapshots
   tags:
     - macos
 
@@ -138,8 +143,13 @@ publish:release:maven:
   rules:
     - *if-release
   script:
-    - ./gradlew :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository :kcml-gradle-plugin:publishAggregationToCentralPortal
-    - ./gradlew publishAllPublicationsToGitLabRepository publishAggregationToCentralPortal
+    - ./gradlew
+      :kcml-gradle-api:publishAllPublicationsToGitLabRepository
+      :kcml-gradle-api:publishAggregationToCentralPortal
+      :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
+      :kcml-gradle-plugin:publishAggregationToCentralPortal
+      publishAllPublicationsToGitLabRepository 
+      publishAggregationToCentralPortal
   tags:
     - macos
 

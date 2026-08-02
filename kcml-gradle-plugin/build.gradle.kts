@@ -42,8 +42,25 @@ version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 if (GitLabCI.isCI) defaultDependencyLocking()
 
 subprojects {
+    apply {
+        plugin<PublishingPlugin>()
+        plugin<SigningPlugin>()
+    }
+
     group = rootProject.group
     version = rootProject.version
+}
+
+allprojects {
+    publishing {
+        apache2License()
+        setRepository("github.com", "karmakrafts/kcml")
+        with(GitLabCI) { karmaKraftsDefaults() }
+    }
+
+    signing {
+        signPublications()
+    }
 }
 
 configureDokka {
@@ -108,14 +125,7 @@ gradlePlugin {
     }
 }
 
-signing {
-    signPublications()
-}
-
 publishing {
-    apache2License()
-    setRepository("github.com", "karmakrafts/kcml")
-    with(GitLabCI) { karmaKraftsDefaults() }
     setProjectInfo(
         name = "KCML Gradle Plugin",
         description = "Gradle plugin for the Kotlin Compiler Meta Loader",

@@ -15,6 +15,7 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.setProjectInfo
 
 plugins {
@@ -23,6 +24,12 @@ plugins {
     alias(libs.plugins.dokka)
     `maven-publish`
     signing
+}
+
+configureDokka {
+    withKotlin()
+    withKotlinGradle()
+    withGradle()
 }
 
 configureJava(rootProject.libs.versions.java)
