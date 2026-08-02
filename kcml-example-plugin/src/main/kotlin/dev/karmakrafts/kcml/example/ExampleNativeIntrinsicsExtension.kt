@@ -34,7 +34,7 @@ import org.jetbrains.kotlin.name.Name
 
 @OptIn(UnsafeDuringIrConstructionAPI::class, ExperimentalForeignApi::class)
 @ExtensionId("example_native_intrinsics_extension")
-class ExampleNativeIntrinsicsExtension : AbstractExtension(), NativeIntrinsicsExtension {
+internal class ExampleNativeIntrinsicsExtension : AbstractExtension(), NativeIntrinsicsExtension {
     companion object {
         private val packageFqName: FqName = FqName("dev.karmakrafts.example")
         private val annotationId: ClassId = ClassId(packageFqName, Name.identifier("CustomIntrinsic"))

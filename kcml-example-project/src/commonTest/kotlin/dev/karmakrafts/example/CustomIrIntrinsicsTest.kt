@@ -14,17 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example
+package dev.karmakrafts.example
 
-import dev.karmakrafts.kcml.api.backend.IrBackend
-import dev.karmakrafts.kcml.api.extension.AbstractExtension
-import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.IrExtension
-import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-@ExtensionId("ir_example") // example:ir_example
-internal class ExampleIrExtension : AbstractExtension(), IrExtension {
-    override fun process(module: IrModuleFragment, backend: IrBackend) {
-        backend.logger.info("Processing current IR module fragment")
+class CustomIrIntrinsicsTest {
+    @Test
+    fun `Custom IR intrinsic is lowered to constant value`() {
+        assertEquals(44, customIrIntrinsic())
     }
 }

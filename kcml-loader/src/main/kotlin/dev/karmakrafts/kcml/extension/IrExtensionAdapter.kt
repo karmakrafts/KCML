@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.extension
 
-import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.extension.IrExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -32,13 +32,17 @@ internal class IrExtensionAdapter( // @formatter:off
     private val loggerFactory: LoggerFactory,
     private val extensions: List<Pair<String, IrExtension>>,
 ) : IrGenerationExtension { // @formatter:on
+    init {
+        loader.logger.info("Initializing IR extension adapter")
+    }
+
     override fun generate( // @formatter:off
         moduleFragment: IrModuleFragment,
         pluginContext: IrPluginContext
     ) { // @formatter:on
         for ((pluginId, extension) in extensions) {
             val logger = loggerFactory.getForPlugin(pluginId)
-            val backend = Backend.create(pluginContext, config, loggerFactory, logger, loader)
+            val backend = IrBackend.create(pluginContext, config, loggerFactory, logger, loader)
             extension.process(moduleFragment, backend)
         }
     }

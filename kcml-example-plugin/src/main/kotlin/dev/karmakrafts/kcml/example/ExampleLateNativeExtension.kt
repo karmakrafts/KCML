@@ -22,7 +22,7 @@ import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.LateNativeExtension
 
 @ExtensionId("late_native_example")
-class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
+internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
     override fun init(backend: LateNativeBackend) {
         backend.logger.info("Hello, world! from the late native extension")
     }

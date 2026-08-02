@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.backend.IrBackend
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 
 /**
@@ -32,5 +32,5 @@ interface IrExtension : Extension {
      * @param module Kotlin IR module fragment available for inspection or transformation.
      * @param backend KCML context exposing compiler services for the active target backend.
      */
-    fun process(module: IrModuleFragment, backend: Backend)
+    fun process(module: IrModuleFragment, backend: IrBackend)
 }

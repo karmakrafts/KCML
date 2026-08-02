@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.backend
 
-import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -27,13 +27,13 @@ import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
 import org.jetbrains.kotlin.platform.konan.NativePlatforms
 import org.jetbrains.kotlin.platform.wasm.WasmPlatforms
 
-internal fun Backend.Companion.create( // @formatter:off
+internal fun IrBackend.Companion.create( // @formatter:off
     context: IrPluginContext,
     config: CompilerConfiguration,
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-): Backend = when (context.platform) { // @formatter:on
+): IrBackend = when (context.platform) { // @formatter:on
     in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(context, config, loggerFactory, logger, loader)
     in JsPlatforms.allJsPlatforms -> JsBackendImpl(context, config, loggerFactory, logger, loader)
     in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(context, config, loggerFactory, logger, loader)

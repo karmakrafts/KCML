@@ -43,6 +43,10 @@ internal class FirExtensionAdapter( // @formatter:off
     session: FirSession,
     val extensions: List<Pair<String, FirExtension>>
 ) : FirDeclarationGenerationExtension(session) { // @formatter:on
+    init {
+        loader.logger.info("Initializing FIR extension adapter")
+    }
+
     private fun createFrontend(pluginId: String, session: FirSession): FrontendImpl {
         val logger = loggerFactory.getForPlugin(pluginId)
         return FrontendImpl( // @formatter:off

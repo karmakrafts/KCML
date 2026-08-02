@@ -32,6 +32,7 @@ class ExamplePlugin : CompilerPlugin {
             register(ExampleIrExtension())
             register(ExampleLateNativeExtension())
             register(ExampleNativeIntrinsicsExtension())
+            register(ExampleIrIntrinsicsExtension())
         }
     }
 }
