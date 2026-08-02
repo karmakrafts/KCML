@@ -14,13 +14,9 @@
  * limitations under the License.
  */
 
-import dev.karmakrafts.conventions.GitLabCI
-import dev.karmakrafts.conventions.apache2License
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.setProjectInfo
-import dev.karmakrafts.conventions.setRepository
-import dev.karmakrafts.conventions.signPublications
 
 plugins {
     alias(libs.plugins.karmaConventions)
@@ -44,9 +40,6 @@ dependencies {
 }
 
 publishing {
-    apache2License()
-    setRepository("github.com", "karmakrafts/kcml")
-    with(GitLabCI) { karmaKraftsDefaults() }
     setProjectInfo(
         name = "KCML Gradle API",
         description = "Support plugin API for the Kotlin Compiler Meta Loader Gradle tooling",
@@ -57,8 +50,4 @@ publishing {
             from(components["kotlin"])
         }
     }
-}
-
-signing {
-    signPublications()
 }
