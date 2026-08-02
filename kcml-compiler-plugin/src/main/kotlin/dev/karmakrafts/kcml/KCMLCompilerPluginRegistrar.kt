@@ -35,11 +35,9 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     private fun buildAgentArgs(
         configuration: CompilerConfiguration
     ): Map<String, String> = buildMap {
-        if (configuration.kcmlAgentLogging) {
-            this["logging"] = "true"
-            configuration.kcmlAgentCommPort?.let { port ->
-                this["comm_port"] = port.toString()
-            }
+        configuration.kcmlAgentCommPort?.let { port ->
+            this["logging"] = configuration.kcmlAgentLogging.toString()
+            this["comm_port"] = port.toString()
         }
         val moduleName = configuration.kcmlModuleName
         if (moduleName?.isNotEmpty() == true) {
