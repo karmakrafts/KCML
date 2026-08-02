@@ -49,9 +49,7 @@ subprojects {
 
     group = rootProject.group
     version = rootProject.version
-}
 
-allprojects {
     publishing {
         apache2License()
         setRepository("github.com", "karmakrafts/kcml")
@@ -126,9 +124,16 @@ gradlePlugin {
 }
 
 publishing {
+    apache2License()
+    setRepository("github.com", "karmakrafts/kcml")
+    with(GitLabCI) { karmaKraftsDefaults() }
     setProjectInfo(
         name = "KCML Gradle Plugin",
         description = "Gradle plugin for the Kotlin Compiler Meta Loader",
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
+}
+
+signing {
+    signPublications()
 }
