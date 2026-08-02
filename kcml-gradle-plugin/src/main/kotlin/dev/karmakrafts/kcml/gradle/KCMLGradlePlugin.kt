@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import dev.karmakrafts.kcml.gradle.api.KCMLGradleSupportPlugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
@@ -129,6 +130,8 @@ open class KCMLGradlePlugin @Inject constructor(
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
+        val supportPlugins = project.plugins.withType(KCMLGradleSupportPlugin::class.java)
+
         val configuration = project.configurations.getByName(CONFIGURATION_NAME)
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
         val resolvedArtifacts = configuration.resolvedConfiguration.resolvedArtifacts
@@ -138,6 +141,9 @@ open class KCMLGradlePlugin @Inject constructor(
         val moduleName = getModuleName(kotlinCompilation)
         return providerFactory.provider {
             buildList {
+                this += supportPlugins.flatMap { plugin ->
+                    plugin.applyToCompilation(kotlinCompilation).get()
+                }
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))

@@ -42,3 +42,4 @@ nmcpSettings {
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+include("kcml-gradle-api")

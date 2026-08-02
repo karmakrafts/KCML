@@ -54,6 +54,7 @@ dependencies {
     compileOnly(libs.kotlin.gradle.plugin)
     compileOnly(libs.kotlinx.serialization.core)
     compileOnly(libs.kotlinx.serialization.json)
+    implementation(projects.kcmlGradleApi)
 
     testImplementation(libs.kotlin.test)
 }
