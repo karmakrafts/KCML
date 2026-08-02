@@ -133,7 +133,7 @@ open class KCMLGradlePlugin @Inject constructor(
 
         val configuration = project.configurations.getByName(CONFIGURATION_NAME)
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
-        val resolvedArtifacts = configuration.incoming.artifactView {}.artifacts
+        val resolvedArtifacts = configuration.resolvedConfiguration.resolvedArtifacts
         val pluginClasspaths = resolvedArtifacts.joinToString(";") {
             it.file.toPath().absolutePathString()
         }
