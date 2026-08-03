@@ -43,6 +43,7 @@ class AgentInjector( // @formatter:off
     }
 
     fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
+        System.setProperty("jdk.attach.allowAttachSelf", "true")
         tryOverwriteAttachPermissions()
         val pid = ProcessHandle.current().pid().toString()
         val virtualMachines = VirtualMachine.list()
