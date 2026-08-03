@@ -44,6 +44,7 @@ data class IPMData @PublishedApi internal constructor(private val map: Map<Strin
      * @param T expected value type.
      * @param key payload key.
      * @return the value for [key] cast to [T].
+     * @throws ClassCastException if the stored value is not assignable to [T].
      */
     @Suppress("UNCHECKED_CAST")
     operator fun <T> get(key: String): T = map[key] as T

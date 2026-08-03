@@ -60,9 +60,7 @@ internal object ReflectionUtils {
     }
 
     inline fun <reified C, reified T> getSuperDelegateProperty(
-        superClassName: String,
-        name: String,
-        instance: Any? = null
+        superClassName: String, name: String, instance: Any? = null
     ): T {
         val type = instance?.javaClass ?: C::class.java
         val superType = findSuperClass(type, superClassName)
