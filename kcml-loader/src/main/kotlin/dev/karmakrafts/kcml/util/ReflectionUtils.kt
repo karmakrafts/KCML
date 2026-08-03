@@ -16,13 +16,17 @@
 
 package dev.karmakrafts.kcml.util
 
+import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeAsciiOnly
+import java.lang.reflect.Modifier
+
 internal object ReflectionUtils {
     inline fun <reified C : Any, reified T> getField(name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
         val field = type.getDeclaredField(name)
-        field.isAccessible = true
+        val isAccessible = field.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
+        if (!isAccessible) field.isAccessible = true
         val value = field.get(instance) as T
-        field.isAccessible = false
+        if (!isAccessible) field.isAccessible = false
         return value
     }
 
@@ -39,9 +43,20 @@ internal object ReflectionUtils {
         val type = instance?.javaClass ?: C::class.java
         val superType = findSuperClass(type, superClassName)
         val field = superType.getDeclaredField(name)
-        field.isAccessible = true
+        val isAccessible = field.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
+        if (!isAccessible) field.isAccessible = true
         val value = field.get(instance) as T
-        field.isAccessible = false
+        if (!isAccessible) field.isAccessible = false
+        return value
+    }
+
+    inline fun <reified C, reified T> getDelegateProperty(name: String, instance: Any? = null): T {
+        val type = instance?.javaClass ?: C::class.java
+        val method = type.declaredMethods.first { method -> method.name == "get${name.capitalizeAsciiOnly()}" }
+        val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
+        if (!isAccessible) method.isAccessible = true
+        val value = method.invoke(instance) as T
+        if (!isAccessible) method.isAccessible = false
         return value
     }
 }

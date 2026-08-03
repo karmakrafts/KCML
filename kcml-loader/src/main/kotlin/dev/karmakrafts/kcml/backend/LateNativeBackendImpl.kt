@@ -44,9 +44,11 @@ internal data class LateNativeBackendImpl(
     override val loader: PluginLoader
 ) : LateNativeBackend {
     companion object {
-        fun fromStateView(
-            stateView: NativeGenerationStateView, pluginId: String, loader: PluginLoader
-        ): LateNativeBackendImpl = LateNativeBackendImpl(
+        fun fromView( // @formatter:off
+            stateView: NativeGenerationStateView,
+            pluginId: String,
+            loader: PluginLoader
+        ): LateNativeBackendImpl = LateNativeBackendImpl( // @formatter:on
             builtIns = stateView.builtIns,
             symbols = stateView.symbols,
             phaseContext = stateView.phaseContext,

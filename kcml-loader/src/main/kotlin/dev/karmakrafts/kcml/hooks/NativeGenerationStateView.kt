@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.config.messageCollector
 
 @OptIn(ExperimentalForeignApi::class)
-data class NativeGenerationStateView(
+internal data class NativeGenerationStateView(
     val moduleId: String,
     val builtIns: KonanBuiltIns,
     val symbols: BackendNativeSymbols,
@@ -41,9 +41,10 @@ data class NativeGenerationStateView(
     val llvmModule: LLVMModuleRef
 ) {
     companion object {
-        fun fromImplementation(
-            impl: Any, loader: PluginLoader
-        ): Result<NativeGenerationStateView> = runCatching {
+        fun fromImpl( // @formatter:off
+            @ActualType("NativeGenerationState") impl: Any,
+            loader: PluginLoader
+        ): Result<NativeGenerationStateView> = runCatching { // @formatter:on
             // First retrieve NativePhaseConfig and configs non-reflectively
             val phaseContext = impl as NativePhaseContext // NativeGenerationState implements NativePhaseContext
             val nativeConfig = phaseContext.config

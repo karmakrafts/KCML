@@ -18,4 +18,4 @@ package dev.karmakrafts.kcml.hooks
 
 @RequiresOptIn("The API you are trying to use should only be used by generated code")
 @Retention(AnnotationRetention.BINARY)
-annotation class KCMLHookApi
+internal annotation class KCMLHookApi

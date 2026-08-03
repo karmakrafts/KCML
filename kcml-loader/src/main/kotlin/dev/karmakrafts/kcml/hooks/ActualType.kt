@@ -17,4 +17,4 @@
 package dev.karmakrafts.kcml.hooks
 
 @Retention(AnnotationRetention.SOURCE)
-annotation class ActualType(val value: String)
+internal annotation class ActualType(val value: String)
