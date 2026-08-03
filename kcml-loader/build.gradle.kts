@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import dev.karmakrafts.conventions.asLibrary
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 
