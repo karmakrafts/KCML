@@ -16,8 +16,10 @@
 
 package dev.karmakrafts.kcml.hooks
 
+import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.util.ReflectionUtils
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.toLong
 import llvm.LLVMBuilderRef
 
 @OptIn(ExperimentalForeignApi::class)
@@ -25,12 +27,20 @@ internal data class FunctionGenerationContextView( // @formatter:off
     val builderGetter: () -> LLVMBuilderRef
 ) { // @formatter:on
     companion object {
-        fun fromImpl(
-            @ActualType("FunctionGenerationContext") impl: Any
-        ): Result<FunctionGenerationContextView> = runCatching {
+        fun fromImpl( // @formatter:off
+            @ActualType("FunctionGenerationContext") impl: Any,
+            loader: PluginLoader
+        ): Result<FunctionGenerationContextView> = runCatching { // @formatter:on
+            loader.logger.info("Creating FunctionGenerationContextView")
             FunctionGenerationContextView(
                 builderGetter = {
-                    ReflectionUtils.getDelegateProperty<Any, LLVMBuilderRef>("builder", impl)
+                    val builder = ReflectionUtils.getSuperDelegateProperty<Any, LLVMBuilderRef>( // @formatter:off
+                        superClassName = "FunctionGenerationContext",
+                        name = "builder",
+                        instance = impl
+                    ) // @formatter:on
+                    loader.logger.info("Got function LLVMBuilderRef at 0x${builder.toLong().toHexString()}")
+                    builder
                 })
         }
     }

@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
 import kotlinx.cinterop.ExperimentalForeignApi
+import kotlinx.cinterop.toLong
 import llvm.LLVMConstInt
 import llvm.LLVMInt32TypeInContext
 import llvm.LLVMValueRef
@@ -53,6 +54,7 @@ internal class ExampleNativeIntrinsicsExtension : AbstractExtension(), NativeInt
         codeGenerator: NativeCodeGenerator
     ): LLVMValueRef { // @formatter:on
         backend.logger.info("We are processing an intrinsic call: ${call.render()}")
+        backend.logger.info("Function builder at 0x${codeGenerator.functionBuilder.toLong().toHexString()}")
         return requireNotNull(LLVMConstInt(LLVMInt32TypeInContext(backend.llvmContext), 44, 0)) {
             "Could not emit constant value in LLVM IR from native intrinsics extension"
         }

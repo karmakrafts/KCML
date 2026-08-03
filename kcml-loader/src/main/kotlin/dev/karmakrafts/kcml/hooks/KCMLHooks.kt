@@ -54,7 +54,7 @@ object KCMLHooks {
                         loggerFactory.getForPlugin(pluginId).info("Processing LLVM intrinsic call ${call.render()}")
                         return@onSuccess extension.process(call, args, backend, nativeCodeGenerator)
                     } catch (error: Throwable) {
-                        error("A native intrinsic extension from plugin '$pluginId' has caused an exception: $error")
+                        error("A native intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                     }
                 }
                 null // No extension has requested to process the call
@@ -76,7 +76,7 @@ object KCMLHooks {
                     try {
                         extension.init(backend)
                     } catch (error: Throwable) {
-                        error("A late extension from plugin '$pluginId' has caused an exception: $error")
+                        error("A late extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                     }
                 }
             }, onFailure = ::error

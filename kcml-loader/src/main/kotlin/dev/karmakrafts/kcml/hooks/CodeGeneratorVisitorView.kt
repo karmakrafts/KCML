@@ -29,14 +29,17 @@ internal data class CodeGeneratorVisitorView( // @formatter:off
             @ActualType("CodeGeneratorVisitor") impl: Any,
             loader: PluginLoader
         ): Result<CodeGeneratorVisitorView> = runCatching { // @formatter:on
+            loader.logger.info("Creating CodeGeneratorVisitorView")
             val codegen = ReflectionUtils.getField<Any, Any>("codegen", impl)
+            loader.logger.info("Got CodeGenerator reference")
             val generationState = ReflectionUtils.getField<Any, Any>("generationState", impl)
             CodeGeneratorVisitorView( // @formatter:off
                 generationState = NativeGenerationStateView.fromImpl(generationState, loader).getOrThrow(),
-                codeGenerator = CodeGeneratorView.fromImpl(codegen).getOrThrow(),
+                codeGenerator = CodeGeneratorView.fromImpl(codegen, loader).getOrThrow(),
                 functionGenContextGetter = {
                     val context = ReflectionUtils.getDelegateProperty<Any, Any>("functionGenerationContext", impl)
-                    FunctionGenerationContextView.fromImpl(context).getOrThrow()
+                    loader.logger.info("Got FunctionGenerationContext reference")
+                    FunctionGenerationContextView.fromImpl(context, loader).getOrThrow()
                 }
             ) // @formatter:on
         }

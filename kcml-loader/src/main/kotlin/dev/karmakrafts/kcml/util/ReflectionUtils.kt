@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.util
 
-import org.jetbrains.kotlin.util.capitalizeDecapitalize.capitalizeAsciiOnly
 import java.lang.reflect.Modifier
 
 internal object ReflectionUtils {
@@ -52,7 +51,22 @@ internal object ReflectionUtils {
 
     inline fun <reified C, reified T> getDelegateProperty(name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
-        val method = type.declaredMethods.first { method -> method.name == "get${name.capitalizeAsciiOnly()}" }
+        val method = type.declaredMethods.first { method -> method.name == "get${name.capitalize()}" }
+        val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
+        if (!isAccessible) method.isAccessible = true
+        val value = method.invoke(instance) as T
+        if (!isAccessible) method.isAccessible = false
+        return value
+    }
+
+    inline fun <reified C, reified T> getSuperDelegateProperty(
+        superClassName: String,
+        name: String,
+        instance: Any? = null
+    ): T {
+        val type = instance?.javaClass ?: C::class.java
+        val superType = findSuperClass(type, superClassName)
+        val method = superType.declaredMethods.first { method -> method.name == "get${name.capitalize()}" }
         val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
         if (!isAccessible) method.isAccessible = true
         val value = method.invoke(instance) as T
