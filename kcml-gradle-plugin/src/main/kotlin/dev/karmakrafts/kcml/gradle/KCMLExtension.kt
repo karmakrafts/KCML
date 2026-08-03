@@ -27,14 +27,11 @@ abstract class KCMLExtension @Inject internal constructor(
     private inline val objectFactory: ObjectFactory
         get() = project.objects
 
-    // @formatter:off
-    val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java)
-        .convention(false)
-    val agentPortRangeStart: Property<Int> = objectFactory.property(Int::class.java)
-        .convention(11000)
-    val agentPortRangeEnd: Property<Int> = objectFactory.property(Int::class.java)
-        .convention(11999)
-    // @formatter:on
+    val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(false)
+
+    val agentPortRangeStart: Property<Int> = objectFactory.property(Int::class.java).convention(11000)
+
+    val agentPortRangeEnd: Property<Int> = objectFactory.property(Int::class.java).convention(11999)
 
     internal val agentPort: Int by lazy {
         val portRangeStart = agentPortRangeStart.get()

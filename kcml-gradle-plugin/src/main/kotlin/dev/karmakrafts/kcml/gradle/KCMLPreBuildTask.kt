@@ -22,7 +22,7 @@ import org.gradle.api.services.ServiceReference
 import org.gradle.api.tasks.TaskAction
 
 // A little hack for Kotlin/Native to keep the KCMLBuildService alive until after linking
-abstract class KCMLPreBuildTask : DefaultTask() {
+internal abstract class KCMLPreBuildTask : DefaultTask() {
     @get:ServiceReference
     internal abstract val buildService: Property<KCMLBuildService>
 

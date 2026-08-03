@@ -34,7 +34,7 @@ import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
 @Suppress("UNUSED")
-open class KCMLGradlePlugin @Inject constructor(
+internal open class KCMLGradlePlugin @Inject constructor(
     private val providerFactory: ProviderFactory
 ) : KotlinCompilerPluginSupportPlugin {
     companion object {
