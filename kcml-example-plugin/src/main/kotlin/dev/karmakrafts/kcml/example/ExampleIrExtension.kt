@@ -25,6 +25,6 @@ import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 @ExtensionId("ir_example") // example:ir_example
 internal class ExampleIrExtension : AbstractExtension(), IrExtension {
     override fun process(module: IrModuleFragment, backend: IrBackend) {
-        backend.logger.info("Processing current IR module fragment")
+        backend.logger.info("Processing current IR module fragment for target ${backend.compileTarget.name}")
     }
 }
