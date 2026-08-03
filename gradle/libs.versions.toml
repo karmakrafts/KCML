@@ -4,8 +4,9 @@ java = "21"
 
 kotlinBootstrap = "2.4.0" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
 kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
+androidGradle = "9.3.0" # https://developer.android.com/reference/tools/gradle-api
 
-kcml = "1.0.2"
+kcml = "1.1.0"
 iridium = "1.13.2" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
@@ -39,6 +40,8 @@ ow2-asm-core = { module = "org.ow2.asm:asm", version.ref = "ow2asm" }
 ow2-asm-tree = { module = "org.ow2.asm:asm-tree", version.ref = "ow2asm" }
 
 [plugins]
+
+android-library = { id = "com.android.kotlin.multiplatform.library", version.ref = "androidGradle" }
 
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlinBootstrap" }

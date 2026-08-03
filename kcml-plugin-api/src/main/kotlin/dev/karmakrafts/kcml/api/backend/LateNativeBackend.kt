@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
 import llvm.LLVMModuleRef
@@ -25,7 +26,6 @@ import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
 import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.konan.target.KonanTarget
 
 /**
  * Exposes Kotlin/Native backend state to KCML extensions.
@@ -35,6 +35,11 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
  */
 @OptIn(ExperimentalForeignApi::class)
 interface LateNativeBackend : Backend {
+    override val type: BackendType
+        get() = BackendType.LATE_NATIVE
+
+    override val compileTarget: NativeCompileTarget
+
     /** Kotlin/Native built-ins for the active Konan compilation. */
     val builtIns: KonanBuiltIns
 
@@ -56,10 +61,6 @@ interface LateNativeBackend : Backend {
     /** Native compilation configuration obtained from [phaseContext]. */
     val nativeConfig: NativeCompilationConfig
         get() = phaseContext.config
-
-    /** Kotlin/Native target selected for the current compilation. */
-    val target: KonanTarget
-        get() = nativeConfig.target
 
     /** Kotlin compiler configuration used by the native compilation. */
     override val config: CompilerConfiguration

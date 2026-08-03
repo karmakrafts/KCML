@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import dev.karmakrafts.conventions.asLibrary
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 
@@ -49,8 +50,8 @@ configurations {
 }
 
 dependencies {
-    api(libs.kotlin.compiler.embeddable)
-    api(libs.kotlin.native.compiler.embeddable)
+    compileOnly(libs.kotlin.compiler.embeddable)
+    compileOnly(libs.kotlin.native.compiler.embeddable)
 
     shadeApi(projects.kcmlPluginApi)
     shadeApi(libs.semver)

@@ -15,6 +15,7 @@
  */
 
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
+import dev.karmakrafts.conventions.kotlin.withAndroidLibrary
 import dev.karmakrafts.conventions.kotlin.withBrowser
 import dev.karmakrafts.conventions.kotlin.withJvm
 import dev.karmakrafts.conventions.kotlin.withNative
@@ -23,6 +24,7 @@ import dev.karmakrafts.conventions.kotlin.withWeb
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.android.library)
     id("dev.karmakrafts.kcml.kcml-gradle-plugin")
 }
 
@@ -32,6 +34,7 @@ kcml {
 
 kotlin {
     defaultCompilerOptions()
+    withAndroidLibrary(group.toString())
     withJvm()
     withNative()
     withWeb {

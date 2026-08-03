@@ -16,10 +16,17 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
+
 /**
  * Marks a [IrBackend] context executing Kotlin's WebAssembly IR backend.
  *
  * This specialization allows a KCML extension to run only for WebAssembly compilations while using
  * the target-independent services inherited from [IrBackend].
  */
-interface WasmBackend : IrBackend
+interface WasmBackend : IrBackend {
+    override val type: BackendType
+        get() = BackendType.WASM
+
+    override val compileTarget: WasmCompileTarget
+}

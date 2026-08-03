@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 /**
@@ -27,8 +28,12 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * A backend implementation exposes the target-independent IR services used by KCML extensions
  * after FIR analysis has completed.
  */
-interface Backend {
+sealed interface Backend {
     companion object
+
+    val type: BackendType
+
+    val compileTarget: CompileTarget
 
     /** Compiler configuration for the active Kotlin compilation. */
     val config: CompilerConfiguration

@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.util.kcmlAgentCommPort
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
+import dev.karmakrafts.kcml.util.kcmlIsAndroid
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
@@ -37,6 +38,7 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
         private const val AGENT_LOGGING: String = "agentLogging"
         private const val AGENT_COMM_PORT: String = "agentCommPort"
         private const val MODULE_NAME: String = "moduleName"
+        private const val IS_ANDROID: String = "isAndroid"
     }
 
     override val pluginId: String get() = KCMLConstants.PLUGIN_ID
@@ -64,6 +66,12 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
             valueDescription = "<string>",
             description = "Name of the module currently being compiled",
             required = false
+        ),
+        CliOption(
+            optionName = IS_ANDROID,
+            valueDescription = "<true|false>",
+            description = "Whether the current compiler invocation is for an Android JVM target",
+            required = false
         )
     ) // @formatter:on
 
@@ -76,6 +84,7 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
             AGENT_LOGGING -> configuration.kcmlAgentLogging = value.lowercase().toBooleanStrictOrNull() == true
             AGENT_COMM_PORT -> configuration.kcmlAgentCommPort = value.toInt()
             MODULE_NAME -> configuration.kcmlModuleName = value
+            IS_ANDROID -> configuration.kcmlIsAndroid = value.lowercase().toBooleanStrictOrNull() == true
         }
     }
 }

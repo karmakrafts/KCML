@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmAndroidCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -42,6 +43,7 @@ open class KCMLGradlePlugin @Inject constructor(
         private const val OPT_AGENT_LOGGING: String = "agentLogging"
         private const val OPT_AGENT_COMM_PORT: String = "agentCommPort"
         private const val OPT_MODULE_NAME: String = "moduleName"
+        private const val OPT_IS_ANDROID: String = "isAndroid"
     }
 
     override fun apply(target: Project) {
@@ -151,6 +153,9 @@ open class KCMLGradlePlugin @Inject constructor(
                         .replace('-', '_')
                         .replace(':', '-')))
                 } // @formatter:on
+                if (kotlinCompilation is KotlinJvmAndroidCompilation) {
+                    add(SubpluginOption(OPT_IS_ANDROID, true.toString()))
+                }
             }
         }
     }

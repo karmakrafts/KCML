@@ -20,6 +20,8 @@ import dev.karmakrafts.kcml.api.backend.WasmBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
+import dev.karmakrafts.kcml.target.WasmCompileTargetImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
@@ -29,4 +31,6 @@ internal class WasmBackendImpl( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), WasmBackend // @formatter:on
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), WasmBackend { // @formatter:on
+    override val compileTarget: WasmCompileTarget get() = WasmCompileTargetImpl
+}

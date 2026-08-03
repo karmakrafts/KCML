@@ -20,33 +20,41 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import java.nio.file.Path
 
+@PublishedApi
 internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
     val agentLogging: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentLogging")
     val agentCommPort: CompilerConfigurationKey<Int> = CompilerConfigurationKey.create("kcmlAgentCommPort")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
+    val isAndroid: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlIsAndroid")
 }
 
-var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
+inline var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
     get() = get(KCMLConfigurationKeys.pluginClasspaths) ?: emptyList()
     set(value) {
         put(KCMLConfigurationKeys.pluginClasspaths, value)
     }
 
-var CompilerConfiguration.kcmlAgentLogging: Boolean
+inline var CompilerConfiguration.kcmlAgentLogging: Boolean
     get() = get(KCMLConfigurationKeys.agentLogging) ?: false
     set(value) {
         put(KCMLConfigurationKeys.agentLogging, value)
     }
 
-var CompilerConfiguration.kcmlAgentCommPort: Int?
+inline var CompilerConfiguration.kcmlAgentCommPort: Int?
     get() = get(KCMLConfigurationKeys.agentCommPort)
     set(value) {
         put(KCMLConfigurationKeys.agentCommPort, value ?: return)
     }
 
-var CompilerConfiguration.kcmlModuleName: String?
+inline var CompilerConfiguration.kcmlModuleName: String?
     get() = get(KCMLConfigurationKeys.moduleName)
     set(value) {
         put(KCMLConfigurationKeys.moduleName, value ?: return)
+    }
+
+inline var CompilerConfiguration.kcmlIsAndroid: Boolean
+    get() = get(KCMLConfigurationKeys.isAndroid) ?: false
+    set(value) {
+        put(KCMLConfigurationKeys.isAndroid, value)
     }

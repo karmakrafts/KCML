@@ -20,8 +20,12 @@ import dev.karmakrafts.kcml.api.backend.NativeBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.konan.config.konanTarget
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 internal class NativeBackendImpl( // @formatter:off
     context: IrPluginContext,
@@ -29,4 +33,12 @@ internal class NativeBackendImpl( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), NativeBackend // @formatter:on
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), NativeBackend { // @formatter:on
+    private val konanTarget: KonanTarget by lazy {
+        KonanTarget.predefinedTargets[config.konanTarget]
+            ?: error("Could not determine Konan target for KCML native backend")
+    }
+    override val compileTarget: NativeCompileTarget by lazy {
+        NativeCompileTargetImpl(konanTarget)
+    }
+}

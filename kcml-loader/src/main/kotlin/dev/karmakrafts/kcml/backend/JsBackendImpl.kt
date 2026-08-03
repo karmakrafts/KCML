@@ -20,6 +20,8 @@ import dev.karmakrafts.kcml.api.backend.JsBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.target.JsCompileTargetImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
@@ -29,4 +31,6 @@ internal class JsBackendImpl( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), JsBackend // @formatter:on
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), JsBackend {
+    override val compileTarget: JsCompileTarget get() = JsCompileTargetImpl
+}
