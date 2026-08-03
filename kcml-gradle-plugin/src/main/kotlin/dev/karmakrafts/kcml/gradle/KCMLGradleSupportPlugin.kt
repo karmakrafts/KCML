@@ -22,8 +22,27 @@ import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 
+/**
+ * A Gradle plugin that contributes compiler options for KCML compilations.
+ *
+ * Implementations can be applied alongside the KCML Gradle plugin to customize
+ * the compiler options supplied to individual Kotlin compilations.
+ */
 interface KCMLGradleSupportPlugin : Plugin<Project> {
+    /**
+     * Applies this support plugin to [target].
+     *
+     * The default implementation performs no project-level configuration.
+     *
+     * @param target the project to which this plugin is applied.
+     */
     override fun apply(target: Project) = Unit
 
+    /**
+     * Produces the additional KCML compiler options for [kotlinCompilation].
+     *
+     * @param kotlinCompilation the Kotlin compilation being configured.
+     * @return a provider of compiler options to pass to the KCML compiler plugin.
+     */
     fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>>
 }

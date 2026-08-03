@@ -21,16 +21,34 @@ import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.Property
 import javax.inject.Inject
 
+/**
+ * Configures the KCML Gradle plugin for a project.
+ */
 abstract class KCMLExtension @Inject internal constructor(
     private val project: Project
 ) {
     private inline val objectFactory: ObjectFactory
         get() = project.objects
 
+    /**
+     * Whether logging from the compiler agent is enabled.
+     *
+     * The default value is `false`.
+     */
     val agentLogging: Property<Boolean> = objectFactory.property(Boolean::class.java).convention(false)
 
+    /**
+     * The inclusive lower bound of the port range used for agent communication.
+     *
+     * The default value is `11000`.
+     */
     val agentPortRangeStart: Property<Int> = objectFactory.property(Int::class.java).convention(11000)
 
+    /**
+     * The exclusive upper bound of the port range used for agent communication.
+     *
+     * The default value is `11999`.
+     */
     val agentPortRangeEnd: Property<Int> = objectFactory.property(Int::class.java).convention(11999)
 
     internal val agentPort: Int by lazy {
