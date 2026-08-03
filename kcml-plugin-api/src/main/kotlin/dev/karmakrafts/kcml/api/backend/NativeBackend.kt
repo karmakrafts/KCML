@@ -27,7 +27,7 @@ import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 interface NativeBackend : IrBackend {
     /** Identifies this context as the Kotlin/Native IR backend. */
     override val type: BackendType
-        get() = BackendType.NATIVE
+        get() = BackendType.Native
 
     /** Native compilation target processed by this backend invocation. */
     override val compileTarget: NativeCompileTarget

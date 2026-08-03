@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.iridium
 
-/** Identifies the Kotlin compiler backend phase in which a KCML extension is executing. */
-interface BackendType {
-    // @formatter:off
-    /** Kotlin/JVM IR backend. */
-    data object Jvm : BackendType
+import dev.karmakrafts.kcml.api.log.Logger
 
-    /** Kotlin/JavaScript IR backend. */
-    data object Js : BackendType
+internal class TestLogger( // @formatter:off
+    override val name: String
+) : Logger { // @formatter:on
+    override fun debug(message: String) {
+        println("[$name][DEBUG] $message")
+    }
 
-    /** Kotlin/Wasm IR backend. */
-    data object Wasm : BackendType
+    override fun info(message: String) {
+        println("[$name][INFO-] $message")
+    }
 
-    /** Kotlin/Native IR backend. */
-    data object Native : BackendType
+    override fun warn(message: String) {
+        println("[$name][WARN-] $message")
+    }
 
-    /** Late Kotlin/Native LLVM code-generation phase. */
-    data object LateNative : BackendType
-    // @formatter:on
+    override fun error(message: String) {
+        System.err.println("[$name][ERROR] $message")
+    }
 }

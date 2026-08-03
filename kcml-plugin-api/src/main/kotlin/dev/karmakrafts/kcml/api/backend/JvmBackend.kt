@@ -27,7 +27,7 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 interface JvmBackend : IrBackend {
     /** Identifies this context as the JVM backend. */
     override val type: BackendType
-        get() = BackendType.JVM
+        get() = BackendType.Jvm
 
     /** JVM compilation target processed by this backend invocation. */
     override val compileTarget: JvmCompileTarget

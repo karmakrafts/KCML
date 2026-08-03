@@ -37,7 +37,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 interface LateNativeBackend : Backend {
     /** Identifies this context as the late Kotlin/Native backend. */
     override val type: BackendType
-        get() = BackendType.LATE_NATIVE
+        get() = BackendType.LateNative
 
     /** Native compilation target processed during LLVM code generation. */
     override val compileTarget: NativeCompileTarget
