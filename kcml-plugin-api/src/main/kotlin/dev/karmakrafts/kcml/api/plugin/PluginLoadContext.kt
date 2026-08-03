@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * @property logger logger named for the plugin being loaded.
  * @property loader loader that exposes the other discovered KCML plugins, metadata, and available
  *   extension registries for this invocation.
+ * @property ipm messaging service for exchanging named payloads with other loaded plugins.
  */
 data class PluginLoadContext( // @formatter:off
     val extensionRegistry: ExtensionRegistry,

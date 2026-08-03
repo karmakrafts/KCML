@@ -16,15 +16,18 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-/** Stores extensions for a compiler invocation. */
+/**
+ * Stores the extensions contributed by one plugin for a compiler invocation.
+ *
+ * Registries accept changes while their plugin is loading. KCML freezes each registry before
+ * dispatching compiler callbacks, at which point dependency-sorted access becomes available.
+ */
 interface ExtensionRegistry {
-    /**
-     * ID of the plugin that owns this registry.
-     */
+    /** Stable identifier of the plugin that owns this registry. */
     val pluginId: String
 
     /**
-     * Registers an extension.
+     * Registers an extension under its stable [Extension.id].
      *
      * @param extension extension to register.
      * @throws IllegalStateException if this registry is frozen.
@@ -33,7 +36,7 @@ interface ExtensionRegistry {
     fun register(extension: Extension)
 
     /**
-     * Unregisters an extension.
+     * Unregisters a previously registered extension.
      *
      * @param extension extension to unregister.
      * @throws IllegalStateException if this registry is frozen.
@@ -41,7 +44,7 @@ interface ExtensionRegistry {
     fun unregister(extension: Extension)
 
     /**
-     * Finds an extension by ID.
+     * Finds a registered extension by its stable ID.
      *
      * @param id extension ID.
      * @return the extension, or `null` if absent.
@@ -49,7 +52,7 @@ interface ExtensionRegistry {
     fun find(id: String): Extension?
 
     /**
-     * Returns an extension by ID.
+     * Returns a registered extension by its stable ID.
      *
      * @param id extension ID.
      * @return the extension.
@@ -74,14 +77,14 @@ interface ExtensionRegistry {
     operator fun contains(extension: Extension): Boolean
 
     /**
-     * Returns extensions in registration order.
+     * Returns all extensions in registration order.
      *
      * @return registered extensions.
      */
     fun all(): List<Extension>
 
     /**
-     * Returns extensions in dependency order.
+     * Returns all extensions in resolved dependency order.
      *
      * @return registered extensions in dependency order.
      * @throws IllegalStateException if this registry is not frozen.

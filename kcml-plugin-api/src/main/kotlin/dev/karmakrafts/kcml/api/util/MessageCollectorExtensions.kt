@@ -20,7 +20,7 @@ import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 
 /**
- * Reports an informational diagnostic through Kotlin's compiler message collector.
+ * Reports a verbose logging diagnostic through Kotlin's compiler message collector.
  *
  * @param message diagnostic text for the compiler output.
  */

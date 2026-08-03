@@ -35,9 +35,11 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  */
 @OptIn(ExperimentalForeignApi::class)
 interface LateNativeBackend : Backend {
+    /** Identifies this context as the late Kotlin/Native backend. */
     override val type: BackendType
         get() = BackendType.LATE_NATIVE
 
+    /** Native compilation target processed during LLVM code generation. */
     override val compileTarget: NativeCompileTarget
 
     /** Kotlin/Native built-ins for the active Konan compilation. */

@@ -16,6 +16,8 @@
 
 package dev.karmakrafts.kcml.api.target
 
+/** Describes a Kotlin/JVM compilation target. */
 interface JvmCompileTarget : CompileTarget {
+    /** Whether this target compiles for Android rather than a standard JVM runtime. */
     val isAndroid: Boolean
 }

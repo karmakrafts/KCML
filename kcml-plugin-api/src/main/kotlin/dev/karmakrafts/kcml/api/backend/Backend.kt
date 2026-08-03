@@ -29,10 +29,13 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * after FIR analysis has completed.
  */
 sealed interface Backend {
+    /** Namespace for utilities shared by all backend contexts. */
     companion object
 
+    /** Kind of Kotlin backend represented by this context. */
     val type: BackendType
 
+    /** Compilation target processed by this backend invocation. */
     val compileTarget: CompileTarget
 
     /** Compiler configuration for the active Kotlin compilation. */

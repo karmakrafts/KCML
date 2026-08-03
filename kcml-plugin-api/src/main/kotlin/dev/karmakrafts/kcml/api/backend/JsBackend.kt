@@ -25,8 +25,10 @@ import dev.karmakrafts.kcml.api.target.JsCompileTarget
  * the target-independent services inherited from [IrBackend].
  */
 interface JsBackend : IrBackend {
+    /** Identifies this context as the JavaScript backend. */
     override val type: BackendType
         get() = BackendType.JS
 
+    /** JavaScript compilation target processed by this backend invocation. */
     override val compileTarget: JsCompileTarget
 }

@@ -25,8 +25,10 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
  * target-independent services inherited from [IrBackend].
  */
 interface JvmBackend : IrBackend {
+    /** Identifies this context as the JVM backend. */
     override val type: BackendType
         get() = BackendType.JVM
 
+    /** JVM compilation target processed by this backend invocation. */
     override val compileTarget: JvmCompileTarget
 }

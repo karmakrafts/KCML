@@ -18,6 +18,19 @@ package dev.karmakrafts.kcml.api.extension
 
 import dev.karmakrafts.kcml.api.backend.LateNativeBackend
 
+/**
+ * Participates in Kotlin/Native's late LLVM code-generation phase through KCML.
+ *
+ * Implementations can inspect the initialized native backend state or register behavior that is
+ * required while Kotlin/Native lowers IR declarations to LLVM.
+ */
 interface LateNativeExtension : Extension {
+    /**
+     * Initializes this extension for a Kotlin/Native backend invocation.
+     *
+     * The default implementation performs no initialization.
+     *
+     * @param backend KCML context exposing the active native compilation and LLVM state.
+     */
     fun init(backend: LateNativeBackend) = Unit
 }

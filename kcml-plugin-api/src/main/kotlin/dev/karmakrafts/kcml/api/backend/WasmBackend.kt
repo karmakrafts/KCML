@@ -25,8 +25,10 @@ import dev.karmakrafts.kcml.api.target.WasmCompileTarget
  * the target-independent services inherited from [IrBackend].
  */
 interface WasmBackend : IrBackend {
+    /** Identifies this context as the WebAssembly backend. */
     override val type: BackendType
         get() = BackendType.WASM
 
+    /** WebAssembly compilation target processed by this backend invocation. */
     override val compileTarget: WasmCompileTarget
 }

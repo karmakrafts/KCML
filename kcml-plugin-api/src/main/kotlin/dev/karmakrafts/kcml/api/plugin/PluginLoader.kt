@@ -21,14 +21,17 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 
-/** Discovers, loads, and provides compiler plugins. */
+/**
+ * Discovers, validates, and loads compiler plugins for one Kotlin compiler invocation.
+ *
+ * The loader exposes plugin instances and metadata together with each plugin's extension registry
+ * after dependency ordering and plugin initialization have completed.
+ */
 interface PluginLoader {
     /** Logger for plugin discovery and loading. */
     val logger: Logger
 
-    /**
-     * ID of the plugin currently loading, or `null` otherwise.
-     */
+    /** Stable identifier of the plugin currently loading, or `null` outside plugin initialization. */
     val loadingPluginId: String?
 
     /**
@@ -102,14 +105,14 @@ interface PluginLoader {
     fun getIpm(pluginId: String): IPM
 
     /**
-     * Lists plugin IDs in loader order.
+     * Lists all discovered plugin IDs in loader insertion order.
      *
      * @return plugin IDs in loader order.
      */
     fun allPlugins(): List<String>
 
     /**
-     * Lists plugin IDs in dependency order.
+     * Lists all discovered plugin IDs in resolved dependency order.
      *
      * @return plugin IDs in dependency order.
      */

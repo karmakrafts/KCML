@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.ipm
 /** Key-value payload carried by an inter-plugin message. */
 @ConsistentCopyVisibility
 data class IPMData @PublishedApi internal constructor(private val map: Map<String, Any>) {
+    /** Creates immutable inter-plugin message payloads. */
     companion object {
         /**
          * Creates message data from a map.

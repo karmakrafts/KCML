@@ -16,12 +16,22 @@
 
 package dev.karmakrafts.kcml.api.backend
 
+/** Identifies the Kotlin compiler backend phase in which a KCML extension is executing. */
 enum class BackendType {
     // @formatter:off
+    /** Kotlin/JVM IR backend. */
     JVM,
+
+    /** Kotlin/JavaScript IR backend. */
     JS,
+
+    /** Kotlin/Wasm IR backend. */
     WASM,
+
+    /** Kotlin/Native IR backend. */
     NATIVE,
+
+    /** Late Kotlin/Native LLVM code-generation phase. */
     LATE_NATIVE
     // @formatter:on
 }

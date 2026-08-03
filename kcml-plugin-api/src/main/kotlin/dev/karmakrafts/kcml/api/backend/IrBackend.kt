@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFile
 
 /** Provides IR-specific services for a Kotlin backend integration. */
 interface IrBackend : Backend {
+    /** Namespace for utilities shared by IR backend contexts. */
     companion object
 
     /** IR built-ins for the current compilation. */

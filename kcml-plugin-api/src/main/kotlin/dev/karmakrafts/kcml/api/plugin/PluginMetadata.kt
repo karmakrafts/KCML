@@ -44,6 +44,8 @@ interface PluginMetadata {
     val dependencies: List<PluginDependency>
 }
 
+/** Human-readable [PluginMetadata.name], or the stable [PluginMetadata.id] when no name is declared. */
 inline val PluginMetadata.nameOrId: String get() = name ?: id
 
+/** Declared [PluginMetadata.version], or an empty semantic version when no version is available. */
 inline val PluginMetadata.versionOrDefault: Version get() = version ?: defaultPluginVersion
