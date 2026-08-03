@@ -6,7 +6,7 @@ kotlinBootstrap = "2.4.0" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gra
 kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
 androidGradle = "9.3.0" # https://developer.android.com/reference/tools/gradle-api
 
-kcml = "1.2.0"
+kcml = "1.3.0"
 iridium = "1.13.2" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
