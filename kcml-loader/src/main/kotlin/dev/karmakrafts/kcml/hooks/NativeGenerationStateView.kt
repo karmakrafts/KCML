@@ -28,11 +28,13 @@ import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
 import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.config.messageCollector
+import org.jetbrains.kotlin.ir.IrBuiltIns
 
 @OptIn(ExperimentalForeignApi::class)
 internal data class NativeGenerationStateView(
     val moduleId: String,
     val builtIns: KonanBuiltIns,
+    val irBuiltIns: IrBuiltIns,
     val symbols: BackendNativeSymbols,
     val phaseContext: NativePhaseContext,
     val secondStageConfig: NativeSecondStageCompilationConfig,
@@ -62,6 +64,7 @@ internal data class NativeGenerationStateView(
             val moduleId = secondStageConfig.moduleId
             logger.info("Creating NativeGenerationStateView for module '$moduleId'")
             val builtIns = ReflectionUtils.getField<Any, KonanBuiltIns>("builtIns", context)
+            val irBuiltIns = ReflectionUtils.getField<Any, IrBuiltIns>("irBuiltIns", context)
             val symbols = ReflectionUtils.getField<Any, BackendNativeSymbols>("symbols", context)
             val llvmContext = ReflectionUtils.getField<Any, LLVMContextRef>("llvmContext", impl)
             logger.info("LLVM context at 0x${llvmContext.rawValue.toHexString()}")
@@ -76,6 +79,7 @@ internal data class NativeGenerationStateView(
             NativeGenerationStateView(
                 moduleId = moduleId,
                 builtIns = builtIns,
+                irBuiltIns = irBuiltIns,
                 symbols = symbols,
                 phaseContext = phaseContext,
                 secondStageConfig = secondStageConfig,

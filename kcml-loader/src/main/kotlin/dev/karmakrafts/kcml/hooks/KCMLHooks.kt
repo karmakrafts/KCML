@@ -37,8 +37,8 @@ object KCMLHooks {
         call: IrCall,
         args: List<LLVMValueRef>
     ): LLVMValueRef? { // @formatter:on
-        return CodeGeneratorVisitorView.fromImpl(codeGeneratorVisitor, PluginLoaderImpl).fold(
-            onSuccess = onSuccess@{ codeGeneratorVisitorView ->
+        return CodeGeneratorVisitorView.fromImpl(codeGeneratorVisitor, PluginLoaderImpl)
+            .fold(onSuccess = onSuccess@{ codeGeneratorVisitorView ->
                 // Invoke all native intrinsic extensions
                 val loggerFactory = codeGeneratorVisitorView.generationState.loggerFactory
                 val nativeCodeGenerator = NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView)
@@ -58,28 +58,29 @@ object KCMLHooks {
                     }
                 }
                 null // No extension has requested to process the call
-            }, onFailure = ::error
-        )
+            }, onFailure = { error ->
+                error("Could not reflect CodeGeneratorVisitor in onEvaluateFunctionCall: ${error.stackTraceToString()}")
+            })
     }
 
     // TopLevelPhases
 
     @JvmStatic
     fun onRunAfterLowerings(@ActualType("NativeGenerationState") state: Any) {
-        NativeGenerationStateView.fromImpl(state, PluginLoaderImpl).fold(
-            onSuccess = { stateView ->
-                stateView.loggerFactory("KCML").info("Post lowering stage")
-                // Invoke all late native extensions' init functions
-                val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions
-                for ((pluginId, extension) in extensions) {
-                    val backend = LateNativeBackendImpl.fromView(stateView, pluginId, PluginLoaderImpl)
-                    try {
-                        extension.init(backend)
-                    } catch (error: Throwable) {
-                        error("A late extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
-                    }
+        NativeGenerationStateView.fromImpl(state, PluginLoaderImpl).fold(onSuccess = { stateView ->
+            stateView.loggerFactory("KCML").info("Post lowering stage")
+            // Invoke all late native extensions' init functions
+            val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions
+            for ((pluginId, extension) in extensions) {
+                val backend = LateNativeBackendImpl.fromView(stateView, pluginId, PluginLoaderImpl)
+                try {
+                    extension.init(backend)
+                } catch (error: Throwable) {
+                    error("A late extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                 }
-            }, onFailure = ::error
-        )
+            }
+        }, onFailure = { error ->
+            error("Could not reflect NativeGenerationState in onRunAfterLowerings: ${error.stackTraceToString()}")
+        })
     }
 }

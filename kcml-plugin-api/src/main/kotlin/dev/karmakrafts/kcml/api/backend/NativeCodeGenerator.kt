@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
+@file:OptIn(ExperimentalForeignApi::class)
+
 package dev.karmakrafts.kcml.api.backend
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
+import llvm.LLVMTypeRef
+import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
+import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.types.IrType
 
 /**
  * Materializes Kotlin/Native IR functions as LLVM callables during late native code generation.
@@ -27,10 +33,15 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
  * Implementations bridge KCML's late-native extensions to the active Kotlin/Native LLVM function
  * generator and use [functionBuilder] to emit instructions into the current function body.
  */
-@OptIn(ExperimentalForeignApi::class)
 interface NativeCodeGenerator {
+    /** Kotlin IR built-in definitions */
+    val irBuiltIns: IrBuiltIns
+
     /** LLVM instruction builder positioned for the function currently being generated. */
     val functionBuilder: LLVMBuilderRef
+
+    /** The global Unit instance address */
+    val unitInstance: LLVMValueRef
 
     /**
      * Materializes an IR function as an LLVM callable when the native backend can generate it.
@@ -39,6 +50,9 @@ interface NativeCodeGenerator {
      * @return the generated LLVM callable, or `null` when [function] cannot be materialized.
      */
     fun tryMaterializeFunction(function: IrSimpleFunction): LlvmCallable?
+
+    // TODO: document this
+    fun tryMaterializeType(type: IrType): LLVMTypeRef?
 }
 
 /**
@@ -51,3 +65,7 @@ interface NativeCodeGenerator {
 @Suppress("NOTHING_TO_INLINE")
 inline fun NativeCodeGenerator.materializeFunction(function: IrSimpleFunction): LlvmCallable =
     requireNotNull(tryMaterializeFunction(function))
+
+// TODO: document this
+@Suppress("NOTHING_TO_INLINE")
+inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef = requireNotNull(tryMaterializeType(type))

@@ -29,18 +29,23 @@ internal object ReflectionUtils {
         return value
     }
 
-    private tailrec fun findSuperClass(clazz: Class<*>, name: String): Class<*> {
+    private tailrec fun findSuperClass(clazz: Class<*>, name: String): Class<*>? {
         val superClass = clazz.superclass
         return when {
-            superClass == null -> error("Could not find super class '$name' in hierarchy of $clazz")
+            superClass == null -> null
             name in superClass.name -> superClass
             else -> findSuperClass(superClass, name)
         }
     }
 
+    private fun findSuperInterface(clazz: Class<*>, name: String): Class<*>? {
+        return clazz.interfaces.first { iface -> name in iface.name }
+    }
+
     inline fun <reified C, reified T> getSuperField(superClassName: String, name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
-        val superType = findSuperClass(type, superClassName)
+        val superType = findSuperClass(type, superClassName) ?: findSuperInterface(type, superClassName)
+        ?: error("Could not find super class '$superClassName' in hierarchy of $type")
         val field = superType.getDeclaredField(name)
         val isAccessible = field.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
         if (!isAccessible) field.isAccessible = true
@@ -63,7 +68,8 @@ internal object ReflectionUtils {
         superClassName: String, name: String, instance: Any? = null
     ): T {
         val type = instance?.javaClass ?: C::class.java
-        val superType = findSuperClass(type, superClassName)
+        val superType = findSuperClass(type, superClassName) ?: findSuperInterface(type, superClassName)
+        ?: error("Could not find super class '$superClassName' in hierarchy of $type")
         val method = superType.declaredMethods.first { method -> method.name == "get${name.capitalize()}" }
         val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
         if (!isAccessible) method.isAccessible = true

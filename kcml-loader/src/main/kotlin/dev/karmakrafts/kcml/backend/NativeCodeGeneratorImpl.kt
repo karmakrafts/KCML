@@ -20,17 +20,27 @@ import dev.karmakrafts.kcml.api.backend.NativeCodeGenerator
 import dev.karmakrafts.kcml.hooks.CodeGeneratorVisitorView
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
+import llvm.LLVMTypeRef
+import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
+import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.types.IrType
 
 @OptIn(ExperimentalForeignApi::class)
 internal class NativeCodeGeneratorImpl( // @formatter:off
     private val tryMaterializeFunctionCallback: (IrSimpleFunction) -> LlvmCallable?,
+    private val tryMaterializeTypeCallback: (IrType) -> LLVMTypeRef?,
+    override val irBuiltIns: IrBuiltIns,
+    override val unitInstance: LLVMValueRef,
     private val functionBuilderGetter: () -> LLVMBuilderRef
 ) : NativeCodeGenerator { // @formatter:on
     companion object {
         fun fromView(view: CodeGeneratorVisitorView): NativeCodeGeneratorImpl = NativeCodeGeneratorImpl(
             tryMaterializeFunctionCallback = view.codeGenerator.tryMaterializeFunctionCallback,
+            tryMaterializeTypeCallback = view.codeGenerator.tryMaterializeTypeCallback,
+            irBuiltIns = view.generationState.irBuiltIns,
+            unitInstance = view.codeGenerator.unitInstance,
             functionBuilderGetter = { view.functionGenContextGetter().builderGetter() })
     }
 
@@ -39,5 +49,9 @@ internal class NativeCodeGeneratorImpl( // @formatter:off
 
     override fun tryMaterializeFunction(function: IrSimpleFunction): LlvmCallable? {
         return tryMaterializeFunctionCallback(function)
+    }
+
+    override fun tryMaterializeType(type: IrType): LLVMTypeRef? {
+        return tryMaterializeTypeCallback(type)
     }
 }
