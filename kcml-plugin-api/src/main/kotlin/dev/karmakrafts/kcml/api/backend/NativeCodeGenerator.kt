@@ -79,5 +79,4 @@ inline fun NativeCodeGenerator.materializeFunction(function: IrSimpleFunction): 
  * @throws IllegalArgumentException if [type] cannot be materialized.
  */
 @Suppress("NOTHING_TO_INLINE")
-inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef =
-    requireNotNull(tryMaterializeType(type))
+inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef = requireNotNull(tryMaterializeType(type))
