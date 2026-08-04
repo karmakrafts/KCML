@@ -29,12 +29,13 @@ import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 internal class NativeBackendImpl( // @formatter:off
+    pluginId: String,
     context: IrPluginContext,
     override val config: CompilerConfiguration,
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), NativeBackend { // @formatter:on
+) : AbstractIrBackend(pluginId, context, config, loggerFactory, logger, loader), NativeBackend { // @formatter:on
     private val konanTarget: KonanTarget by lazy {
         KonanTarget.predefinedTargets[config.konanTarget]
             ?: error("Could not determine Konan target for KCML native backend")

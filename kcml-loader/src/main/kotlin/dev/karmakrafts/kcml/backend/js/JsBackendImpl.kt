@@ -27,11 +27,12 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 internal class JsBackendImpl( // @formatter:off
+    pluginId: String,
     context: IrPluginContext,
     config: CompilerConfiguration,
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), JsBackend {
+) : AbstractIrBackend(pluginId, context, config, loggerFactory, logger, loader), JsBackend {
     override val compileTarget: JsCompileTarget get() = JsCompileTargetImpl
 }

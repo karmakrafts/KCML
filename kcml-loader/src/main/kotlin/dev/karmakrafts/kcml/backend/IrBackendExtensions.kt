@@ -32,15 +32,16 @@ import org.jetbrains.kotlin.platform.konan.NativePlatforms
 import org.jetbrains.kotlin.platform.wasm.WasmPlatforms
 
 internal fun IrBackend.Companion.create( // @formatter:off
+    pluginId: String,
     context: IrPluginContext,
     config: CompilerConfiguration,
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
 ): IrBackend = when (context.platform) { // @formatter:on
-    in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(context, config, loggerFactory, logger, loader)
-    in JsPlatforms.allJsPlatforms -> JsBackendImpl(context, config, loggerFactory, logger, loader)
-    in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(context, config, loggerFactory, logger, loader)
-    in NativePlatforms.allNativePlatforms -> NativeBackendImpl(context, config, loggerFactory, logger, loader)
+    in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+    in JsPlatforms.allJsPlatforms -> JsBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+    in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+    in NativePlatforms.allNativePlatforms -> NativeBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
     else -> error("Unsupported compiler backend")
 }

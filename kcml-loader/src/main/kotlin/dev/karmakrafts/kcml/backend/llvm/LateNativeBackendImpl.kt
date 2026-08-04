@@ -34,6 +34,7 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 
 @OptIn(ExperimentalForeignApi::class)
 internal data class LateNativeBackendImpl(
+    override val pluginId: String,
     override val irBuiltIns: IrBuiltIns,
     override val builtIns: KonanBuiltIns,
     override val symbols: BackendNativeSymbols,
@@ -51,6 +52,7 @@ internal data class LateNativeBackendImpl(
             pluginId: String,
             loader: PluginLoader
         ): LateNativeBackendImpl = LateNativeBackendImpl( // @formatter:on
+            pluginId = pluginId,
             irBuiltIns = stateView.irBuiltIns,
             builtIns = stateView.builtIns,
             symbols = stateView.symbols,

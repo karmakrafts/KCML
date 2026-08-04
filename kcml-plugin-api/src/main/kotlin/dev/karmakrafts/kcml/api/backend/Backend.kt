@@ -32,6 +32,9 @@ interface Backend {
     /** Namespace for utilities shared by all backend contexts. */
     companion object
 
+    /** The ID of the plugin this backend belongs to **/
+    val pluginId: String
+
     /** Kind of Kotlin backend represented by this context. */
     val type: BackendType
 

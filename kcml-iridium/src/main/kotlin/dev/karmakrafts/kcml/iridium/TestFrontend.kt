@@ -27,6 +27,7 @@ internal class TestFrontend( // @formatter:off
     override val session: FirSession,
     override val config: CompilerConfiguration
 ) : Frontend { // @formatter:on
+    override val pluginId: String = "iridium"
     override val loggerFactory: LoggerFactory by lazy { TestLoggerFactory() }
     override val logger: Logger by lazy { loggerFactory("Iridium") }
     override val loader: PluginLoader by lazy { TestPluginLoader(logger) }

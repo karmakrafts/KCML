@@ -50,6 +50,7 @@ internal class FirExtensionAdapter( // @formatter:off
     private fun createFrontend(pluginId: String, session: FirSession): FrontendImpl {
         val logger = loggerFactory.getForPlugin(pluginId)
         return FrontendImpl( // @formatter:off
+            pluginId = pluginId,
             session = session,
             config = config,
             loggerFactory = loggerFactory,

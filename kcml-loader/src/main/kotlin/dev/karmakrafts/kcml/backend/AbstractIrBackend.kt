@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrFile
 
 internal abstract class AbstractIrBackend( // @formatter:off
+    override val pluginId: String,
     protected val context: IrPluginContext,
     override val config: CompilerConfiguration,
     override val loggerFactory: LoggerFactory,

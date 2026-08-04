@@ -49,6 +49,7 @@ internal class TestIrBackend( // @formatter:off
         return pluginContext.finderForSource(source)
     }
 
+    override val pluginId: String = "iridium"
     override val compileTarget: CompileTarget by lazy { compilerTarget.createCompileTarget(config) }
     override val loggerFactory: LoggerFactory by lazy { TestLoggerFactory() }
     override val logger: Logger by lazy { loggerFactory("Iridium") }

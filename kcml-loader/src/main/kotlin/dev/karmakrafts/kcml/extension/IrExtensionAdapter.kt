@@ -42,7 +42,14 @@ internal class IrExtensionAdapter( // @formatter:off
     ) { // @formatter:on
         for ((pluginId, extension) in extensions) {
             val logger = loggerFactory.getForPlugin(pluginId)
-            val backend = IrBackend.create(pluginContext, config, loggerFactory, logger, loader)
+            val backend = IrBackend.create(
+                pluginId = pluginId,
+                context = pluginContext,
+                config = config,
+                loggerFactory = loggerFactory,
+                logger = logger,
+                loader = loader
+            )
             extension.process(moduleFragment, backend)
         }
     }
