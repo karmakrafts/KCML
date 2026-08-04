@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.backend.llvm
 
+import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
@@ -26,6 +28,7 @@ import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
 import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.IrBuiltIns
 
 /**
  * Exposes Kotlin/Native backend state to KCML extensions.
@@ -41,6 +44,9 @@ interface LateNativeBackend : Backend {
 
     /** Native compilation target processed during LLVM code generation. */
     override val compileTarget: NativeCompileTarget
+
+    /** Built-in IR definitions provided by Kotlin */
+    val irBuiltIns: IrBuiltIns
 
     /** Kotlin/Native built-ins for the active Konan compilation. */
     val builtIns: KonanBuiltIns

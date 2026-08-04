@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.backend
+package dev.karmakrafts.kcml.backend.llvm
 
-import dev.karmakrafts.kcml.api.backend.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -30,9 +30,11 @@ import org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig
 import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
 import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
+import org.jetbrains.kotlin.ir.IrBuiltIns
 
 @OptIn(ExperimentalForeignApi::class)
 internal data class LateNativeBackendImpl(
+    override val irBuiltIns: IrBuiltIns,
     override val builtIns: KonanBuiltIns,
     override val symbols: BackendNativeSymbols,
     override val phaseContext: NativePhaseContext,
@@ -49,6 +51,7 @@ internal data class LateNativeBackendImpl(
             pluginId: String,
             loader: PluginLoader
         ): LateNativeBackendImpl = LateNativeBackendImpl( // @formatter:on
+            irBuiltIns = stateView.irBuiltIns,
             builtIns = stateView.builtIns,
             symbols = stateView.symbols,
             phaseContext = stateView.phaseContext,

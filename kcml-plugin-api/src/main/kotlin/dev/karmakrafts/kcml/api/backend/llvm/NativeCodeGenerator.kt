@@ -16,14 +16,13 @@
 
 @file:OptIn(ExperimentalForeignApi::class)
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.backend.llvm
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
 import llvm.LLVMTypeRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
-import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.types.IrType
 
@@ -34,14 +33,19 @@ import org.jetbrains.kotlin.ir.types.IrType
  * the materialization functions to obtain LLVM representations of Kotlin IR declarations and types.
  */
 interface NativeCodeGenerator {
-    /** The Kotlin IR built-in declarations and types available to the native backend. */
-    val irBuiltIns: IrBuiltIns
+    /** The late native backend available during code generation */
+    val backend: LateNativeBackend
 
     /** The LLVM instruction builder for the function currently being generated. */
     val functionBuilder: LLVMBuilderRef
 
     /** The LLVM value that references the global Kotlin [Unit] instance. */
     val unitInstance: LLVMValueRef
+
+    /**
+     * LLVM primitive and pointer types associated with the current code-generation context.
+     */
+    val types: NativeTypes
 
     /**
      * Returns the LLVM callable corresponding to an IR function, if one is available.
@@ -59,24 +63,3 @@ interface NativeCodeGenerator {
      */
     fun tryMaterializeType(type: IrType): LLVMTypeRef?
 }
-
-/**
- * Returns the LLVM callable corresponding to an IR function.
- *
- * @param function the IR function to materialize.
- * @return the corresponding LLVM callable.
- * @throws IllegalArgumentException if [function] cannot be materialized.
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun NativeCodeGenerator.materializeFunction(function: IrSimpleFunction): LlvmCallable =
-    requireNotNull(tryMaterializeFunction(function))
-
-/**
- * Returns the LLVM type corresponding to a Kotlin IR type.
- *
- * @param type the Kotlin IR type to materialize.
- * @return the corresponding LLVM type.
- * @throws IllegalArgumentException if [type] cannot be materialized.
- */
-@Suppress("NOTHING_TO_INLINE")
-inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef = requireNotNull(tryMaterializeType(type))

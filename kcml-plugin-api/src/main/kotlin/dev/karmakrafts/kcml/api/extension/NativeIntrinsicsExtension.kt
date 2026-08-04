@@ -16,8 +16,8 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-import dev.karmakrafts.kcml.api.backend.LateNativeBackend
-import dev.karmakrafts.kcml.api.backend.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.expressions.IrCall
@@ -44,13 +44,7 @@ interface NativeIntrinsicsExtension : LateNativeExtension {
      *
      * @param call IR call selected by [shouldProcess].
      * @param args materialized LLVM values for the call arguments.
-     * @param backend KCML context exposing the active native and LLVM backend state.
      * @return LLVM value that replaces [call] in the generated native code.
      */
-    fun process( // @formatter:off
-        call: IrCall,
-        args: List<LLVMValueRef>,
-        backend: LateNativeBackend,
-        codeGenerator: NativeCodeGenerator
-    ): LLVMValueRef // @formatter:on
+    fun NativeCodeGenerator.process(call: IrCall, args: List<LLVMValueRef>): LLVMValueRef
 }

@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.backend.wasm
 
+import dev.karmakrafts.kcml.api.backend.BackendType
+import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 
 /**

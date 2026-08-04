@@ -14,21 +14,23 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.backend.jvm
 
-import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.backend.BackendType
+import dev.karmakrafts.kcml.api.backend.IrBackend
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 
 /**
- * Marks a [IrBackend] context executing Kotlin's native IR backend.
+ * Marks a [IrBackend] context executing Kotlin's JVM IR backend.
  *
- * This specialization allows a KCML extension to run only for native compilations while using the
+ * This specialization allows a KCML extension to run only for JVM compilations while using the
  * target-independent services inherited from [IrBackend].
  */
-interface NativeBackend : IrBackend {
-    /** Identifies this context as the Kotlin/Native IR backend. */
+interface JvmBackend : IrBackend {
+    /** Identifies this context as the JVM backend. */
     override val type: BackendType
-        get() = BackendType.Native
+        get() = BackendType.Jvm
 
-    /** Native compilation target processed by this backend invocation. */
-    override val compileTarget: NativeCompileTarget
+    /** JVM compilation target processed by this backend invocation. */
+    override val compileTarget: JvmCompileTarget
 }

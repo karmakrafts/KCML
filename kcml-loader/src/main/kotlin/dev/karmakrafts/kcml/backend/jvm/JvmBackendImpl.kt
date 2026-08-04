@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.backend
+package dev.karmakrafts.kcml.backend.jvm
 
-import dev.karmakrafts.kcml.api.backend.JvmBackend
+import dev.karmakrafts.kcml.api.backend.jvm.JvmBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.backend.AbstractIrBackend
 import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
 import dev.karmakrafts.kcml.util.kcmlIsAndroid
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext

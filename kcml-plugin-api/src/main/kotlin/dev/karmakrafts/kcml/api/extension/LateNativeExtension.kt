@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.api.extension
 
-import dev.karmakrafts.kcml.api.backend.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 
 /**
  * Participates in Kotlin/Native's late LLVM code-generation phase through KCML.

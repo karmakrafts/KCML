@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.example
 
-import dev.karmakrafts.kcml.api.backend.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.LateNativeExtension

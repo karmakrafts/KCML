@@ -14,31 +14,24 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.backend
+package dev.karmakrafts.kcml.backend.wasm
 
-import dev.karmakrafts.kcml.api.backend.NativeBackend
+import dev.karmakrafts.kcml.api.backend.wasm.WasmBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import dev.karmakrafts.kcml.api.target.NativeCompileTarget
-import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
+import dev.karmakrafts.kcml.backend.AbstractIrBackend
+import dev.karmakrafts.kcml.target.WasmCompileTargetImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.konan.config.konanTarget
-import org.jetbrains.kotlin.konan.target.KonanTarget
 
-internal class NativeBackendImpl( // @formatter:off
+internal class WasmBackendImpl( // @formatter:off
     context: IrPluginContext,
-    override val config: CompilerConfiguration,
+    config: CompilerConfiguration,
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-) : AbstractIrBackend(context, config, loggerFactory, logger, loader), NativeBackend { // @formatter:on
-    private val konanTarget: KonanTarget by lazy {
-        KonanTarget.predefinedTargets[config.konanTarget]
-            ?: error("Could not determine Konan target for KCML native backend")
-    }
-    override val compileTarget: NativeCompileTarget by lazy {
-        NativeCompileTargetImpl(konanTarget)
-    }
+) : AbstractIrBackend(context, config, loggerFactory, logger, loader), WasmBackend { // @formatter:on
+    override val compileTarget: WasmCompileTarget get() = WasmCompileTargetImpl
 }

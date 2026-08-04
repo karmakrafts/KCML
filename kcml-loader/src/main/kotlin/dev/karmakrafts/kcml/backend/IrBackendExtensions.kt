@@ -20,6 +20,10 @@ import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.backend.js.JsBackendImpl
+import dev.karmakrafts.kcml.backend.jvm.JvmBackendImpl
+import dev.karmakrafts.kcml.backend.llvm.NativeBackendImpl
+import dev.karmakrafts.kcml.backend.wasm.WasmBackendImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.platform.js.JsPlatforms

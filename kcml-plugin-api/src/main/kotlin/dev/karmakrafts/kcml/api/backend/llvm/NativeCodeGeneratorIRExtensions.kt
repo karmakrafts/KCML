@@ -16,7 +16,7 @@
 
 @file:OptIn(ExperimentalForeignApi::class) @file:Suppress("NOTHING_TO_INLINE")
 
-package dev.karmakrafts.kcml.api.backend
+package dev.karmakrafts.kcml.api.backend.llvm
 
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toCValues
@@ -729,7 +729,7 @@ inline fun NativeCodeGenerator.call( // @formatter:off
 /** Builds a [`call`](https://llvm.org/docs/LangRef.html#call-instruction) with a materialized IR function signature. */
 inline fun NativeCodeGenerator.call(
     address: LLVMValueRef,
-    returnType: IrType = irBuiltIns.unitType,
+    returnType: IrType = backend.irBuiltIns.unitType,
     paramTypes: List<IrType> = emptyList(),
     args: List<LLVMValueRef> = emptyList(),
     name: String? = null
@@ -766,7 +766,7 @@ inline fun NativeCodeGenerator.callWithOperandBundles( // @formatter:off
 /** Builds a [`call`](https://llvm.org/docs/LangRef.html#call-instruction) with a materialized IR signature and operand bundles. */
 inline fun NativeCodeGenerator.callWithOperandBundles( // @formatter:off
     address: LLVMValueRef,
-    returnType: IrType = irBuiltIns.unitType,
+    returnType: IrType = backend.irBuiltIns.unitType,
     paramTypes: List<IrType> = emptyList(),
     args: List<LLVMValueRef> = emptyList(),
     operandBundles: List<LLVMOperandBundleRef> = emptyList(),
@@ -812,7 +812,7 @@ inline fun NativeCodeGenerator.callBr( // @formatter:off
     address: LLVMValueRef,
     fallthroughBlock: LLVMBasicBlockRef,
     indirectDestinations: List<LLVMBasicBlockRef> = emptyList(),
-    returnType: IrType = irBuiltIns.unitType,
+    returnType: IrType = backend.irBuiltIns.unitType,
     paramTypes: List<IrType> = emptyList(),
     args: List<LLVMValueRef> = emptyList(),
     operandBundles: List<LLVMOperandBundleRef> = emptyList(),
@@ -849,7 +849,7 @@ inline fun NativeCodeGenerator.invoke( // @formatter:off
     address: LLVMValueRef,
     thenBlock: LLVMBasicBlockRef,
     catchBlock: LLVMBasicBlockRef,
-    returnType: IrType = irBuiltIns.unitType,
+    returnType: IrType = backend.irBuiltIns.unitType,
     paramTypes: List<IrType> = emptyList(),
     args: List<LLVMValueRef> = emptyList(),
     name: String? = null
@@ -894,7 +894,7 @@ inline fun NativeCodeGenerator.invokeWithOperandBundles( // @formatter:off
     address: LLVMValueRef,
     thenBlock: LLVMBasicBlockRef,
     catchBlock: LLVMBasicBlockRef,
-    returnType: IrType = irBuiltIns.unitType,
+    returnType: IrType = backend.irBuiltIns.unitType,
     paramTypes: List<IrType> = emptyList(),
     args: List<LLVMValueRef> = emptyList(),
     operandBundles: List<LLVMOperandBundleRef> = emptyList(),

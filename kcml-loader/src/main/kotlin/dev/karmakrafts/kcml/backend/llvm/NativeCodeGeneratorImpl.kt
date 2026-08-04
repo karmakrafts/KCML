@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.backend
+package dev.karmakrafts.kcml.backend.llvm
 
-import dev.karmakrafts.kcml.api.backend.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.backend.llvm.NativeTypes
 import dev.karmakrafts.kcml.hooks.CodeGeneratorVisitorView
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
 import llvm.LLVMTypeRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
-import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.types.IrType
 
@@ -31,18 +32,23 @@ import org.jetbrains.kotlin.ir.types.IrType
 internal class NativeCodeGeneratorImpl( // @formatter:off
     private val tryMaterializeFunctionCallback: (IrSimpleFunction) -> LlvmCallable?,
     private val tryMaterializeTypeCallback: (IrType) -> LLVMTypeRef?,
-    override val irBuiltIns: IrBuiltIns,
+    override val backend: LateNativeBackend,
     override val unitInstance: LLVMValueRef,
     private val functionBuilderGetter: () -> LLVMBuilderRef
 ) : NativeCodeGenerator { // @formatter:on
     companion object {
-        fun fromView(view: CodeGeneratorVisitorView): NativeCodeGeneratorImpl = NativeCodeGeneratorImpl(
+        fun fromView( // @formatter:off
+            view: CodeGeneratorVisitorView,
+            backend: LateNativeBackend
+        ): NativeCodeGeneratorImpl = NativeCodeGeneratorImpl( // @formatter:on
             tryMaterializeFunctionCallback = view.codeGenerator.tryMaterializeFunctionCallback,
             tryMaterializeTypeCallback = view.codeGenerator.tryMaterializeTypeCallback,
-            irBuiltIns = view.generationState.irBuiltIns,
+            backend = backend,
             unitInstance = view.codeGenerator.unitInstance,
             functionBuilderGetter = { view.functionGenContextGetter().builderGetter() })
     }
+
+    override val types: NativeTypes by lazy { NativeTypesImpl(backend.llvmContext) }
 
     override val functionBuilder: LLVMBuilderRef
         get() = functionBuilderGetter()

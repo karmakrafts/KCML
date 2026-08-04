@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * A backend implementation exposes the target-independent IR services used by KCML extensions
  * after FIR analysis has completed.
  */
-sealed interface Backend {
+interface Backend {
     /** Namespace for utilities shared by all backend contexts. */
     companion object
 

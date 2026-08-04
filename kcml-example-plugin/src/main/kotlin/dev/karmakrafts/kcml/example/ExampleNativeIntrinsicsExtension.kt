@@ -16,8 +16,8 @@
 
 package dev.karmakrafts.kcml.example
 
-import dev.karmakrafts.kcml.api.backend.LateNativeBackend
-import dev.karmakrafts.kcml.api.backend.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
@@ -47,14 +47,12 @@ internal class ExampleNativeIntrinsicsExtension : AbstractExtension(), NativeInt
         return target.hasAnnotation(annotationId)
     }
 
-    override fun process( // @formatter:off
+    override fun NativeCodeGenerator.process( // @formatter:off
         call: IrCall,
-        args: List<LLVMValueRef>,
-        backend: LateNativeBackend,
-        codeGenerator: NativeCodeGenerator
+        args: List<LLVMValueRef>
     ): LLVMValueRef { // @formatter:on
         backend.logger.info("We are processing an intrinsic call: ${call.render()}")
-        backend.logger.info("Function builder at 0x${codeGenerator.functionBuilder.toLong().toHexString()}")
+        backend.logger.info("Function builder at 0x${functionBuilder.toLong().toHexString()}")
         return requireNotNull(LLVMConstInt(LLVMInt32TypeInContext(backend.llvmContext), 44, 0)) {
             "Could not emit constant value in LLVM IR from native intrinsics extension"
         }

@@ -17,8 +17,8 @@
 package dev.karmakrafts.kcml.hooks
 
 import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
-import dev.karmakrafts.kcml.backend.LateNativeBackendImpl
-import dev.karmakrafts.kcml.backend.NativeCodeGeneratorImpl
+import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
+import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
@@ -41,7 +41,6 @@ object KCMLHooks {
             .fold(onSuccess = onSuccess@{ codeGeneratorVisitorView ->
                 // Invoke all native intrinsic extensions
                 val loggerFactory = codeGeneratorVisitorView.generationState.loggerFactory
-                val nativeCodeGenerator = NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView)
                 val extensions =
                     PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.filter { (_, extension) -> extension is NativeIntrinsicsExtension }
                 for ((pluginId, extension) in extensions) {
@@ -49,10 +48,15 @@ object KCMLHooks {
                     val backend = LateNativeBackendImpl.fromView(
                         codeGeneratorVisitorView.generationState, pluginId, PluginLoaderImpl
                     )
+                    val nativeCodeGenerator = NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView, backend)
                     try {
                         if (!extension.shouldProcess(call, backend)) continue
                         loggerFactory.getForPlugin(pluginId).info("Processing LLVM intrinsic call ${call.render()}")
-                        return@onSuccess extension.process(call, args, backend, nativeCodeGenerator)
+                        return@onSuccess with(extension) {
+                            with(nativeCodeGenerator) {
+                                process(call, args)
+                            }
+                        }
                     } catch (error: Throwable) {
                         error("A native intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                     }
