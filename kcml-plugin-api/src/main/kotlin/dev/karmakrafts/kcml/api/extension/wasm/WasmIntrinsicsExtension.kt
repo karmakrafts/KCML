@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example.llvm
+package dev.karmakrafts.kcml.api.extension.wasm
 
-import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
-import dev.karmakrafts.kcml.api.extension.AbstractExtension
-import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
+import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
+import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
-@ExtensionId("late_native_example")
-internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
-    override fun init(backend: LateNativeBackend) {
-        backend.logger.info("Hello from the late native extension")
-    }
+// TODO: document this
+interface WasmIntrinsicsExtension : LateWasmExtension {
+    fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean
+
+    fun WasmCodeGenerator.process(call: IrFunctionAccessExpression)
 }

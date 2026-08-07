@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example.llvm
+package dev.karmakrafts.kcml.backend.wasm
 
-import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
-import dev.karmakrafts.kcml.api.extension.AbstractExtension
-import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
+import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
+import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
+import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
-@ExtensionId("late_native_example")
-internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
-    override fun init(backend: LateNativeBackend) {
-        backend.logger.info("Hello from the late native extension")
-    }
-}
+internal class WasmCodeGeneratorImpl( // @formatter:off
+    override val backend: LateWasmBackend,
+    override val context: WasmFunctionCodegenContext,
+    override val expressionBuilder: WasmExpressionBuilder
+) : WasmCodeGenerator // @formatter:on

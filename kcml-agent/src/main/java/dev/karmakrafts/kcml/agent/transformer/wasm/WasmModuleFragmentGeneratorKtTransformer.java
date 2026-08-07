@@ -49,7 +49,6 @@ public final class WasmModuleFragmentGeneratorKtTransformer extends AbstractClas
                 builder.aload("backendContext");
                 builder.aload("typeContext");
                 builder.aload("declarationContext");
-                builder.aload("linkerDataContext");
                 builder.invokestatic(KCML.WASM_HOOKS,
                     false,
                     "onCompileIrFiles",
@@ -57,8 +56,7 @@ public final class WasmModuleFragmentGeneratorKtTransformer extends AbstractClas
                     Common.IR_FILE,
                     WASM.WASM_BACKEND_CONTEXT,
                     WASM.WASM_TYPE_CODEGEN_CONTEXT,
-                    WASM.WASM_DECLARATION_CODEGEN_CONTEXT,
-                    WASM.WASM_LINKER_DATA_CODEGEN_CONTEXT);
+                    WASM.WASM_DECLARATION_CODEGEN_CONTEXT);
                 methodNode.instructions.insertBefore(needle, builder.build());
                 return true;
             })

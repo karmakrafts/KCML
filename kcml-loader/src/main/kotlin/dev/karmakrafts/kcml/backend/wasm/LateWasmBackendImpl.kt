@@ -25,7 +25,6 @@ import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.target.WasmCompileTargetImpl
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
-import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmLinkerDataCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
 import org.jetbrains.kotlin.config.messageCollector
 
@@ -34,7 +33,6 @@ internal class LateWasmBackendImpl(
     override val context: WasmBackendContext,
     override val typeContext: WasmTypeCodegenContext,
     override val declarationContext: WasmDeclarationCodegenContext?,
-    override val linkerDataContext: WasmLinkerDataCodegenContext?,
     override val loader: PluginLoader
 ) : LateWasmBackend {
     override val compileTarget: CompileTarget get() = WasmCompileTargetImpl

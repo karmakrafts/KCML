@@ -38,7 +38,7 @@ internal data class CodeGeneratorVisitorView( // @formatter:off
                 generationState = NativeGenerationStateView.fromImpl(generationState, loader).getOrThrow(),
                 codeGenerator = CodeGeneratorView.fromImpl(codegen, loader).getOrThrow(),
                 functionGenContextGetter = {
-                    val context = ReflectionUtils.getDelegateProperty<Any, Any>("functionGenerationContext", impl)
+                    val context = ReflectionUtils.getProperty<Any, Any>("functionGenerationContext", impl)
                     loader.logger.info("Got FunctionGenerationContext reference")
                     FunctionGenerationContextView.fromImpl(context, loader).getOrThrow()
                 }

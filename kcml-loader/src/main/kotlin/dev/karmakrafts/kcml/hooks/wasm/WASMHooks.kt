@@ -16,24 +16,26 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
+import dev.karmakrafts.kcml.api.extension.wasm.WasmIntrinsicsExtension
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
+import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
-import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmLinkerDataCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
-import org.jetbrains.kotlin.com.google.common.collect.Sets
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
+import org.jetbrains.kotlin.ir.util.render
+import java.util.*
 
 @Suppress("UNUSED")
 @KCMLHookApi
 object WASMHooks {
-    private val initializedInstances: MutableSet<CompilerConfiguration> = Sets.newIdentityHashSet()
+    private val initializedInstances: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
     private val initializationLock: Any = Any()
 
     private fun initIfNeeded(config: CompilerConfiguration) = synchronized(initializationLock) {
@@ -49,8 +51,7 @@ object WASMHooks {
         file: IrFile,
         backendContext: WasmBackendContext,
         typeContext: WasmTypeCodegenContext,
-        declarationContext: WasmDeclarationCodegenContext?,
-        linkerDataContext: WasmLinkerDataCodegenContext?
+        declarationContext: WasmDeclarationCodegenContext?
     ) { // @formatter:on
         initIfNeeded(backendContext.configuration)
         val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
@@ -60,7 +61,6 @@ object WASMHooks {
                 context = backendContext,
                 typeContext = typeContext,
                 declarationContext = declarationContext,
-                linkerDataContext = linkerDataContext,
                 loader = PluginLoaderImpl
             )
             extension.init(backend)
@@ -71,6 +71,39 @@ object WASMHooks {
 
     @JvmStatic
     fun onGenerateCall(call: IrFunctionAccessExpression, generator: BodyGenerator) {
-        // TODO: implement this
+        BodyGeneratorView.fromImpl(generator).fold(onSuccess = { generatorView ->
+            // @formatter:off
+            val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
+                .filter { (_, extension) -> extension is WasmIntrinsicsExtension }
+                .map { (pluginId, extension) -> pluginId to extension as WasmIntrinsicsExtension }
+            // @formatter:on
+            for ((pluginId, extension) in extensions) {
+                val backend = LateWasmBackendImpl(
+                    pluginId = pluginId,
+                    context = generatorView.backendContext,
+                    typeContext = generatorView.typeCodegenContext,
+                    declarationContext = generatorView.declarationCodegenContext,
+                    loader = PluginLoaderImpl
+                )
+                try {
+                    if (!extension.shouldProcess(call, backend)) continue
+                    backend.loggerFactory.getForPlugin(pluginId).info("Processing WASM intrinsic call ${call.render()}")
+                    val codegen = WasmCodeGeneratorImpl( // @formatter:off
+                        backend = backend,
+                        context = generatorView.functionContext,
+                        expressionBuilder = generatorView.body
+                    ) // @formatter:on
+                    with(extension) {
+                        with(codegen) {
+                            process(call)
+                        }
+                    }
+                } catch (error: Throwable) {
+                    PluginLoaderImpl.logger.error("A WASM intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
+                }
+            }
+        }, onFailure = { error ->
+            error("Could not reflect BodyGenerator in onGenerateCall: ${error.stackTraceToString()}")
+        })
     }
 }

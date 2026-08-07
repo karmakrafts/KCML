@@ -18,13 +18,14 @@ package dev.karmakrafts.kcml
 
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.com.google.common.collect.Sets
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import java.util.Collections
+import java.util.IdentityHashMap
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
@@ -34,7 +35,7 @@ import kotlin.io.path.exists
 internal object KCMLBootstrap {
     private lateinit var messageCollector: MessageCollector
     private val initializationLock: Any = Any()
-    private val initializationSet: MutableSet<CompilerConfiguration> = Sets.newIdentityHashSet()
+    private val initializationSet: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
     private var isCleanedUp: Boolean = false
     val tempDirectory: Path = Files.createTempDirectory("kcml")
 

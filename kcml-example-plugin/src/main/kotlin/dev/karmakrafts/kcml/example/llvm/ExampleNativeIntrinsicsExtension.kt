@@ -20,7 +20,7 @@ import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
+import dev.karmakrafts.kcml.api.extension.llvm.NativeIntrinsicsExtension
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toLong
 import llvm.LLVMConstInt

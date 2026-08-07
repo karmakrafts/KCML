@@ -35,7 +35,7 @@ internal data class FunctionGenerationContextView( // @formatter:off
             loader.logger.info("Creating FunctionGenerationContextView")
             FunctionGenerationContextView(
                 builderGetter = {
-                    val builder = ReflectionUtils.getSuperDelegateProperty<Any, LLVMBuilderRef>( // @formatter:off
+                    val builder = ReflectionUtils.getSuperProperty<Any, LLVMBuilderRef>( // @formatter:off
                         superClassName = "FunctionGenerationContext",
                         name = "builder",
                         instance = impl

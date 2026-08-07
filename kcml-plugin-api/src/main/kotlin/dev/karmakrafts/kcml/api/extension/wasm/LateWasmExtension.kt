@@ -14,15 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.extension
+package dev.karmakrafts.kcml.api.extension.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
-import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
-import org.jetbrains.kotlin.ir.expressions.IrCall
+import dev.karmakrafts.kcml.api.extension.Extension
 
 // TODO: document this
-interface WasmIntrinsicExtension : LateWasmExtension {
-    fun shouldProcess(call: IrCall, backend: LateWasmBackend): Boolean
-
-    fun WasmCodeGenerator.process(call: IrCall)
+interface LateWasmExtension : Extension {
+    fun init(backend: LateWasmBackend) = Unit
 }

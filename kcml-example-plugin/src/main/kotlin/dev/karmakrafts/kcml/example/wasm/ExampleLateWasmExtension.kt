@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.example.wasm
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.LateWasmExtension
+import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 
 @ExtensionId("example_late_wasm_extension")
 internal class ExampleLateWasmExtension : AbstractExtension(), LateWasmExtension {

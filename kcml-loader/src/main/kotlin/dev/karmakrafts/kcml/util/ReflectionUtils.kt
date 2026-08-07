@@ -54,7 +54,7 @@ internal object ReflectionUtils {
         return value
     }
 
-    inline fun <reified C, reified T> getDelegateProperty(name: String, instance: Any? = null): T {
+    inline fun <reified C, reified T> getProperty(name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
         val method = type.declaredMethods.first { method -> method.name == "get${name.capitalize()}" }
         val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
@@ -64,7 +64,7 @@ internal object ReflectionUtils {
         return value
     }
 
-    inline fun <reified C, reified T> getSuperDelegateProperty(
+    inline fun <reified C, reified T> getSuperProperty(
         superClassName: String, name: String, instance: Any? = null
     ): T {
         val type = instance?.javaClass ?: C::class.java

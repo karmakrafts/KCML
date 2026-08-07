@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.extension
+package dev.karmakrafts.kcml.api.extension.llvm
 
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
+import dev.karmakrafts.kcml.api.extension.Extension
 
 /**
  * Participates in Kotlin/Native's late LLVM code-generation phase through KCML.

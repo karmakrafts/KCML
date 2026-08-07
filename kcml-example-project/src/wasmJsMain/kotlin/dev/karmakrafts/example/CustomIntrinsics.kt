@@ -14,16 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example.llvm
+package dev.karmakrafts.example
 
-import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
-import dev.karmakrafts.kcml.api.extension.AbstractExtension
-import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
-
-@ExtensionId("late_native_example")
-internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
-    override fun init(backend: LateNativeBackend) {
-        backend.logger.info("Hello from the late native extension")
-    }
-}
+@CustomIntrinsic
+internal fun customIntrinsic(): Int = throw NotImplementedError("Intrinsic not lowered by KCML example plugin")

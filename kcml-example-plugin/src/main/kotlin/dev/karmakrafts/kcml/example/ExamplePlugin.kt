@@ -23,6 +23,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
 import dev.karmakrafts.kcml.example.llvm.ExampleLateNativeExtension
 import dev.karmakrafts.kcml.example.llvm.ExampleNativeIntrinsicsExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleLateWasmExtension
+import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
 
 @Suppress("UNUSED")
 @AutoService(CompilerPlugin::class)
@@ -39,6 +40,7 @@ class ExamplePlugin : CompilerPlugin {
             register(ExampleNativeIntrinsicsExtension())
             // WASM
             register(ExampleLateWasmExtension())
+            register(ExampleWasmIntrinsicsExtension())
         }
     }
 }

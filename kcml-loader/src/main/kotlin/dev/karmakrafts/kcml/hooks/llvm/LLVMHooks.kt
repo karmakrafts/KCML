@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
-import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
+import dev.karmakrafts.kcml.api.extension.llvm.NativeIntrinsicsExtension
 import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
 import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -43,6 +43,8 @@ object LLVMHooks {
             .fold(onSuccess = onSuccess@{ codeGeneratorVisitorView ->
                 // Invoke all native intrinsic extensions
                 val loggerFactory = codeGeneratorVisitorView.generationState.loggerFactory
+                val logger = loggerFactory("KCML")
+                logger.info("Code generation stage")
                 val extensions =
                     PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.filter { (_, extension) -> extension is NativeIntrinsicsExtension }
                 for ((pluginId, extension) in extensions) {
@@ -60,7 +62,7 @@ object LLVMHooks {
                             }
                         }
                     } catch (error: Throwable) {
-                        error("A native intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
+                        logger.error("A native intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                     }
                 }
                 null // No extension has requested to process the call
@@ -74,7 +76,8 @@ object LLVMHooks {
     @JvmStatic
     fun onRunAfterLowerings(@ActualType("NativeGenerationState") state: Any) {
         NativeGenerationStateView.fromImpl(state, PluginLoaderImpl).fold(onSuccess = { stateView ->
-            stateView.loggerFactory("KCML").info("Post lowering stage")
+            val logger = stateView.loggerFactory("KCML")
+            logger.info("Post lowering stage")
             // Invoke all late native extensions' init functions
             val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions
             for ((pluginId, extension) in extensions) {
@@ -82,7 +85,7 @@ object LLVMHooks {
                 try {
                     extension.init(backend)
                 } catch (error: Throwable) {
-                    error("A late extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
+                    logger.error("A late extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                 }
             }
         }, onFailure = { error ->

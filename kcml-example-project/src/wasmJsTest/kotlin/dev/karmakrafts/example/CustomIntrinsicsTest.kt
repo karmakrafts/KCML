@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.extension
+package dev.karmakrafts.example
 
-import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
+import kotlin.test.Test
+import kotlin.test.assertEquals
 
-// TODO: document this
-interface LateWasmExtension : Extension {
-    fun init(backend: LateWasmBackend) = Unit
+class CustomIntrinsicsTest {
+    @Test
+    fun `Custom intrinsic is lowered to constant value`() {
+        assertEquals(44, customIntrinsic())
+    }
 }

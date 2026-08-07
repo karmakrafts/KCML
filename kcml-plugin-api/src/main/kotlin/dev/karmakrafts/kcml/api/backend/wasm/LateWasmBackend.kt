@@ -20,9 +20,9 @@ import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.backend.BackendType
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
-import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmLinkerDataCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.IrBuiltIns
 
 // TODO: document this
 interface LateWasmBackend : Backend {
@@ -35,8 +35,9 @@ interface LateWasmBackend : Backend {
 
     val declarationContext: WasmDeclarationCodegenContext?
 
-    val linkerDataContext: WasmLinkerDataCodegenContext?
-
     override val config: CompilerConfiguration
         get() = context.configuration
+
+    val irBuiltIns: IrBuiltIns
+        get() = context.irBuiltIns
 }
