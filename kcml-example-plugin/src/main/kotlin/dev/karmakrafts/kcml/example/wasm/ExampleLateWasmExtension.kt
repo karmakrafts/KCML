@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example.llvm
+package dev.karmakrafts.kcml.example.wasm
 
-import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
+import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.LateNativeExtension
+import dev.karmakrafts.kcml.api.extension.LateWasmExtension
 
-@ExtensionId("late_native_example")
-internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
-    override fun init(backend: LateNativeBackend) {
-        backend.logger.info("Hello from the late native extension")
+@ExtensionId("example_late_wasm_extension")
+internal class ExampleLateWasmExtension : AbstractExtension(), LateWasmExtension {
+    override fun init(backend: LateWasmBackend) {
+        backend.logger.info("Hello from the late WASM extension")
     }
 }

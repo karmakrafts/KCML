@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
 import dev.karmakrafts.kcml.api.extension.LateNativeExtension
+import dev.karmakrafts.kcml.api.extension.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -34,17 +35,20 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 @OptIn(ExperimentalCompilerApi::class)
 internal class ExtensionDispatcher( // @formatter:off
     private val loader: PluginLoader,
-    registries: Map<String, ExtensionRegistry>
+    private val registries: Map<String, ExtensionRegistry>
 ) { // @formatter:on
     private val extensions: List<Pair<String, Extension>> = registries.flatMap { (pluginId, registry) ->
         registry.allSorted().map { extension -> pluginId to extension }
     }
 
-    val lateNativeExtensions: List<Pair<String, LateNativeExtension>> by lazy {
+    private inline fun <reified E : Extension> gather(): Lazy<List<Pair<String, E>>> = lazy {
         registries.flatMap { (pluginId, registry) ->
-            registry.allSorted().filterIsInstance<LateNativeExtension>().map { extension -> pluginId to extension }
+            registry.allSorted().filterIsInstance<E>().map { extension -> pluginId to extension }
         }
     }
+
+    val lateNativeExtensions: List<Pair<String, LateNativeExtension>> by gather()
+    val lateWasmExtensions: List<Pair<String, LateWasmExtension>> by gather()
 
     /**
      * Registers all adapters required to wire through existing compiler extension APIs

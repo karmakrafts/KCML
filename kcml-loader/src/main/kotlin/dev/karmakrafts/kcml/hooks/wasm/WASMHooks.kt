@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
+import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
@@ -52,6 +53,18 @@ object WASMHooks {
         linkerDataContext: WasmLinkerDataCodegenContext?
     ) { // @formatter:on
         initIfNeeded(backendContext.configuration)
+        val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
+        for ((pluginId, extension) in extensions) {
+            val backend = LateWasmBackendImpl(
+                pluginId = pluginId,
+                context = backendContext,
+                typeContext = typeContext,
+                declarationContext = declarationContext,
+                linkerDataContext = linkerDataContext,
+                loader = PluginLoaderImpl
+            )
+            extension.init(backend)
+        }
     }
 
     // BodyGenerator
