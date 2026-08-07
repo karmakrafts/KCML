@@ -17,7 +17,8 @@
 
 The Kotlin Compiler Meta Loader project allows multiple Kotlin compiler plugins to interoperate  
 and provides a stable API for FIR, IR and backend processing.  
-It also exposes some additional internals of the compiler to allow extending Kotlin beyond the IR.
+It also provides a clean API for implementing custom target code generation (intrinsics) for  
+every available Kotlin Multiplatform to allow customization beyond IR.
 
 > KCML heavily tampers with the compiler based on what meta plugins are applied.  
 > In order to prevent an influx of false reports on the Kotlin issue tracker,  
