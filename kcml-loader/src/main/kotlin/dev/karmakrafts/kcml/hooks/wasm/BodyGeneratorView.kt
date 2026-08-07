@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
 internal class BodyGeneratorView(
@@ -29,7 +30,8 @@ internal class BodyGeneratorView(
     val typeCodegenContext: WasmTypeCodegenContext,
     val declarationCodegenContext: WasmDeclarationCodegenContext,
     val functionContext: WasmFunctionCodegenContext,
-    val body: WasmExpressionBuilder
+    val body: WasmExpressionBuilder,
+    val generateExpressionCallback: (IrExpression) -> Unit
 ) {
     companion object {
         fun fromImpl(generator: BodyGenerator): Result<BodyGeneratorView> = runCatching {
@@ -42,13 +44,20 @@ internal class BodyGeneratorView(
             )
             val functionContext =
                 ReflectionUtils.getField<BodyGenerator, WasmFunctionCodegenContext>("functionContext", generator)
+            val generateExpression = BodyGenerator::class.java.declaredMethods.first { method ->
+                method.name == $$"generateExpression$org_jetbrains_kotlin_backend_wasm"
+            }
             BodyGeneratorView(
                 backendContext = backendContext,
                 typeCodegenContext = typeCodegenContext,
                 declarationCodegenContext = declarationCodegenContext,
                 functionContext = functionContext,
-                body = generator.body
-            )
+                body = generator.body,
+                generateExpressionCallback = { expression ->
+                    generateExpression.isAccessible = true
+                    generateExpression.invoke(generator, expression)
+                    generateExpression.isAccessible = false
+                })
         }
     }
 }

@@ -23,8 +23,11 @@ import dev.karmakrafts.kcml.agent.asm.Types.KCML;
 import dev.karmakrafts.kcml.agent.asm.Types.WASM;
 import dev.karmakrafts.kcml.agent.log.Logger;
 import dev.karmakrafts.kcml.agent.transformer.AbstractClassTransformer;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
+import org.objectweb.asm.tree.AbstractInsnNode;
 import org.objectweb.asm.tree.ClassNode;
+import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
 public final class BodyGeneratorTransformer extends AbstractClassTransformer {
@@ -37,8 +40,18 @@ public final class BodyGeneratorTransformer extends AbstractClassTransformer {
         return className.equals(WASM.BODY_GENERATOR.getInternalName());
     }
 
+    // We need this because at this point the call arguments have been materialized in WASM
+    private boolean isGenerateCallTarget(final AbstractInsnNode insn) {
+        if (insn.getOpcode() != Opcodes.INVOKESPECIAL) {
+            return false;
+        }
+        final var methodInsn = (MethodInsnNode) insn;
+        return methodInsn.name.equals("tryToGenerateIntrinsicCall");
+    }
+
     private boolean transformGenerateCall(final MethodNode methodNode) { // @formatter:off
         return ASMUtils.stream(methodNode.instructions)
+            .filter(this::isGenerateCallTarget)
             .findFirst()
             .map(needle -> {
                 logger.info("Transforming %s%s (onGenerateCall)", methodNode.name, methodNode.desc);
@@ -48,10 +61,15 @@ public final class BodyGeneratorTransformer extends AbstractClassTransformer {
                 builder.invokestatic(KCML.WASM_HOOKS,
                     false,
                     "onGenerateCall",
-                    Type.VOID_TYPE,
+                    Type.BOOLEAN_TYPE,
                     Common.IR_FUNCTION_ACCESS_EXPRESSION,
                     WASM.BODY_GENERATOR);
-                methodNode.instructions.insertBefore(needle, builder.build());
+                builder.ifeq("fallthrough");
+                builder.vreturn(); // If we handle the intrinsic, we return from the function early
+                builder.label("fallthrough");
+                // Shift 3 instructions backwards (ALOAD 0) and insert before that so arguments are materialized already
+                final var shiftedNeedle = ASMUtils.shift(methodNode.instructions, needle, -3);
+                methodNode.instructions.insertBefore(shiftedNeedle, builder.build());
                 return true;
             })
             .orElse(false);

@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.example.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.api.backend.wasm.const
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.wasm.WasmIntrinsicsExtension
@@ -42,6 +43,6 @@ internal class ExampleWasmIntrinsicsExtension : AbstractExtension(), WasmIntrins
     }
 
     override fun WasmCodeGenerator.process(call: IrFunctionAccessExpression) {
-
+        const(44)
     }
 }

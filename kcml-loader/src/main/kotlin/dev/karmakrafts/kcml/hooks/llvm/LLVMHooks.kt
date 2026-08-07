@@ -52,12 +52,11 @@ object LLVMHooks {
                     val backend = LateNativeBackendImpl.fromView(
                         codeGeneratorVisitorView.generationState, pluginId, PluginLoaderImpl
                     )
-                    val nativeCodeGenerator = NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView, backend)
                     try {
                         if (!extension.shouldProcess(call, backend)) continue
                         loggerFactory.getForPlugin(pluginId).info("Processing LLVM intrinsic call ${call.render()}")
                         return@onSuccess with(extension) {
-                            with(nativeCodeGenerator) {
+                            with(NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView, backend)) {
                                 process(call, args)
                             }
                         }

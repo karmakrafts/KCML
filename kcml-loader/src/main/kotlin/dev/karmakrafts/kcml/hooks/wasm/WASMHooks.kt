@@ -70,8 +70,8 @@ object WASMHooks {
     // BodyGenerator
 
     @JvmStatic
-    fun onGenerateCall(call: IrFunctionAccessExpression, generator: BodyGenerator) {
-        BodyGeneratorView.fromImpl(generator).fold(onSuccess = { generatorView ->
+    fun onGenerateCall(call: IrFunctionAccessExpression, generator: BodyGenerator): Boolean {
+        return BodyGeneratorView.fromImpl(generator).fold(onSuccess = onSuccess@{ generatorView ->
             // @formatter:off
             val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
                 .filter { (_, extension) -> extension is WasmIntrinsicsExtension }
@@ -88,20 +88,18 @@ object WASMHooks {
                 try {
                     if (!extension.shouldProcess(call, backend)) continue
                     backend.loggerFactory.getForPlugin(pluginId).info("Processing WASM intrinsic call ${call.render()}")
-                    val codegen = WasmCodeGeneratorImpl( // @formatter:off
-                        backend = backend,
-                        context = generatorView.functionContext,
-                        expressionBuilder = generatorView.body
-                    ) // @formatter:on
                     with(extension) {
-                        with(codegen) {
+                        with(WasmCodeGeneratorImpl.fromView(backend, generatorView)) {
                             process(call)
                         }
                     }
+                    return@onSuccess true
                 } catch (error: Throwable) {
                     PluginLoaderImpl.logger.error("A WASM intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
+                    return@onSuccess false
                 }
             }
+            false
         }, onFailure = { error ->
             error("Could not reflect BodyGenerator in onGenerateCall: ${error.stackTraceToString()}")
         })

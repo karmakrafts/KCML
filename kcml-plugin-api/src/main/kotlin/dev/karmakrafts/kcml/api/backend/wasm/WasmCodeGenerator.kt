@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.backend.wasm
 
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
 // TODO: document this
@@ -26,4 +27,6 @@ interface WasmCodeGenerator {
     val context: WasmFunctionCodegenContext
 
     val expressionBuilder: WasmExpressionBuilder
+
+    fun generateExpression(expression: IrExpression)
 }

@@ -32,6 +32,13 @@ public final class ASMUtils {
         return StreamSupport.stream(Spliterators.spliterator(list.iterator(), list.size(), 0), false);
     }
 
+    public static AbstractInsnNode shift(final InsnList list, AbstractInsnNode insn, final int offset) {
+        if (offset == 0) {
+            return insn;
+        }
+        return list.get(list.indexOf(insn) + offset);
+    }
+
     public static int findLocal(final MethodNode method, final String name) {
         final var locals = method.localVariables;
         if (locals == null) {

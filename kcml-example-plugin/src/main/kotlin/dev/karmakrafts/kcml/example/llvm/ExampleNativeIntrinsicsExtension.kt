@@ -18,13 +18,12 @@ package dev.karmakrafts.kcml.example.llvm
 
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.backend.llvm.llvm
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.llvm.NativeIntrinsicsExtension
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toLong
-import llvm.LLVMConstInt
-import llvm.LLVMInt32TypeInContext
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
@@ -53,8 +52,6 @@ internal class ExampleNativeIntrinsicsExtension : AbstractExtension(), NativeInt
     ): LLVMValueRef { // @formatter:on
         backend.logger.info("We are processing an intrinsic call: ${call.render()}")
         backend.logger.info("Function builder at 0x${functionBuilder.toLong().toHexString()}")
-        return requireNotNull(LLVMConstInt(LLVMInt32TypeInContext(backend.llvmContext), 44, 0)) {
-            "Could not emit constant value in LLVM IR from native intrinsics extension"
-        }
+        return 44.llvm
     }
 }

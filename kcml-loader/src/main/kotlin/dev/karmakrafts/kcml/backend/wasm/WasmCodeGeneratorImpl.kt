@@ -18,11 +18,31 @@ package dev.karmakrafts.kcml.backend.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.hooks.wasm.BodyGeneratorView
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
 internal class WasmCodeGeneratorImpl( // @formatter:off
     override val backend: LateWasmBackend,
     override val context: WasmFunctionCodegenContext,
-    override val expressionBuilder: WasmExpressionBuilder
-) : WasmCodeGenerator // @formatter:on
+    override val expressionBuilder: WasmExpressionBuilder,
+    private val generateExpressionCallback: (IrExpression) -> Unit
+) : WasmCodeGenerator {
+    // @formatter:on
+    companion object {
+        fun fromView( // @formatter:off
+            backend: LateWasmBackend,
+            view: BodyGeneratorView
+        ): WasmCodeGeneratorImpl = WasmCodeGeneratorImpl( // @formatter:on
+            backend = backend,
+            context = view.functionContext,
+            expressionBuilder = view.body,
+            generateExpressionCallback = view.generateExpressionCallback
+        )
+    }
+
+    override fun generateExpression(expression: IrExpression) {
+        generateExpressionCallback(expression)
+    }
+}
