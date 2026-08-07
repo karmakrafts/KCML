@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.backend.llvm
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import dev.karmakrafts.kcml.api.backend.llvm.NativeTypes
-import dev.karmakrafts.kcml.hooks.CodeGeneratorVisitorView
+import dev.karmakrafts.kcml.hooks.llvm.CodeGeneratorVisitorView
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
 import llvm.LLVMTypeRef

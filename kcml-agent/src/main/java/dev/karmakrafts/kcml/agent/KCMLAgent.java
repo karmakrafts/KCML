@@ -19,8 +19,9 @@ package dev.karmakrafts.kcml.agent;
 import dev.karmakrafts.kcml.agent.log.Logger;
 import dev.karmakrafts.kcml.agent.log.NoopLogger;
 import dev.karmakrafts.kcml.agent.log.RemoteLogger;
-import dev.karmakrafts.kcml.agent.transformer.CodeGeneratorVisitorTransformer;
-import dev.karmakrafts.kcml.agent.transformer.TopLevelPhasesTransformer;
+import dev.karmakrafts.kcml.agent.transformer.CommonTransformers;
+import dev.karmakrafts.kcml.agent.transformer.llvm.LLVMTransformers;
+import dev.karmakrafts.kcml.agent.transformer.wasm.WASMTransformers;
 import dev.karmakrafts.kcml.agent.util.AgentCommClient;
 
 import java.lang.instrument.Instrumentation;
@@ -69,11 +70,12 @@ public final class KCMLAgent {
 
             logger.info("Registering class transformers");
             final var startTime = System.nanoTime();
-            instrumentation.addTransformer(new TopLevelPhasesTransformer(logger));
-            instrumentation.addTransformer(new CodeGeneratorVisitorTransformer(logger));
+            CommonTransformers.register(instrumentation, logger, options);
+            LLVMTransformers.register(instrumentation, logger);
+            WASMTransformers.register(instrumentation, logger);
             final var endTime = System.nanoTime();
-            logger.info(String.format("Registered class transformers in %dms",
-                TimeUnit.MILLISECONDS.convert(endTime - startTime, TimeUnit.NANOSECONDS)));
+            logger.info("Registered class transformers in %dms",
+                TimeUnit.MILLISECONDS.convert(endTime - startTime, TimeUnit.NANOSECONDS));
         }
         catch (Throwable error) {
             // We can't really do anything here :/

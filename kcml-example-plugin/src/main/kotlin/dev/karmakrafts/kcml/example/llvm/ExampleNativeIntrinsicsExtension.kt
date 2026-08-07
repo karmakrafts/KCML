@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.example
+package dev.karmakrafts.kcml.example.llvm
 
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator

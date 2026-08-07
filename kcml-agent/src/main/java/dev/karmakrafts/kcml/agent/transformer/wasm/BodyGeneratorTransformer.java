@@ -14,51 +14,56 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.transformer;
+package dev.karmakrafts.kcml.agent.transformer.wasm;
 
 import dev.karmakrafts.kcml.agent.asm.ASMUtils;
 import dev.karmakrafts.kcml.agent.asm.BlockBuilder;
-import dev.karmakrafts.kcml.agent.asm.Types;
-import dev.karmakrafts.kcml.agent.asm.Types.Konan;
+import dev.karmakrafts.kcml.agent.asm.Types.Common;
+import dev.karmakrafts.kcml.agent.asm.Types.KCML;
+import dev.karmakrafts.kcml.agent.asm.Types.WASM;
 import dev.karmakrafts.kcml.agent.log.Logger;
+import dev.karmakrafts.kcml.agent.transformer.AbstractClassTransformer;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.ClassNode;
 import org.objectweb.asm.tree.MethodNode;
 
-public final class TopLevelPhasesTransformer extends AbstractClassTransformer {
-    public TopLevelPhasesTransformer(final Logger logger) {
+public final class BodyGeneratorTransformer extends AbstractClassTransformer {
+    public BodyGeneratorTransformer(final Logger logger) {
         super(logger);
     }
 
     @Override
     protected boolean shouldTransform(final String className) {
-        return className.equals("org/jetbrains/kotlin/backend/konan/driver/phases/TopLevelPhasesKt");
+        return className.equals(WASM.BODY_GENERATOR.getInternalName());
     }
 
-    private boolean transformRunAfterLowerings(final MethodNode methodNode) {
-        // @formatter:off
+    private boolean transformGenerateCall(final MethodNode methodNode) { // @formatter:off
         return ASMUtils.stream(methodNode.instructions)
             .findFirst()
             .map(needle -> {
-                logger.info(String.format("Transforming %s%s", methodNode.name, methodNode.desc));
+                logger.info("Transforming %s%s (onGenerateCall)", methodNode.name, methodNode.desc);
                 final var builder = BlockBuilder.create().withContext(methodNode);
-                builder.load(Konan.NATIVE_GENERATION_STATE, "generationState");
-                builder.invokehook("onRunAfterLowerings", Type.VOID_TYPE, Types.OBJECT);
-                methodNode.instructions.insertBefore(needle, builder.getInstructions());
+                builder.aload("call");
+                builder.loadThis();
+                builder.invokestatic(KCML.WASM_HOOKS,
+                    false,
+                    "onGenerateCall",
+                    Type.VOID_TYPE,
+                    Common.IR_FUNCTION_ACCESS_EXPRESSION,
+                    WASM.BODY_GENERATOR);
+                methodNode.instructions.insertBefore(needle, builder.build());
                 return true;
             })
             .orElse(false);
-        // @formatter:on
-    }
+    } // @formatter:on
 
     @Override
     protected boolean transform(final ClassNode classNode) {
         var wasChanged = false;
         for (final var methodNode : classNode.methods) {
-            wasChanged |= switch (methodNode.name) {
-                case "runBackend$lambda$0$runAfterLowerings" -> transformRunAfterLowerings(methodNode);
-                default -> false;
-            };
+            switch (methodNode.name) {
+                case "generateCall" -> wasChanged |= transformGenerateCall(methodNode);
+            }
         }
         return wasChanged;
     }

@@ -42,7 +42,7 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
 
     protected AbstractClassTransformer(final Logger logger) {
         this.logger = logger;
-        logger.info(String.format("Created %s", this.getClass().getSimpleName()));
+        logger.info("Created %s", this.getClass().getSimpleName());
     }
 
     private static boolean isClassBlacklisted(final String className) {
@@ -73,24 +73,22 @@ public abstract class AbstractClassTransformer implements ClassFileTransformer {
             return new byte[0];
         }
         if (shouldTransform(className)) {
-            logger.info(String.format("Transforming class %s..", className));
+            logger.info("Transforming class %s..", className);
             final var reader = new ClassReader(classfileBuffer);
             final var classNode = new ClassNode();
-            reader.accept(classNode, 0);
+            reader.accept(classNode, ClassReader.SKIP_FRAMES);
             try {
                 if (transform(classNode)) {
                     final var writer = new NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES);
                     classNode.accept(writer);
                     final var transformedBytes = writer.toByteArray();
-                    logger.info(String.format("Transformed %d bytes of data for %s",
-                        transformedBytes.length,
-                        className));
+                    logger.info("Transformed %d bytes of data for %s", transformedBytes.length, className);
                     return transformedBytes;
                 }
                 return classfileBuffer;
             }
             catch (Throwable error) {
-                logger.error(String.format("Could not transform class %s: %s", className, error));
+                logger.error("Could not transform class %s: %s", className, logger.formatException(error));
             }
         }
         return classfileBuffer;

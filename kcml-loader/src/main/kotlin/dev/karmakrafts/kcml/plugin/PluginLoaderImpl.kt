@@ -39,13 +39,16 @@ import io.github.alexandrepiveteau.graphs.algorithms.topologicalSort
 import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
+import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
+import java.net.URL
 import java.net.URLClassLoader
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.io.path.Path
 import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
@@ -126,17 +129,29 @@ object PluginLoaderImpl : PluginLoader {
         logger = loggerFactory("KCML")
     }
 
-    private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
+    private fun loadCandidates(urls: List<URL>): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = this::class.java.classLoader
-        val classLoader = URLClassLoader(
-            config.kcmlPluginClasspaths.map { path ->
-                val absolutePath = path.absolute().normalize()
-                logger.debug("Loading classpath dependency $absolutePath")
-                absolutePath.toUri().toURL()
-            }.toTypedArray(), parentClassLoader
-        )
+        val classLoader = URLClassLoader(urls.toTypedArray(), parentClassLoader)
         return ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
+    }
+
+    // Used for regular direct compiler invocations
+    private fun loadCandidates(config: CompilerConfiguration): List<CompilerPlugin> {
+        return loadCandidates(config.kcmlPluginClasspaths.map { path ->
+            val absolutePath = path.absolute().normalize()
+            logger.debug("Found classpath dependency $absolutePath")
+            absolutePath.toUri().toURL()
+        })
+    }
+
+    // Used in cases where we abuse the regular pluginClasspaths for passing KCML plugins
+    private fun loadCandidates(arguments: CommonCompilerArguments): List<CompilerPlugin> {
+        return loadCandidates(arguments.pluginClasspaths.map { path ->
+            val absolutePath = Path(path).absolute().normalize()
+            logger.debug("Found classpath dependency $absolutePath")
+            absolutePath.toUri().toURL()
+        })
     }
 
     private fun loadMetadata(candidates: List<CompilerPlugin>) {
@@ -185,29 +200,37 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
+    private fun loadAllPlugins(
+        config: CompilerConfiguration, candidates: List<CompilerPlugin> = loadCandidates(config)
+    ) {
+        if (arePluginsLoaded) return
+        logger.info("Found ${candidates.size} plugin candidates")
+        // Try to load metadata for all plugins
+        loadMetadata(candidates)
+        // Log plugin load order for debugging purposes
+        val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
+        logger.info("Sorted plugins into load order: $sortedNames")
+        // Load all plugins in the proper order
+        loadPlugins(config)
+        // Invoke all inter-plugin messaging
+        processIpms()
+        logger.info("Initialized ${plugins.size} plugins")
+        extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
+        arePluginsLoaded = true
+    }
+
+    // Invoked standalone for things like linking tasks
+    fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) =
+        synchronized(loaderLock) {
+            setupLogging(config)
+            loadAllPlugins(config, loadCandidates(arguments))
+        }
+
+    // Invoked through a delegate IR plugin
     fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) =
         synchronized(loaderLock) {
             setupLogging(config)
-
-            if (!arePluginsLoaded) {
-                // Load all plugin candidates and instantiate them through ServiceLoader
-                val candidates = loadCandidates(config)
-                logger.info("Found ${candidates.size} plugin candidates")
-                // Try to load metadata for all plugins
-                loadMetadata(candidates)
-                // Log plugin load order for debugging purposes
-                val sortedNames =
-                    sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
-                logger.info("Sorted plugins into load order: $sortedNames")
-                // Load all plugins in the proper order
-                loadPlugins(config)
-                // Invoke all inter-plugin messaging
-                processIpms()
-                logger.info("Initialized ${plugins.size} plugins")
-                extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
-                arePluginsLoaded = true
-            }
-
+            loadAllPlugins(config)
             // Register adapters for extension dispatcher
             extensionDispatcher.registerAdapters(this, config, loggerFactory)
             logger.info("Registered extension adapters")

@@ -40,7 +40,7 @@ kotlin {
 dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
     compileOnly(libs.kotlin.native.compiler.embeddable)
-    compileOnly(projects.kcmlLoader) // Injected into compiler CP by this module for runtime
+    compileOnly(projects.kcmlLoader) // Injected into compiler CP at runtime and by injection
     compileOnly(libs.autoService.annotations)
     compileOnly(libs.kotlin.reflect)
     kapt(libs.autoService.processor)

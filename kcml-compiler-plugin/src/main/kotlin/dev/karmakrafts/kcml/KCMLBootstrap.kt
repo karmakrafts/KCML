@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml
 
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
+import org.jetbrains.kotlin.com.google.common.collect.Sets
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
@@ -27,39 +28,79 @@ import java.nio.file.StandardCopyOption
 import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.deleteRecursively
 import kotlin.io.path.div
+import kotlin.io.path.exists
 
 @OptIn(ExperimentalPathApi::class)
 internal object KCMLBootstrap {
     private lateinit var messageCollector: MessageCollector
+    private val initializationLock: Any = Any()
+    private val initializationSet: MutableSet<CompilerConfiguration> = Sets.newIdentityHashSet()
+    private var isCleanedUp: Boolean = false
     val tempDirectory: Path = Files.createTempDirectory("kcml")
 
-    fun init(config: CompilerConfiguration) {
-        messageCollector = config.messageCollector
-    }
+    lateinit var loaderPath: Path
+        private set
 
-    fun cleanup() {
-        tempDirectory.deleteRecursively()
-    }
+    private fun log(message: String) =
+        messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
 
-    private fun unpackLoaderJar(): Path {
-        val targetPath = tempDirectory / "loader.jar"
-        this::class.java.getResourceAsStream("/kcml-loader.jar")?.use { stream ->
-            Files.copy(stream, targetPath, StandardCopyOption.REPLACE_EXISTING)
-        } ?: error("Could not unpack kcml-loader.jar")
-        messageCollector.report(CompilerMessageSeverity.INFO, "Unpacked loader JAR to $targetPath")
-        return targetPath
-    }
-
-    fun injectLoader() {
+    fun init(configuration: CompilerConfiguration) = synchronized(initializationLock) {
+        if (configuration in initializationSet) return@synchronized
+        messageCollector = configuration.messageCollector
+        log("Bootstrapping KCML..")
+        unpackLoaderJar()
+        // This may occur very late when the Gradle/Kotlin daemon is stopped, but we need it available for a long time
+        Runtime.getRuntime().addShutdownHook(Thread(::cleanup))
+        val compilerClassLoader = configuration::class.java.classLoader
+        log("Compiler ClassLoader is $compilerClassLoader")
         try {
-            val compilerClassLoader = this::class.java.classLoader.parent as? URLClassLoader ?: return
-            val clClass = compilerClassLoader::class.java
+            // Try to resolve the PluginLoaderImpl class from the loader JAR to check if it is already injected
+            log("Checking for loader presence")
+            Class.forName("dev.karmakrafts.kcml.plugin.PluginLoaderImpl", false, compilerClassLoader)
+            log("Found loader on classpath, skipping runtime injection")
+            // If we fall through here, no need to inject anything
+        } catch (_: Throwable) {
+            // The fallback method of injecting the loader for early bootstrap for direct compiler invocations
+            log("KCML loader not found on classpath, injecting at runtime")
+            injectLoader(compilerClassLoader)
+        }
+        initializationSet += configuration
+    }
+
+    private fun cleanup() = synchronized(initializationLock) {
+        if (isCleanedUp) return@synchronized
+        log("Cleaning up what KCML left behind..")
+        tempDirectory.deleteRecursively()
+        isCleanedUp = true
+    }
+
+    private fun unpackLoaderJar() {
+        loaderPath = tempDirectory / "loader.jar"
+        if (loaderPath.exists()) return
+        log("Unpacking loader JAR to $loaderPath")
+        this::class.java.getResourceAsStream("/kcml-loader.jar")?.use { stream ->
+            Files.copy(stream, loaderPath, StandardCopyOption.REPLACE_EXISTING)
+        } ?: error("Could not unpack kcml-loader.jar")
+        log("Unpacked ${Files.size(loaderPath)} bytes to $loaderPath")
+    }
+
+    /**
+     * This is only for our direct entrypoint via KCMLCommandLineProcessor.
+     * Any subsequent tasks that do not use the plugin pipeline will inherit
+     * the loader in their compiler CP via a direct injection.
+     * See `CLICompilerTransformer` in the agent.
+     */
+    private fun injectLoader(classLoader: ClassLoader) {
+        try {
+            val urlClassLoader = classLoader as? URLClassLoader ?: return
+            log("Target ClassLoader is a URLClassLoader, appending loader URL")
+            val clClass = urlClassLoader::class.java
             val method = clClass.declaredMethods.first { method -> method.name == "addURL" }
-            val url = unpackLoaderJar().toUri().toURL()
+            val url = loaderPath.toUri().toURL()
             method.isAccessible = true
-            method.invoke(compilerClassLoader, url)
+            method.invoke(urlClassLoader, url)
             method.isAccessible = false
-            messageCollector.report(CompilerMessageSeverity.INFO, "Injected $url into compiler classpath")
+            log("Appended KCML loader URL to classpath of ClassLoader")
         } catch (error: Throwable) {
             error("Could not inject KCML loader into compiler classpath: ${error.stackTraceToString()}")
         }

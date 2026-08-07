@@ -17,8 +17,10 @@
 package dev.karmakrafts.kcml.gradle
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
@@ -26,10 +28,14 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinNativeCompilerOptions
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmAndroidCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
+import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -61,7 +67,24 @@ internal open class KCMLGradlePlugin @Inject constructor(
         registerPreBuildTasks(target)
         registerPostBuildTasks(target)
         logger.info("Registered KCML tasks")
+        configureTaskOptions(target)
         logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
+    }
+
+    private fun configureTaskOptions(project: Project) {
+        project.pluginManager.withPlugin(PluginIds.KOTLIN_MP) {
+            project.afterEvaluate {
+                // We need to load plugins during JS/WASM IR linking ourselves to get a bootstrap entrypoint
+                project.tasks.withType(KotlinJsIrLink::class.java) { task ->
+                    project.logger.lifecycle("Configuring KCML task options for '${task.name}'")
+                    // @formatter:off
+                    task.pluginClasspath.from(*getPluginClasspaths(project)
+                        .map(ResolvedArtifact::getFile)
+                        .toTypedArray())
+                    // @formatter:on
+                }
+            }
+        }
     }
 
     private fun getModuleName(compilation: KotlinCompilation<*>): String? {
@@ -73,21 +96,28 @@ internal open class KCMLGradlePlugin @Inject constructor(
         }
     }
 
+    private fun createPreBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPreBuildTask> {
+        val taskName = "kcmlPreBuild${target.name.capitalized()}"
+        return project.tasks.register(taskName, KCMLPreBuildTask::class.java) { task ->
+            task.apply {
+                group = "kcml"
+                description =
+                    "Dummy task for retaining a reference to the KCML build service before the relevant build tasks"
+            }
+        }
+    }
+
     private fun registerPreBuildTasks(project: Project) {
         val pluginManager = project.pluginManager
         if (!pluginManager.hasPlugin(PluginIds.KOTLIN_MP)) return
         pluginManager.withPlugin(PluginIds.KOTLIN_MP) { // For KMP, we wire pre-build as compile dependency tasks
             val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
             project.afterEvaluate {
-                kmpExtension.targets.filterIsInstance<KotlinNativeTarget>().forEach { target ->
-                    val taskName = "kcmlPreBuild${target.name.capitalized()}"
-                    val preBuildTask = project.tasks.register(taskName, KCMLPreBuildTask::class.java) { task ->
-                        task.apply {
-                            group = "kcml"
-                            description =
-                                "Dummy task for retaining a reference to the KCML build service before the relevant build tasks"
-                        }
-                    }
+                kmpExtension.targets.filter { target ->
+                    val platformType = target.platformType
+                    platformType == KotlinPlatformType.native || platformType == KotlinPlatformType.wasm
+                }.forEach { target ->
+                    val preBuildTask = createPreBuildTask(project, target)
                     target.compilations.map { compilation -> compilation.compileKotlinTaskName }
                         .toSet()
                         .map(project.tasks::named)
@@ -101,21 +131,26 @@ internal open class KCMLGradlePlugin @Inject constructor(
         }
     }
 
+    private fun createPostBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPostBuildTask> {
+        val taskName = "kcmlPostBuild${target.name.capitalized()}"
+        return project.tasks.register(taskName, KCMLPostBuildTask::class.java) { task ->
+            task.apply {
+                group = "kcml"
+                description =
+                    "Dummy task for retaining a reference to the KCML build service until after the relevant build tasks"
+            }
+        }
+    }
+
     private fun registerPostBuildTasks(project: Project) {
         val pluginManager = project.pluginManager
         if (!pluginManager.hasPlugin(PluginIds.KOTLIN_MP)) return
         pluginManager.withPlugin(PluginIds.KOTLIN_MP) { // For KMP, we wire post-build as link finalization tasks
             val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
             project.afterEvaluate {
+                // Kotlin/Native has an extra link task we need to extend the build service lifetime to
                 kmpExtension.targets.filterIsInstance<KotlinNativeTarget>().forEach { target ->
-                    val taskName = "kcmlPostBuild${target.name.capitalized()}"
-                    val postBuildTask = project.tasks.register(taskName, KCMLPostBuildTask::class.java) { task ->
-                        task.apply {
-                            group = "kcml"
-                            description =
-                                "Dummy task for retaining a reference to the KCML build service until after the relevant build tasks"
-                        }
-                    }
+                    val postBuildTask = createPostBuildTask(project, target)
                     target.binaries.map { binary -> binary.linkTaskName }
                         .toSet()
                         .map(project.tasks::named)
@@ -125,20 +160,31 @@ internal open class KCMLGradlePlugin @Inject constructor(
                             }
                         }
                 }
+                // Kotlin/WASM
+                val targets = kmpExtension.targets.filterIsInstance<KotlinJsIrTarget>()
+                    .filter { target -> target.platformType == KotlinPlatformType.wasm }
+                for (target in targets) {
+                    val postBuildTask = createPostBuildTask(project, target)
+                    project.tasks.named(target.artifactsTaskName).configure { task ->
+                        task.finalizedBy(postBuildTask)
+                    }
+                }
             }
         }
+    }
+
+    private fun getPluginClasspaths(project: Project): List<ResolvedArtifact> {
+        val configuration = project.configurations.getByName(CONFIGURATION_NAME)
+        return configuration.resolvedConfiguration.resolvedArtifacts.toList()
     }
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
         val supportPlugins = project.plugins.withType(KCMLGradleSupportPlugin::class.java)
-
-        val configuration = project.configurations.getByName(CONFIGURATION_NAME)
-        val extension = project.extensions.findByType(KCMLExtension::class.java)!!
-        val resolvedArtifacts = configuration.resolvedConfiguration.resolvedArtifacts
-        val pluginClasspaths = resolvedArtifacts.joinToString(";") {
+        val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
             it.file.toPath().absolutePathString()
         }
+        val extension = project.extensions.findByType(KCMLExtension::class.java)!!
         val moduleName = getModuleName(kotlinCompilation)
         return providerFactory.provider {
             buildList {

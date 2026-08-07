@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.hooks
+package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.hooks.ActualType
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.util.ReflectionUtils
 import kotlinx.cinterop.ExperimentalForeignApi

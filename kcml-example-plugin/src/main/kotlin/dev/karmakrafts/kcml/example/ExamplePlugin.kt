@@ -20,6 +20,8 @@ import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
+import dev.karmakrafts.kcml.example.llvm.ExampleLateNativeExtension
+import dev.karmakrafts.kcml.example.llvm.ExampleNativeIntrinsicsExtension
 
 @Suppress("UNUSED")
 @AutoService(CompilerPlugin::class)

@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.hooks
+package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.extension.NativeIntrinsicsExtension
 import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
 import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
+import dev.karmakrafts.kcml.hooks.ActualType
+import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
@@ -28,7 +30,7 @@ import org.jetbrains.kotlin.ir.util.render
 @Suppress("UNUSED")
 @KCMLHookApi
 @OptIn(ExperimentalForeignApi::class)
-object KCMLHooks {
+object LLVMHooks {
     // CodeGeneratorVisitor
 
     @JvmStatic

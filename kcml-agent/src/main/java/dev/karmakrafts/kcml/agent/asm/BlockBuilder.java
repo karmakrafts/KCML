@@ -16,18 +16,20 @@
 
 package dev.karmakrafts.kcml.agent.asm;
 
-import dev.karmakrafts.kcml.agent.asm.Types.KCML;
 import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.*;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Objects;
 
 public final class BlockBuilder {
     private final HashMap<String, LabelNode> labels = new HashMap<>();
     private final InsnList instructions;
+    private final HashMap<String, Integer> newLocalIndices = new HashMap<>();
+    private final HashSet<String> endedLocals = new HashSet<>();
     private MethodNode context;
 
     private BlockBuilder(final InsnList instructions) {
@@ -51,8 +53,46 @@ public final class BlockBuilder {
         return labels.computeIfAbsent(name, k -> new LabelNode());
     }
 
+    public void beginLocal(final String name) {
+        label(String.format("%s_begin", name));
+    }
+
+    public void endLocal(final String name) {
+        label(String.format("%s_end", name));
+        endedLocals.add(name);
+    }
+
+    public int getOrCreateLocalIndex(final String name, final Type type) {
+        var index = ASMUtils.findLocal(context, name);
+        if (index == -1) {
+            index = newLocalIndices.computeIfAbsent(name, n -> {
+                final var newIndex = context.maxLocals++;
+                final var desc = type.getDescriptor();
+                final var start = Objects.requireNonNull(getOrCreateLabel(String.format("%s_begin", name)));
+                final var end = Objects.requireNonNull(getOrCreateLabel(String.format("%s_end", name)));
+                context.localVariables.add(new LocalVariableNode(name, desc, desc, start, end, newIndex));
+                // First time a generated local is synthesized we open its scope
+                beginLocal(name);
+                return newIndex;
+            });
+        }
+        return index;
+    }
+
+    private int getLocalIndex(final String name) {
+        final var newLocalIndex = newLocalIndices.get(name);
+        if (newLocalIndex != null) {
+            return newLocalIndex;
+        }
+        return ASMUtils.findLocal(Objects.requireNonNull(context), name);
+    }
+
     public void label(final String name) {
-        instructions.add(getOrCreateLabel(name));
+        final var label = getOrCreateLabel(name);
+        if (instructions.contains(label)) {
+            throw new IllegalStateException(String.format("Label '%s' has already been inserted", name));
+        }
+        instructions.add(label);
     }
 
     public void jump(final int op, final String label) {
@@ -80,7 +120,7 @@ public final class BlockBuilder {
     }
 
     public void iload(final String name) {
-        instructions.add(new VarInsnNode(Opcodes.ILOAD, ASMUtils.findLocal(Objects.requireNonNull(context), name)));
+        instructions.add(new VarInsnNode(Opcodes.ILOAD, getLocalIndex(name)));
     }
 
     public void lload(final int index) {
@@ -88,7 +128,7 @@ public final class BlockBuilder {
     }
 
     public void lload(final String name) {
-        instructions.add(new VarInsnNode(Opcodes.LLOAD, ASMUtils.findLocal(Objects.requireNonNull(context), name)));
+        instructions.add(new VarInsnNode(Opcodes.LLOAD, getLocalIndex(name)));
     }
 
     public void fload(final int index) {
@@ -96,7 +136,7 @@ public final class BlockBuilder {
     }
 
     public void fload(final String name) {
-        instructions.add(new VarInsnNode(Opcodes.FLOAD, ASMUtils.findLocal(Objects.requireNonNull(context), name)));
+        instructions.add(new VarInsnNode(Opcodes.FLOAD, getLocalIndex(name)));
     }
 
     public void dload(final int index) {
@@ -104,7 +144,7 @@ public final class BlockBuilder {
     }
 
     public void dload(final String name) {
-        instructions.add(new VarInsnNode(Opcodes.DLOAD, ASMUtils.findLocal(Objects.requireNonNull(context), name)));
+        instructions.add(new VarInsnNode(Opcodes.DLOAD, getLocalIndex(name)));
     }
 
     public void aload(final int index) {
@@ -112,7 +152,15 @@ public final class BlockBuilder {
     }
 
     public void aload(final String name) {
-        instructions.add(new VarInsnNode(Opcodes.ALOAD, ASMUtils.findLocal(Objects.requireNonNull(context), name)));
+        instructions.add(new VarInsnNode(Opcodes.ALOAD, getLocalIndex(name)));
+    }
+
+    public void astore(final int index) {
+        instructions.add(new VarInsnNode(Opcodes.ASTORE, index));
+    }
+
+    public void astore(final String name, final Type type) {
+        instructions.add(new VarInsnNode(Opcodes.ASTORE, getOrCreateLocalIndex(name, type)));
     }
 
     public void load(final Type type, final int index) {
@@ -135,6 +183,14 @@ public final class BlockBuilder {
         instruction(Opcodes.DUP);
     }
 
+    public void dupx1() {
+        instruction(Opcodes.DUP_X1);
+    }
+
+    public void dupx2() {
+        instruction(Opcodes.DUP_X2);
+    }
+
     public void dup2() {
         instruction(Opcodes.DUP2);
     }
@@ -145,6 +201,36 @@ public final class BlockBuilder {
 
     public void pop2() {
         instruction(Opcodes.POP2);
+    }
+
+    public void checkcast(final Type type) {
+        instructions.add(new TypeInsnNode(Opcodes.CHECKCAST, type.getInternalName()));
+    }
+
+    public void instanceOf(final Type type) {
+        instructions.add(new TypeInsnNode(Opcodes.INSTANCEOF, type.getInternalName()));
+    }
+
+    public void anewarray(final Type type) {
+        instructions.add(new TypeInsnNode(Opcodes.ANEWARRAY, type.getInternalName()));
+    }
+
+    public void aastore() {
+        instruction(Opcodes.AASTORE);
+    }
+
+    public void swap() {
+        instruction(Opcodes.SWAP);
+    }
+
+    public void ldc(final Object value) {
+        switch (value) {
+            case null -> instructions.add(new InsnNode(Opcodes.ACONST_NULL));
+            case Boolean boolValue -> instructions.add(new LdcInsnNode(boolValue ? 1 : 0));
+            case Byte byteValue -> instructions.add(new IntInsnNode(Opcodes.BIPUSH, byteValue));
+            case Short shortValue -> instructions.add(new IntInsnNode(Opcodes.SIPUSH, shortValue));
+            default -> instructions.add(new LdcInsnNode(value));
+        }
     }
 
     public void invoke(final int op,
@@ -165,16 +251,16 @@ public final class BlockBuilder {
         invoke(Opcodes.INVOKEVIRTUAL, owner, false, name, returnType, paramTypes);
     }
 
-    public void invokestatic(final Type owner, final String name, final Type returnType, final Type... paramTypes) {
-        invoke(Opcodes.INVOKESTATIC, owner, false, name, returnType, paramTypes);
+    public void invokestatic(final Type owner,
+                             final boolean isInterface,
+                             final String name,
+                             final Type returnType,
+                             final Type... paramTypes) {
+        invoke(Opcodes.INVOKESTATIC, owner, isInterface, name, returnType, paramTypes);
     }
 
     public void invokeinterface(final Type owner, final String name, final Type returnType, final Type... paramTypes) {
         invoke(Opcodes.INVOKEINTERFACE, owner, true, name, returnType, paramTypes);
-    }
-
-    public void invokehook(final String name, final Type returnType, final Type... paramTypes) {
-        invokestatic(KCML.KCML_HOOKS, name, returnType, paramTypes);
     }
 
     public void vreturn() {
@@ -201,7 +287,17 @@ public final class BlockBuilder {
         instructions.add(new InsnNode(Opcodes.ARETURN));
     }
 
-    public InsnList getInstructions() {
+    public void getstatic(final Type owner, final String name, final Type type) {
+        instructions.add(new FieldInsnNode(Opcodes.GETSTATIC, owner.getInternalName(), name, type.getDescriptor()));
+    }
+
+    public InsnList build() {
+        for (final var local : newLocalIndices.keySet()) {
+            if (endedLocals.contains(local)) {
+                continue;
+            }
+            endLocal(local); // Automatically end any locals that are still asymmetric
+        }
         return instructions;
     }
 }

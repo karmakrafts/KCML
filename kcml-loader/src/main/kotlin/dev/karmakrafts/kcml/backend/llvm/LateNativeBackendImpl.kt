@@ -21,7 +21,7 @@ import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
-import dev.karmakrafts.kcml.hooks.NativeGenerationStateView
+import dev.karmakrafts.kcml.hooks.llvm.NativeGenerationStateView
 import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
