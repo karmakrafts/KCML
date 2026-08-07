@@ -17,15 +17,19 @@
 package dev.karmakrafts.kcml.hooks
 
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
+import kotlin.concurrent.atomics.AtomicReference
 
 @Suppress("UNUSED")
 @KCMLHookApi
 object CommonHooks {
-    lateinit var compilerArguments: CommonCompilerArguments
-        private set
+    private val _compilerArguments: AtomicReference<CommonCompilerArguments?> = AtomicReference(null)
+    val compilerArguments: CommonCompilerArguments
+        get() = requireNotNull(_compilerArguments.load()) {
+            "Compiler arguments have not been initialized for KCML"
+        }
 
     @JvmStatic
     fun onExecImpl(arguments: CommonCompilerArguments) {
-        compilerArguments = arguments
+        _compilerArguments.store(arguments)
     }
 }
