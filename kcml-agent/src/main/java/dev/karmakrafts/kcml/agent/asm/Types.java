@@ -28,27 +28,15 @@ public final class Types {
     public static final Type CLASS_LOADER = Type.getObjectType("java/lang/ClassLoader");
     public static final Type LIST = Type.getObjectType("java/util/List");
     public static final Type METHOD = Type.getObjectType("java/lang/reflect/Method");
-    public static final Type FIELD = Type.getObjectType("java/lang/reflect/Field");
-    public static final Type URL_CLASS_LOADER = Type.getObjectType("java/net/URLClassLoader");
     public static final Type URL = Type.getObjectType("java/net/URL");
     public static final Type URI = Type.getObjectType("java/net/URI");
     public static final Type PATH = Type.getObjectType("java/nio/file/Path");
-    public static final Type SYSTEM = Type.getObjectType("java/lang/System");
-    public static final Type PRINT_STREAM = Type.getObjectType("java/io/PrintStream");
-    public static final Type THREAD = Type.getObjectType("java/lang/Thread");
 
     public static final class CInterop {
         public static final Type C_POINTER = Type.getObjectType("kotlinx/cinterop/CPointer");
     }
 
     public static final class Common {
-        public static final Type PLUGIN_CLI_PARSER = Type.getObjectType(
-            "org/jetbrains/kotlin/cli/jvm/plugins/PluginCliParser");
-        public static final Type EXIT_CODE = Type.getObjectType("org/jetbrains/kotlin/cli/common/ExitCode");
-        public static final Type COMPILER_CONFIGURATION = Type.getObjectType(
-            "org/jetbrains/kotlin/config/CompilerConfiguration");
-        public static final Type DISPOSABLE = Type.getObjectType("com/intellij/openapi/Disposable");
-
         public static final Type IR_CALL = Type.getObjectType("org/jetbrains/kotlin/ir/expressions/IrCall");
         public static final Type IR_FUNCTION_ACCESS_EXPRESSION = Type.getObjectType(
             "org/jetbrains/kotlin/ir/expressions/IrFunctionAccessExpression");
@@ -59,11 +47,6 @@ public final class Types {
     }
 
     public static final class WASM {
-        public static final Type COMMON_WASM_CONFIGURATION_UPDATER = Type.getObjectType(
-            "org/jetbrains/kotlin/cli/pipeline/web/CommonWasmConfigurationUpdater");
-        public static final Type WASM_CONFIGURATION_UPDATER = Type.getObjectType(
-            "org/jetbrains/kotlin/cli/pipeline/web/wasm/WasmConfigurationUpdater");
-
         public static final Type WASM_BACKEND_CONTEXT = Type.getObjectType(
             "org/jetbrains/kotlin/backend/wasm/WasmBackendContext");
 
