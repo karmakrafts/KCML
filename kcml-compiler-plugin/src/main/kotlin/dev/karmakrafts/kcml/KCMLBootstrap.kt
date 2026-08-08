@@ -49,7 +49,6 @@ internal object KCMLBootstrap {
         messageCollector = configuration.messageCollector
         log("Bootstrapping KCML ${KCMLVersion.version}..")
         initPaths()
-        loaderJar.unpackIfNeeded(loaderPath)
         val compilerClassLoader = configuration::class.java.classLoader
         log("Compiler ClassLoader is $compilerClassLoader")
         try {
@@ -61,6 +60,7 @@ internal object KCMLBootstrap {
         } catch (_: Throwable) {
             // The fallback method of injecting the loader for early bootstrap for direct compiler invocations
             log("KCML loader not found on classpath, injecting at runtime")
+            loaderJar.unpackIfNeeded(loaderPath)
             injectLoader(compilerClassLoader)
         }
         initializationSet += configuration
