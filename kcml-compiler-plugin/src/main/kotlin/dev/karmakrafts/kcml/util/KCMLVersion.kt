@@ -14,20 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.gradle
+package dev.karmakrafts.kcml.util
 
-import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
-
-internal object BuildInfo {
-    const val GROUP: String = "dev.karmakrafts.kcml"
-    const val PLUGIN_NAME: String = "kcml-compiler-plugin"
-    const val PLUGIN_ID: String = "kcml"
-
+internal object KCMLVersion {
     val version: String by lazy {
-        BuildInfo::class.java.getResourceAsStream("/kcml.version")?.bufferedReader().use {
+        KCMLVersion::class.java.getResourceAsStream("/kcml.version")?.bufferedReader().use {
             it?.readText()
         }!!
     }
-
-    val pluginArtifact: SubpluginArtifact = SubpluginArtifact(GROUP, PLUGIN_NAME, version)
 }

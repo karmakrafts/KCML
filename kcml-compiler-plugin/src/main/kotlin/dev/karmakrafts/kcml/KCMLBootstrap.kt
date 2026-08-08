@@ -16,31 +16,30 @@
 
 package dev.karmakrafts.kcml
 
+import dev.karmakrafts.kcml.util.EmbeddedJar
+import dev.karmakrafts.kcml.util.KCMLVersion
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
-import java.util.Collections
-import java.util.IdentityHashMap
-import kotlin.io.path.ExperimentalPathApi
-import kotlin.io.path.deleteRecursively
+import java.util.*
+import kotlin.io.path.Path
+import kotlin.io.path.createDirectories
 import kotlin.io.path.div
-import kotlin.io.path.exists
 
-@OptIn(ExperimentalPathApi::class)
 internal object KCMLBootstrap {
     private lateinit var messageCollector: MessageCollector
     private val initializationLock: Any = Any()
     private val initializationSet: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
-    private var isCleanedUp: Boolean = false
-    val tempDirectory: Path = Files.createTempDirectory("kcml")
 
+    lateinit var kcmlDirectory: Path
+        private set
     lateinit var loaderPath: Path
         private set
+
+    private val loaderJar: EmbeddedJar = EmbeddedJar("/kcml-loader.jar", ::log)
 
     private fun log(message: String) =
         messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
@@ -48,10 +47,9 @@ internal object KCMLBootstrap {
     fun init(configuration: CompilerConfiguration) = synchronized(initializationLock) {
         if (configuration in initializationSet) return@synchronized
         messageCollector = configuration.messageCollector
-        log("Bootstrapping KCML..")
-        unpackLoaderJar()
-        // This may occur very late when the Gradle/Kotlin daemon is stopped, but we need it available for a long time
-        Runtime.getRuntime().addShutdownHook(Thread(::cleanup))
+        log("Bootstrapping KCML ${KCMLVersion.version}..")
+        initPaths()
+        loaderJar.unpackIfNeeded(loaderPath)
         val compilerClassLoader = configuration::class.java.classLoader
         log("Compiler ClassLoader is $compilerClassLoader")
         try {
@@ -68,21 +66,14 @@ internal object KCMLBootstrap {
         initializationSet += configuration
     }
 
-    private fun cleanup() = synchronized(initializationLock) {
-        if (isCleanedUp) return@synchronized
-        log("Cleaning up what KCML left behind..")
-        tempDirectory.deleteRecursively()
-        isCleanedUp = true
-    }
-
-    private fun unpackLoaderJar() {
-        loaderPath = tempDirectory / "loader.jar"
-        if (loaderPath.exists()) return
-        log("Unpacking loader JAR to $loaderPath")
-        this::class.java.getResourceAsStream("/kcml-loader.jar")?.use { stream ->
-            Files.copy(stream, loaderPath, StandardCopyOption.REPLACE_EXISTING)
-        } ?: error("Could not unpack kcml-loader.jar")
-        log("Unpacked ${Files.size(loaderPath)} bytes to $loaderPath")
+    private fun initPaths() {
+        log("Initializing paths")
+        val userDir = Path(System.getProperty("user.home"))
+        val kcmlDir = userDir / ".kcml"
+        kcmlDirectory = kcmlDir / KCMLVersion.version
+        kcmlDirectory.createDirectories()
+        log("KCML home directory is $kcmlDirectory")
+        loaderPath = kcmlDirectory / "loader.jar" // This path might not exist initially
     }
 
     /**

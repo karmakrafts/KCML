@@ -20,13 +20,26 @@ import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
-// TODO: document this
+/**
+ * Generates WebAssembly instructions while Kotlin IR expressions are translated to WebAssembly.
+ *
+ * Extensions can use the compiler contexts exposed by this interface together with the instruction
+ * helpers in this package to contribute code to the current function body.
+ */
 interface WasmCodeGenerator {
+    /** Late WebAssembly backend context for the current compilation. */
     val backend: LateWasmBackend
 
+    /** Code-generation context for the function currently being generated. */
     val context: WasmFunctionCodegenContext
 
+    /** Builder that receives instructions for the current WebAssembly expression. */
     val expressionBuilder: WasmExpressionBuilder
 
+    /**
+     * Generates WebAssembly instructions for a Kotlin IR [expression].
+     *
+     * @param expression Kotlin IR expression to generate.
+     */
     fun generateExpression(expression: IrExpression)
 }

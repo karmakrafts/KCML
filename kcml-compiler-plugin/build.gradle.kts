@@ -17,6 +17,10 @@
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
+import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
+import kotlin.io.path.div
+import kotlin.io.path.writeText
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -35,6 +39,11 @@ java {
 
 kotlin {
     defaultCompilerOptions()
+    sourceSets {
+        main {
+            resources.srcDir("build/generated")
+        }
+    }
 }
 
 dependencies {
@@ -62,6 +71,24 @@ tasks {
         from(agentShadowJarTask) { rename { "kcml-agent.jar" } }
         from(loaderShadowJarTask) { rename { "kcml-loader.jar" } }
     }
+    val version = version.toString()
+    val createVersionFile = register("createVersionFile") {
+        group = "build"
+        description = "Generate the version file embedded in the finished plugin JAR"
+        inputs.file(layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
+        inputs.property("version", version)
+        doFirst {
+            val path = inputs.files.singleFile.toPath()
+            path.deleteIfExists()
+            path.parent.createDirectories()
+            path.writeText(version)
+        }
+        outputs.upToDateWhen { false } // Always re-generate this file
+    }
+    processResources {
+        dependsOn(createVersionFile, "kaptKotlin")
+    }
+    compileKotlin { dependsOn(processResources) }
 }
 
 publishing {

@@ -71,14 +71,17 @@ tasks {
     test {
         useJUnitPlatform()
     }
+    val version = version.toString()
     val createVersionFile = register("createVersionFile") {
         group = "build"
         description = "Generate the version file embedded in the finished plugin JAR"
+        inputs.file(layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
+        inputs.property("version", version)
         doFirst {
-            val path = (layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
+            val path = inputs.files.singleFile.toPath()
             path.deleteIfExists()
             path.parent.createDirectories()
-            path.writeText(version.toString())
+            path.writeText(version)
         }
         outputs.upToDateWhen { false } // Always re-generate this file
     }

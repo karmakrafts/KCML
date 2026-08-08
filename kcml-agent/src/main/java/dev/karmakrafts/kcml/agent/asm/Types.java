@@ -58,8 +58,6 @@ public final class Types {
             "org/jetbrains/kotlin/backend/wasm/ir2wasm/WasmTypeCodegenContext");
         public static final Type WASM_DECLARATION_CODEGEN_CONTEXT = Type.getObjectType(
             "org/jetbrains/kotlin/backend/wasm/ir2wasm/WasmDeclarationCodegenContext");
-        public static final Type WASM_LINKER_DATA_CODEGEN_CONTEXT = Type.getObjectType(
-            "org/jetbrains/kotlin/backend/wasm/ir2wasm/WasmLinkerDataCodegenContext");
     }
 
     public static final class Konan {

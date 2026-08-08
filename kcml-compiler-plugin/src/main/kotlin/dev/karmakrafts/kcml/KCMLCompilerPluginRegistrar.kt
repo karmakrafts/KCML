@@ -22,9 +22,11 @@ import dev.karmakrafts.kcml.util.AgentInjector
 import dev.karmakrafts.kcml.util.kcmlAgentCommPort
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import dev.karmakrafts.kcml.util.kcmlModuleName
+import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.messageCollector
 import kotlin.io.path.absolutePathString
 
 @Suppress("UNUSED")
@@ -47,7 +49,10 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
 
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
         val agentArgs = buildAgentArgs(configuration)
-        AgentInjector(KCMLBootstrap.tempDirectory).inject(agentArgs)
+        val messageCollector = configuration.messageCollector
+        AgentInjector(KCMLBootstrap.kcmlDirectory) { message ->
+            messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
+        }.inject(agentArgs)
         with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
 

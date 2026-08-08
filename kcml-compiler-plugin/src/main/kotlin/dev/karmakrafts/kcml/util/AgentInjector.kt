@@ -17,15 +17,15 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
-import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.StandardCopyOption
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div
 
 class AgentInjector( // @formatter:off
-    directory: Path
+    directory: Path,
+    logger: (String) -> Unit = {}
 ) { // @formatter:on
+    private val agentJar: EmbeddedJar = EmbeddedJar("/kcml-agent.jar", logger)
     private val agentPath: Path = directory / "agent.jar"
 
     @Suppress("DEPRECATION")
@@ -42,7 +42,7 @@ class AgentInjector( // @formatter:off
         }
     }
 
-    fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
+    private fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
         System.setProperty("jdk.attach.allowAttachSelf", "true")
         tryOverwriteAttachPermissions()
         val pid = ProcessHandle.current().pid().toString()
@@ -52,11 +52,7 @@ class AgentInjector( // @formatter:off
     }
 
     fun inject(options: Map<String, String> = emptyMap()): Boolean {
-        requireNotNull(this::class.java.getResourceAsStream("/kcml-agent.jar")) {
-            "Could not find KCML agent JAR in embedded resources"
-        }.use {
-            Files.copy(it, agentPath, StandardCopyOption.REPLACE_EXISTING)
-        }
+        agentJar.unpackIfNeeded(agentPath)
         return tryAttachSelf().fold(onSuccess = { vm ->
             val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
             vm.loadAgent(agentPath.absolutePathString(), args)
