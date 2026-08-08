@@ -19,18 +19,26 @@ package dev.karmakrafts.kcml.util
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
+import kotlin.io.path.div
 import kotlin.io.path.exists
+import kotlin.io.path.nameWithoutExtension
 
 internal data class EmbeddedJar( // @formatter:off
     val path: String,
     val logger: (String) -> Unit = {}
 ) { // @formatter:on
+    private fun getLockPath(path: Path): Path = path.parent / "${path.nameWithoutExtension}.lock"
+
     private fun unpack(target: Path) {
-        logger("Unpacking JAR $path to $target")
-        this::class.java.getResourceAsStream(path)?.use { stream ->
-            Files.copy(stream, target, StandardCopyOption.REPLACE_EXISTING)
-        } ?: error("Could not unpack $path")
-        logger("Unpacked ${Files.size(target)} bytes to $target")
+        logger("Acquiring write lock for file $target")
+        FileLock(getLockPath(target)).use {
+            logger("Unpacking JAR $path to $target")
+            this::class.java.getResourceAsStream(path)?.use { stream ->
+                Files.copy(stream, target, StandardCopyOption.REPLACE_EXISTING)
+            } ?: error("Could not unpack $path")
+            logger("Unpacked ${Files.size(target)} bytes to $target")
+        }
+        logger("Released write lock for file $target")
     }
 
     fun unpackIfNeeded(target: Path) {
