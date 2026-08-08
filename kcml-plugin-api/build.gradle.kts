@@ -44,6 +44,7 @@ dependencies {
     api(libs.kotlin.compiler.embeddable)
     api(libs.kotlin.native.compiler.embeddable)
     api(libs.semver)
+    api(libs.ow2.asm.core)
 }
 
 publishing {

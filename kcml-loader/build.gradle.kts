@@ -54,6 +54,7 @@ dependencies {
 
     shadeApi(projects.kcmlPluginApi)
     shadeApi(libs.semver)
+    shadeApi(libs.ow2.asm.core)
     compileOnly(libs.kotlin.reflect)
     shadeImplementation(libs.kotlinx.serialization.core)
     shadeImplementation(libs.kotlinx.serialization.json)
