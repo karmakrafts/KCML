@@ -32,6 +32,14 @@ internal class MixinClassTransformer( // @formatter:off
     private val logger: Logger,
     private val loader: MixinLoader
 ) : ClassFileTransformer { // @formatter:on
+    companion object {
+        private val packageBlacklist: List<String> = listOf( // @formatter:off
+            "java/",
+            "javax/",
+            "dev/karmakrafts/kcml/agent/"
+        ) // @formatter:on
+    }
+
     private fun findMixinInstantiation(insn: AbstractInsnNode): Type? = when {
         insn.opcode != Opcodes.NEW -> null
         insn !is TypeInsnNode -> null
@@ -59,6 +67,11 @@ internal class MixinClassTransformer( // @formatter:off
         classfileBuffer: ByteArray?
     ): ByteArray {
         if (className.isNullOrBlank() || classfileBuffer == null) return ByteArray(0)
+        // Check if class matches against prefix blacklist
+        for (pkgName in packageBlacklist) {
+            if (!className.startsWith(pkgName)) continue
+            return classfileBuffer // Skip any classes which are part of a blacklisted package
+        }
         val type = Type.getObjectType(className)
         try {
             if (this.loader.isMixin(type)) {
@@ -71,6 +84,14 @@ internal class MixinClassTransformer( // @formatter:off
             classReader.accept(classNode, ClassReader.SKIP_FRAMES)
             // Explicit mixin instantiations are completely illegal, so we check for them in every class
             checkForMixinInstantiations(classNode)
+            var wasChanged = false
+            for (mixin in this.loader.mixins) {
+                try {
+                    wasChanged = wasChanged or mixin.apply(classNode)
+                } catch (error: Throwable) {
+                    logger.error(error) { "Mixin ${mixin.mixinClass.dottedName} failed to apply" }
+                }
+            }
             return classfileBuffer // TODO: implement class writing by voting
         } catch (error: MixinRuntimeInstantiationException) {
             throw error // Runtime instantiations are irrecoverable

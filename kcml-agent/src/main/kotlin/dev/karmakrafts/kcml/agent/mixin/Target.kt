@@ -18,8 +18,6 @@ package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.getValue
-import dev.karmakrafts.kcml.agent.asm.shift
-import dev.karmakrafts.kcml.agent.asm.toInsnList
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.AnnotationNode
@@ -57,9 +55,12 @@ internal data class Target(
      * properties given by this target instance.
      * If no instruction can be found, null is returned.
      */
-    fun find(instructions: InsnList): AbstractInsnNode? {
+    fun find(instructions: InsnList): AbstractInsnNode? = find(instructions, 0, instructions.size())
+
+    private fun find(instructions: InsnList, startIndex: Int, endIndex: Int): AbstractInsnNode? {
         val possibleTargets = ArrayList<AbstractInsnNode>()
-        for (insn in instructions) {
+        for (currentIndex in startIndex until endIndex) {
+            val insn = instructions[currentIndex]
             val currentOpcode = insn.opcode
             // First we filter by opcode itself
             if (opcode != ANY_OPCODE && currentOpcode != opcode) continue
@@ -85,7 +86,9 @@ internal data class Target(
             possibleTargets += insn
         }
         // The ordinal is the nth element in the possibleTarget list
-        return possibleTargets.getOrNull(ordinal)?.shift(instructions, offset)
+        val targetIndex = possibleTargets.getOrNull(ordinal)?.let(instructions::indexOf) ?: return null
+        val offsetIndex = targetIndex + offset
+        return if (offsetIndex in startIndex until endIndex) instructions[offsetIndex] else null
     }
 
     /**
@@ -93,15 +96,9 @@ internal data class Target(
      */
     context(slice: Slice)
     fun findWithin(instructions: InsnList): AbstractInsnNode? {
-        val lastIndex = instructions.size() - 1
         val (start, end) = slice.resolve(instructions)
         val startIndex = start?.let(instructions::indexOf) ?: 0
-        val endIndex = end?.let(instructions::indexOf) ?: lastIndex
-        val count = endIndex - startIndex
-        var sliceInstructions = instructions
-        if (startIndex != 0 || endIndex != lastIndex) {
-            sliceInstructions = instructions.drop(startIndex).take(count).toInsnList()
-        }
-        return find(sliceInstructions)
+        val endIndex = end?.let(instructions::indexOf) ?: instructions.size()
+        return find(instructions, startIndex, endIndex)
     }
 }

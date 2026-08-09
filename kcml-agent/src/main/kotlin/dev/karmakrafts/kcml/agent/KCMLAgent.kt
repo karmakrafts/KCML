@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.agent
 
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.log.RemoteLogger
+import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
@@ -38,7 +39,7 @@ object KCMLAgent {
         logger.info { "Initializing KCML compiler agent.." }
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader mixins" }
-        loader.load(listOf(Path(args.loaderPath)))
-        //instrumentation.addTransformer(MixinClassTransformer(logger, loader))
+        loader.load(listOf(Path(args.loaderPath))) // Load builtin mixins from loader JAR
+        instrumentation.addTransformer(MixinClassTransformer(logger, loader))
     }
 }

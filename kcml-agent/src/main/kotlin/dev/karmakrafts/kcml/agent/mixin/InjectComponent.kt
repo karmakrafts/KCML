@@ -49,20 +49,23 @@ internal data class InjectComponent( // @formatter:off
         )
     }
 
-    private fun injectIntoTarget(targetClass: ClassNode, targetMethod: MethodNode) {
+    private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {
+        val (targetClass, _, logger) = context
         val instructions = targetMethod.instructions
         val needle = with(slice) { target.findWithin(instructions) }
             ?: error("Could not find injection target for ${targetClass.dottedName}.${targetMethod.name}")
-        // TODO: implement this
+        logger.info { "Found injection point in ${targetClass.dottedName}.${targetMethod.name}${targetMethod.desc}" }
     }
 
-    override fun apply(target: ClassNode): Boolean {
+    override fun apply(context: ComponentContext): Boolean {
+        val (target, _, logger) = context
         // First we need to find the target method
         for (targetMethod in target.methods) when {
             targetMethod.name != name -> continue
             descriptor != null && targetMethod.desc != descriptor.descriptor -> continue
             else -> {
-                injectIntoTarget(target, targetMethod)
+                logger.info { "Applying injection to ${target.dottedName}.${targetMethod.name}${targetMethod.desc}" }
+                injectIntoTarget(context, targetMethod)
                 return true
             }
         }

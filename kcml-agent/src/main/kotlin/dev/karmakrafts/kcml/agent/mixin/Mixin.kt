@@ -38,9 +38,14 @@ internal data class Mixin( // @formatter:off
 
     fun apply(classNode: ClassNode): Boolean {
         if (classNode.name != target.internalName) return false
+        val componentContext = ComponentContext( // @formatter:off
+            target = classNode,
+            loader = loader,
+            logger = logger
+        ) // @formatter:on
         var wasChanged = false
         for (component in components) {
-            wasChanged = wasChanged or component.apply(classNode)
+            wasChanged = wasChanged or component.apply(componentContext)
         }
         return wasChanged
     }

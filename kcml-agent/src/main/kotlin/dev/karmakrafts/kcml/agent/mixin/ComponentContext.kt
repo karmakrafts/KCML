@@ -16,6 +16,11 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
-internal interface MixinComponent {
-    fun apply(context: ComponentContext): Boolean
-}
+import dev.karmakrafts.kcml.agent.log.Logger
+import org.objectweb.asm.tree.ClassNode
+
+internal data class ComponentContext( // @formatter:off
+    val target: ClassNode,
+    val loader: MixinLoader,
+    val logger: Logger
+) // @formatter:on

@@ -33,5 +33,5 @@ internal data class Slice( // @formatter:off
     }
 
     fun resolve(instructions: InsnList): Pair<AbstractInsnNode?, AbstractInsnNode?> =
-        start.find(instructions) to end.find(instructions)
+        start.takeUnless { it == Target() }?.find(instructions) to end.takeUnless { it == Target() }?.find(instructions)
 }
