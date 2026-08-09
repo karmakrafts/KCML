@@ -18,9 +18,27 @@ package dev.karmakrafts.kcml.agent.asm
 
 import org.objectweb.asm.tree.AnnotationNode
 
+private inline fun <reified T> Any?.unwrapValue(): T? {
+    val outType = T::class.java
+    return when { // @formatter:off
+        Enum::class.java.isAssignableFrom(outType)
+            && this is Array<*>
+            && this::class.java.componentType == String::class.java -> {
+            @Suppress("UNCHECKED_CAST") // Enum values are encoded as Array<Any>{"<type>", "<constant>"}
+            val name = (this as Array<Any>).last() as String
+            outType.enumConstants.find { value ->
+                (value as Enum<*>).name == name
+            }
+        }
+
+        else -> this as? T
+    }
+} // @formatter:on
+
 internal inline fun <reified T> AnnotationNode.getValue(name: String): T? {
     return values.windowed(2, 2)
         .filter { (valueName, _) -> valueName == name }
         .map { (_, value) -> value }
-        .firstOrNull() as? T
+        .firstOrNull()
+        ?.unwrapValue()
 }

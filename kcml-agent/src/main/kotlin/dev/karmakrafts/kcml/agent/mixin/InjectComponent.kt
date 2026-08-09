@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.agent.asm.getValue
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
 
 /**
@@ -31,6 +32,7 @@ internal data class InjectComponent( // @formatter:off
     val descriptor: Type?,
     val slice: Slice,
     val target: Target,
+    val order: Order,
     val mixinClass: ClassNode,
     val mixinMethod: MethodNode
 ) : MixinComponent { // @formatter:on
@@ -44,9 +46,19 @@ internal data class InjectComponent( // @formatter:off
             descriptor = node.getValue<String>("descriptor")?.let(Type::getMethodType),
             slice = node.getValue<AnnotationNode>("slice")?.let(Slice::fromAnnotation) ?: Slice(),
             target = node.getValue<AnnotationNode>("target")?.let(Target::fromAnnotation) ?: Target(),
+            order = node.getValue<Order>("order") ?: Order.AFTER,
             mixinClass = mixinClass,
             mixinMethod = mixinMethod
         )
+    }
+
+    private fun processInjection(context: ComponentContext, targetMethod: MethodNode): InsnList {
+        // Parameter capturing analysis
+        // Replace loads of captured values with their respective target indices
+        // Replace all loads & calls to ReturnContext and replace them with target returns
+        // Replace all calls to ThisAware with their intrinsic target this load
+        // Relocate stack to max index of target method
+        TODO()
     }
 
     private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {
@@ -55,6 +67,8 @@ internal data class InjectComponent( // @formatter:off
         val needle = with(slice) { target.findWithin(instructions) }
             ?: error("Could not find injection target for ${targetClass.dottedName}.${targetMethod.name}")
         logger.info { "Found injection point in ${targetClass.dottedName}.${targetMethod.name}${targetMethod.desc}" }
+        //val injection = processInjection(context, targetMethod)
+        //order.insert(needle, injection, targetMethod.instructions)
     }
 
     override fun apply(context: ComponentContext): Boolean {
