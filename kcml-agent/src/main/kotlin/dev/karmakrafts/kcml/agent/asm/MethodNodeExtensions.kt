@@ -38,9 +38,10 @@ internal fun MethodNode.getVisibleAnnotation(type: Type): AnnotationNode = requi
     "Method $name$desc does not have a visible annotation of type $type"
 }
 
-internal fun MethodNode.findInvisibleAnnotation(type: Type): AnnotationNode? = invisibleAnnotations?.find { annotation ->
-    annotation.desc == type.descriptor
-}
+internal fun MethodNode.findInvisibleAnnotation(type: Type): AnnotationNode? =
+    invisibleAnnotations?.find { annotation ->
+        annotation.desc == type.descriptor
+    }
 
 internal fun MethodNode.getInvisibleAnnotation(type: Type): AnnotationNode =
     requireNotNull(findInvisibleAnnotation(type)) {
