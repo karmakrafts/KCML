@@ -31,7 +31,10 @@ import kotlin.time.Clock
 
 internal class AgentCommServer( // @formatter:off
     port: Int,
-    private val messageConsumer: (String) -> Unit = Logging.getLogger(AgentCommServer::class.java)::info
+    private val messageConsumer: (String) -> Unit = { message ->
+        val logger = Logging.getLogger(AgentCommServer::class.java)
+        logger.info("[KCML Agent]$message")
+    }
 ) : AutoCloseable { // @formatter:on
     companion object {
         fun isPortInUse(port: Int): Boolean = try {

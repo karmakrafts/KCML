@@ -18,22 +18,27 @@ package dev.karmakrafts.kcml.agent
 
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.log.RemoteLogger
-import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
 import dev.karmakrafts.kcml.agent.util.commPort
+import dev.karmakrafts.kcml.agent.util.loaderPath
 import dev.karmakrafts.kcml.agent.util.logging
 import java.lang.instrument.Instrumentation
+import kotlin.io.path.Path
 
+@Suppress("UNUSED")
 object KCMLAgent {
     @JvmStatic
-    fun agentmain(joinedArgs: String, instrumentation: Instrumentation) {
+    fun agentmain(joinedArgs: String?, instrumentation: Instrumentation) {
+        require(joinedArgs != null) { "KCML compiler agent requires initial startup options" }
         val args = KCMLAgentArguments.parse(joinedArgs)
         val commClient = AgentCommClient(args.commPort)
         val logger = if (args.logging) RemoteLogger(commClient) else NoopLogger
         logger.info { "Initializing KCML compiler agent.." }
         val loader = MixinLoader(logger)
-        instrumentation.addTransformer(MixinClassTransformer(logger, loader))
+        logger.info { "Loading builtin loader mixins" }
+        loader.load(listOf(Path(args.loaderPath)))
+        //instrumentation.addTransformer(MixinClassTransformer(logger, loader))
     }
 }

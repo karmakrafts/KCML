@@ -24,20 +24,11 @@ plugins {
 }
 
 configureJava(libs.versions.java)
-val shadeImplementation = configurations.create("shadeImplementation")
-
-configurations {
-    implementation {
-        extendsFrom(shadeImplementation)
-    }
-}
 
 dependencies {
-    shadeImplementation(libs.ow2.asm.core)
-    shadeImplementation(libs.ow2.asm.tree)
-    shadeImplementation(libs.annotations)
-    shadeImplementation(libs.kotlin.stdlib)
-    shadeImplementation(libs.kotlin.reflect)
+    implementation(libs.ow2.asm.core)
+    implementation(libs.ow2.asm.tree)
+    implementation(libs.annotations)
 
     testImplementation(libs.kotlin.test)
 }
@@ -47,13 +38,11 @@ tasks {
         useJUnitPlatform()
     }
     shadowJar {
-        configurations = setOf(shadeImplementation)
-        entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar
         archiveClassifier = ""
-        relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")
-        relocate("kotlin", "${rootProject.group}.shaded.kotlin")
-        relocate("org.jetbrains.annotations", "${rootProject.group}.shaded.org.jetbrains.annotations")
-        relocate("org.intellij.lang.annotations", "${rootProject.group}.shaded.org.intellij.lang.annotations")
+        addMultiReleaseAttribute = false
+        relocationPrefix = "${rootProject.group}.agent.internal"
+        enableAutoRelocation = true
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
         manifest {
             attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgent"
             attributes["Can-Redefine-Classes"] = true

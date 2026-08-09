@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.asm
+package dev.karmakrafts.kcml.agent.mixin
 
-import org.objectweb.asm.Type
-
-internal inline val Type.isMethodType: Boolean
-    get() = '(' in descriptor
-
-internal inline val Type.isObjectType: Boolean
-    get() = !isMethodType
-
-internal inline val Type.dottedName: String
-    get() = internalName.replace('/', '.')
+internal class MixinRuntimeInstantiationException(message: String?) : IllegalStateException(message)

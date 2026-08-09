@@ -23,14 +23,36 @@ import org.objectweb.asm.tree.ClassNode
 internal val ClassNode.dottedName: String
     get() = name.replace('/', '.')
 
-internal fun ClassNode.hasAnnotation(type: Type): Boolean {
-    return visibleAnnotations?.any { annotationNode ->
-        annotationNode.desc == type.descriptor
-    } == true
+internal fun ClassNode.hasVisibleAnnotation(type: Type): Boolean = visibleAnnotations?.any { annotationNode ->
+    annotationNode.desc == type.descriptor
+} == true
+
+internal fun ClassNode.hasInvisibleAnnotation(type: Type): Boolean = invisibleAnnotations?.any { annotationNode ->
+    annotationNode.desc == type.descriptor
+} == true
+
+internal fun ClassNode.hasAnnotation(type: Type): Boolean = hasInvisibleAnnotation(type) || hasVisibleAnnotation(type)
+
+internal fun ClassNode.findVisibleAnnotation(type: Type): AnnotationNode? = visibleAnnotations?.find { annotation ->
+    annotation.desc == type.descriptor
 }
 
+internal fun ClassNode.getVisibleAnnotation(type: Type): AnnotationNode = requireNotNull(findVisibleAnnotation(type)) {
+    "Class $dottedName does not have a visible annotation of type $type"
+}
+
+internal fun ClassNode.findInvisibleAnnotation(type: Type): AnnotationNode? = invisibleAnnotations?.find { annotation ->
+    annotation.desc == type.descriptor
+}
+
+internal fun ClassNode.getInvisibleAnnotation(type: Type): AnnotationNode =
+    requireNotNull(findInvisibleAnnotation(type)) {
+        "Class $dottedName does not have an invisible annotation of type $type"
+    }
+
 internal fun ClassNode.getAnnotation(type: Type): AnnotationNode =
-    visibleAnnotations.first { annotationNode -> annotationNode.desc == type.descriptor }
+    findVisibleAnnotation(type) ?: findInvisibleAnnotation(type)
+    ?: error("Class $dottedName does not have an annotation of type $type")
 
 internal fun ClassNode.implements(type: Type): Boolean = interfaces.any { name -> name == type.internalName }
 

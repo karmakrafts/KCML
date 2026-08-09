@@ -35,11 +35,11 @@ import kotlin.io.path.absolutePathString
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     private fun buildAgentArgs(
         configuration: CompilerConfiguration
-    ): Map<String, String> = buildMap {
+    ): Map<String, Any> = buildMap {
         this["loader_path"] = KCMLBootstrap.loaderPath.absolutePathString()
         configuration.kcmlAgentCommPort?.let { port ->
-            this["logging"] = configuration.kcmlAgentLogging.toString()
-            this["comm_port"] = port.toString()
+            this["logging"] = configuration.kcmlAgentLogging
+            this["comm_port"] = port
         }
         val moduleName = configuration.kcmlModuleName
         if (moduleName?.isNotEmpty() == true) {

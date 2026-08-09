@@ -27,12 +27,12 @@ import org.objectweb.asm.tree.MethodNode
  * A mixin component for injection constructed from the `Inject` annotation exposed by the runtime API.
  */
 internal data class InjectComponent( // @formatter:off
-    val mixinClass: ClassNode,
-    val mixinMethod: MethodNode,
     val name: String,
     val descriptor: Type?,
     val slice: Slice,
-    val target: Target
+    val target: Target,
+    val mixinClass: ClassNode,
+    val mixinMethod: MethodNode
 ) : MixinComponent { // @formatter:on
     companion object {
         fun fromAnnotation( // @formatter:off
@@ -40,12 +40,12 @@ internal data class InjectComponent( // @formatter:off
             mixinMethod: MethodNode,
             node: AnnotationNode
         ): InjectComponent = InjectComponent( // @formatter:on
-            mixinClass = mixinClass,
-            mixinMethod = mixinMethod,
             name = requireNotNull(node.getValue("name")) { "InjectComponent requires name" },
             descriptor = node.getValue<String>("descriptor")?.let(Type::getMethodType),
             slice = node.getValue<AnnotationNode>("slice")?.let(Slice::fromAnnotation) ?: Slice(),
-            target = node.getValue<AnnotationNode>("target")?.let(Target::fromAnnotation) ?: Target()
+            target = node.getValue<AnnotationNode>("target")?.let(Target::fromAnnotation) ?: Target(),
+            mixinClass = mixinClass,
+            mixinMethod = mixinMethod
         )
     }
 

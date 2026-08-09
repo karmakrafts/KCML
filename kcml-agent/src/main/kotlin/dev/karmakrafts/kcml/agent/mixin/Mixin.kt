@@ -16,21 +16,23 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
+import dev.karmakrafts.kcml.agent.log.Logger
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 
 internal data class Mixin( // @formatter:off
     val mixinClass: ClassNode,
     val target: Type,
-    val priority: Int
+    val priority: Int,
+    private val logger: Logger,
+    private val loader: MixinLoader
 ) : Comparable<Mixin> { // @formatter:on
-    val components: List<MixinComponent> by lazy {
-        buildList {
-            // Handle creating all required method based mixin components
-            for (method in mixinClass.methods) {
-                val componentType = MixinComponents.findMixinComponentType(method) ?: continue
-                this += MixinComponents.tryCreateComponent(componentType, mixinClass, method) ?: continue
-            }
+    val components: List<MixinComponent> = buildList {
+        // Handle creating all required method based mixin components
+        val components = loader.components
+        for (method in mixinClass.methods) {
+            val componentType = components.findMixinComponentType(method) ?: continue
+            this += components.tryCreateComponent(componentType, mixinClass, method) ?: continue
         }
     }
 

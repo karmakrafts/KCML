@@ -18,9 +18,9 @@ package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.dottedName
-import dev.karmakrafts.kcml.agent.asm.getAnnotation
+import dev.karmakrafts.kcml.agent.asm.getInvisibleAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
-import dev.karmakrafts.kcml.agent.asm.hasAnnotation
+import dev.karmakrafts.kcml.agent.asm.hasInvisibleAnnotation
 import dev.karmakrafts.kcml.agent.asm.implements
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
@@ -31,38 +31,54 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
+import kotlin.time.Clock
 
 internal class MixinLoader(
     private val logger: Logger
 ) {
-    fun load(paths: List<Path>): List<Mixin> {
-        val mixins = ArrayList<Mixin>()
+    val components: MixinComponents = MixinComponents(logger)
+    private val lock: Any = Any()
+
+    val mixins: List<Mixin>
+        field: ArrayList<Mixin> = ArrayList()
+
+    fun load(paths: List<Path>) = synchronized(lock) {
+        mixins.clear() // Allow re-loading all mixins
+        val startTime = Clock.System.now()
         for (path in paths) {
             mixins += when {
                 path.isRegularFile() && path.extension == "jar" -> loadFromJar(path)
-                else -> error("MixinLoader does not currently support loading mixins from $path")
+                else -> {
+                    logger.warn { "Unsupported path $path for MixinLoader, skipping" }
+                    continue
+                }
             }
         }
-        return mixins
+        val time = Clock.System.now() - startTime
+        logger.info { "Loaded ${mixins.size} mixins in ${time.inWholeMilliseconds}ms" }
+    }
+
+    fun isMixin(type: Type): Boolean = mixins.any { mixin ->
+        mixin.mixinClass.name == type.internalName
     }
 
     private fun isValidMixin(classNode: ClassNode): Boolean { // @formatter:off
-        return (classNode.hasAnnotation(Types.Mixin.directMixin)
-            || classNode.hasAnnotation(Types.Mixin.indirectMixin))
+        return (classNode.hasInvisibleAnnotation(Types.Mixin.directMixin)
+            || classNode.hasInvisibleAnnotation(Types.Mixin.indirectMixin))
             && classNode.implements(Types.Mixin.mixin)
     } // @formatter:on
 
     private fun createMixin(classNode: ClassNode): Result<Mixin> {
         val (targetClassType, priority) = when {
-            classNode.hasAnnotation(Types.Mixin.directMixin) -> {
-                val annotation = classNode.getAnnotation(Types.Mixin.directMixin)
+            classNode.hasInvisibleAnnotation(Types.Mixin.directMixin) -> {
+                val annotation = classNode.getInvisibleAnnotation(Types.Mixin.directMixin)
                 annotation.getValue<Type>("target")?.let { type ->
                     type to (annotation.getValue<Int>("priority") ?: 0)
                 } ?: return Result.failure(Throwable("Mixin ${classNode.dottedName} is missing a target"))
             }
 
-            classNode.hasAnnotation(Types.Mixin.indirectMixin) -> {
-                val annotation = classNode.getAnnotation(Types.Mixin.indirectMixin)
+            classNode.hasInvisibleAnnotation(Types.Mixin.indirectMixin) -> {
+                val annotation = classNode.getInvisibleAnnotation(Types.Mixin.indirectMixin)
                 Type.getObjectType(annotation.getValue<String>("target")?.replace('.', '/'))?.let { type ->
                     type to (annotation.getValue<Int>("priority") ?: 0)
                 } ?: return Result.failure(Throwable("Mixin ${classNode.dottedName} is missing a target"))
@@ -71,16 +87,16 @@ internal class MixinLoader(
             else -> return Result.failure(Throwable("Unsupported mixin definition for class ${classNode.dottedName}"))
         }
         logger.info { "Loaded mixin ${classNode.dottedName}" }
-        return Result.success(Mixin(classNode, targetClassType, priority))
+        return Result.success(Mixin(classNode, targetClassType, priority, logger, this))
     }
 
     private fun loadFromJar(jarPath: Path): List<Mixin> {
         logger.info { "Loading mixins from JAR at $jarPath" }
         return JarFile(jarPath.toFile()).use { jarFile ->
             // @formatter:off
-            jarFile.versionedStream()
+            jarFile.stream()
                 .parallel()
-                .filter { entry -> entry.realName.endsWith(".class") }
+                .filter { entry -> !entry.isDirectory && entry.realName.endsWith(".class") }
                 .map { entry ->
                     jarFile.getInputStream(entry).use { classStream ->
                         val classBytes = classStream.readBytes()

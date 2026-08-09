@@ -51,7 +51,7 @@ class AgentInjector( // @formatter:off
         VirtualMachine.attach(descriptor)
     }
 
-    fun inject(options: Map<String, String> = emptyMap()): Boolean {
+    fun inject(options: Map<String, Any> = emptyMap()): Boolean {
         agentJar.unpackIfNeeded(agentPath)
         return tryAttachSelf().fold(onSuccess = { vm ->
             val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
