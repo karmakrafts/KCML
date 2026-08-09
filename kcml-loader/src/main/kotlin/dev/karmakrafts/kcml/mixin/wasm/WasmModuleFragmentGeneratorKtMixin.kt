@@ -32,7 +32,7 @@ import org.objectweb.asm.Opcodes
 
 @Suppress("UNUSED")
 @OptIn(KCMLHookApi::class)
-@IndirectMixin("org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleFragmentGeneratorKt")
+@IndirectMixin("org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleFragmentGeneratorKt", -999)
 internal object WasmModuleFragmentGeneratorKtMixin : Mixin {
     @Inject( // @formatter:off
         name = "compileIrFile",

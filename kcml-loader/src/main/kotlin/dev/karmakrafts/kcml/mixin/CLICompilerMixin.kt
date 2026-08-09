@@ -35,9 +35,11 @@ import kotlin.io.path.Path
 @DirectMixin(CLICompiler::class)
 internal class CLICompilerMixin<A : CommonCompilerArguments> : Mixin, ThisAware<CLICompiler<A>> {
     @Inject("execImpl")
-    fun execImpl(
-        @Capture messageCollector: MessageCollector, @Capture services: Services, @Capture arguments: A
-    ) {
+    fun execImpl( // @formatter:off
+        @Capture messageCollector: MessageCollector,
+        @Capture services: Services,
+        @Capture arguments: A
+    ) { // @formatter:on
         val classLoader = getThis()::class.java.classLoader
         val classLoaderType = classLoader::class.java
         val addURLMethod = classLoaderType.getMethod("addURL", URL::class.java)

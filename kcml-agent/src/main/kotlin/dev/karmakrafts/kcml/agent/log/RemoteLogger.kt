@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.log
 
-import kotlin.reflect.KClass
+import dev.karmakrafts.kcml.agent.util.AgentCommClient
 
-/**
- * May be used to indicate a [Mixin] whose target class is publicly visible
- * and may be identified by concrete type at compile time.
- */
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.CLASS)
-annotation class DirectMixin( // @formatter:off
-    val target: KClass<*>,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
-) // @formatter:on
+internal class RemoteLogger(val client: AgentCommClient) : Logger {
+    override fun debug(message: () -> Any?) {
+        client.log("[DEBUG] ${message()}")
+    }
+
+    override fun info(message: () -> Any?) {
+        client.log("[-INFO] ${message()}")
+    }
+
+    override fun warn(message: () -> Any?) {
+        client.log("[-WARN] ${message()}")
+    }
+
+    override fun error(message: () -> Any?) {
+        client.log("[ERROR] ${message()}")
+    }
+}

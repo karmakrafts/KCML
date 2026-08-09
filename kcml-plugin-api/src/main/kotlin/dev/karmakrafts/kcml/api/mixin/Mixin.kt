@@ -21,6 +21,10 @@ package dev.karmakrafts.kcml.api.mixin
  * of the mixin runtime compiler.
  */
 interface Mixin {
+    companion object {
+        const val DEFAULT_PRIORITY: Int = 0
+    }
+
     val constantTable: ConstantTable
         get() = throw NotImplementedError("This should not be called directly")
 }

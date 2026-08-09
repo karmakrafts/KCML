@@ -34,6 +34,11 @@ package dev.karmakrafts.kcml.api.mixin
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.VALUE_PARAMETER)
 annotation class Capture( // @formatter:off
-    val name: String = "",
-    val index: Int = -1
-) // @formatter:on
+    val name: String = AUTOMATIC_NAME,
+    val index: Int = AUTOMATIC_INDEX
+) { // @formatter:on
+    companion object {
+        const val AUTOMATIC_NAME: String = ""
+        const val AUTOMATIC_INDEX: Int = -1
+    }
+}

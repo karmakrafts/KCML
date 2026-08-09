@@ -22,4 +22,7 @@ package dev.karmakrafts.kcml.api.mixin
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
-annotation class IndirectMixin(val target: String)
+annotation class IndirectMixin( // @formatter:off
+    val target: String,
+    val priority: Int = Mixin.DEFAULT_PRIORITY
+) // @formatter:on

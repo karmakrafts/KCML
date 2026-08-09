@@ -36,6 +36,8 @@ dependencies {
     shadeImplementation(libs.ow2.asm.core)
     shadeImplementation(libs.ow2.asm.tree)
     shadeImplementation(libs.annotations)
+    shadeImplementation(libs.kotlin.stdlib)
+    shadeImplementation(libs.kotlin.reflect)
 
     testImplementation(libs.kotlin.test)
 }
@@ -49,6 +51,7 @@ tasks {
         entryCompression = ZipEntryCompression.STORED // Don't need compression with Jar-in-Jar
         archiveClassifier = ""
         relocate("org.objectweb.asm", "${rootProject.group}.shaded.org.objectweb.asm")
+        relocate("kotlin", "${rootProject.group}.shaded.kotlin")
         relocate("org.jetbrains.annotations", "${rootProject.group}.shaded.org.jetbrains.annotations")
         relocate("org.intellij.lang.annotations", "${rootProject.group}.shaded.org.intellij.lang.annotations")
         manifest {

@@ -28,32 +28,41 @@ package dev.karmakrafts.kcml.api.mixin
  * @param target If the instruction being matched is a method instruction,
  *  this parameter may be used to match a call to a specific function.
  *  By default, an empty [Target] is passed which means match all calls.
- * @param offset Use the nth instruction from the match as the needle.
- *  0 means pick the exact instruction that was matched.
  * @param order The ordering in which the injection happens relative to the needle.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Inject( // @formatter:off
     val name: String,
-    val descriptor: String = "",
+    val descriptor: String = ANY_DESCRIPTOR,
     val slice: Slice = Slice(),
     val target: Target = Target(),
-    val offset: Int = 0,
     val order: Order = Order.AFTER
 ) { // @formatter:on
+    companion object {
+        const val ANY_DESCRIPTOR: String = ""
+        const val ANY_NAME: String = ""
+        const val ANY_OWNER: String = ""
+        const val ANY_OPCODE: Int = -1
+        const val ANY_INDEX: Int = -1
+    }
+
     enum class Order {
         BEFORE, AFTER
     }
 
     annotation class Target(
-        val name: String = "",
-        val descriptor: String = "",
-        val opcode: Int = -1,
+        val owner: String = ANY_OWNER,
+        val name: String = ANY_NAME,
+        val descriptor: String = ANY_DESCRIPTOR,
+        val index: Int = ANY_INDEX,
+        val opcode: Int = ANY_OPCODE,
         val ordinal: Int = 0,
+        val offset: Int = 0
     )
 
-    annotation class Slice(
-        val start: Target = Target(), val end: Target = Target()
-    )
+    annotation class Slice( // @formatter:off
+        val start: Target = Target(),
+        val end: Target = Target()
+    ) // @formatter:on
 }

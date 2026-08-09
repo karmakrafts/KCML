@@ -32,7 +32,7 @@ import org.objectweb.asm.Opcodes
 
 @OptIn(ExperimentalForeignApi::class, KCMLHookApi::class)
 @Suppress("UNUSED_PARAMETER")
-@IndirectMixin("org.jetbrains.kotlin.backend.konan.llvm.CodeGeneratorVisitor")
+@IndirectMixin("org.jetbrains.kotlin.backend.konan.llvm.CodeGeneratorVisitor", -999)
 internal class CodeGeneratorVisitorMixin : Mixin, ThisAware<Any> {
     @Inject( // @formatter:off
         name = "evaluateFunctionCall",

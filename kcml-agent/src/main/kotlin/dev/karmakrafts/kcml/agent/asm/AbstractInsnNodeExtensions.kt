@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.asm
 
-import kotlin.reflect.KClass
+import org.objectweb.asm.tree.AbstractInsnNode
+import org.objectweb.asm.tree.InsnList
 
-/**
- * May be used to indicate a [Mixin] whose target class is publicly visible
- * and may be identified by concrete type at compile time.
- */
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.CLASS)
-annotation class DirectMixin( // @formatter:off
-    val target: KClass<*>,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
-) // @formatter:on
+internal fun AbstractInsnNode.shift(list: InsnList, offset: Int): AbstractInsnNode? {
+    val index = list.indexOf(this)
+    if (index == -1) return null
+    val offsetIndex = index + offset
+    if (offsetIndex < 0 || offsetIndex >= list.size()) return null
+    return list.get(offsetIndex)
+}

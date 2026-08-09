@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.asm
 
-import kotlin.reflect.KClass
+import org.objectweb.asm.ClassWriter
 
-/**
- * May be used to indicate a [Mixin] whose target class is publicly visible
- * and may be identified by concrete type at compile time.
- */
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.CLASS)
-annotation class DirectMixin( // @formatter:off
-    val target: KClass<*>,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
-) // @formatter:on
+internal class NonLoadingClassWriter(flags: Int) : ClassWriter(flags) {
+    /**
+     * Frame calculation usually relies on class loading to determine common super classes,
+     * which would cause major problems in an Instrumentation context.
+     * We just stub the function to get rid of any class-loader dependant logic here.
+     */
+    override fun getCommonSuperClass(type1: String?, type2: String?): String {
+        return Types.any.internalName
+    }
+}

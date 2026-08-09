@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.asm
 
-import kotlin.reflect.KClass
+import org.objectweb.asm.tree.AnnotationNode
 
-/**
- * May be used to indicate a [Mixin] whose target class is publicly visible
- * and may be identified by concrete type at compile time.
- */
-@Retention(AnnotationRetention.BINARY)
-@Target(AnnotationTarget.CLASS)
-annotation class DirectMixin( // @formatter:off
-    val target: KClass<*>,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
-) // @formatter:on
+internal inline fun <reified T> AnnotationNode.getValue(name: String): T? {
+    return values.windowed(2, 2)
+        .filter { (valueName, _) -> valueName == name }
+        .map { (_, value) -> value }
+        .firstOrNull() as? T
+}

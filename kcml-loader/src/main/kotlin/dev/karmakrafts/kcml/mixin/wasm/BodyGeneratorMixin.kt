@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.mixin.Capture
 import dev.karmakrafts.kcml.api.mixin.DirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Order
+import dev.karmakrafts.kcml.api.mixin.Inject.Slice
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
 import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
@@ -33,15 +34,15 @@ import org.objectweb.asm.Opcodes
 
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
-@DirectMixin(BodyGenerator::class)
+@DirectMixin(BodyGenerator::class, -999)
 internal class BodyGeneratorMixin : Mixin, ThisAware<BodyGenerator> {
     @Inject( // @formatter:off
         name = "generateCall",
-        target = Target(
-            name = "tryToGenerateIntrinsicCall",
-            opcode = Opcodes.INVOKESPECIAL
+        slice = Slice(
+            start = Target(opcode = Opcodes.INVOKEINTERFACE, name = "getOwner"),
+            end = Target(opcode = Opcodes.INVOKEVIRTUAL, name = "getReturnType")
         ),
-        offset = -3,
+        target = Target(opcode = Opcodes.ALOAD, index = 0),
         order = Order.BEFORE
     )
     fun generateCall(
