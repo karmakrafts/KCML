@@ -64,6 +64,7 @@ class InjectComponentTest {
             if (includeCaptured) {
                 localVariables.add(LocalVariableNode("captured", "Ljava/lang/String;", null, start, end, 8))
             }
+            maxLocals = 9
         }
 
     private fun createComponent(
@@ -102,7 +103,7 @@ class InjectComponentTest {
         }
 
         val injectedVariables = targetMethod.instructions.filterIsInstance<VarInsnNode>()
-        assertEquals(listOf(0, 5, 5, 8, 8), injectedVariables.map { it.`var` })
+        assertEquals(listOf(9, 5, 5, 8, 8), injectedVariables.map { it.`var` })
         injectedVariables.forEach { injectedInstruction ->
             originalInstructions.forEach { originalInstruction ->
                 assertNotSame(originalInstruction, injectedInstruction)

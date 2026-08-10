@@ -34,21 +34,25 @@ internal fun List<AbstractInsnNode>.toInsnList(): InsnList {
     return list
 }
 
-private fun InsnList.getLowestStackIndex(): Int {
+private fun InsnList.getLowestStackIndex(exempt: Set<AbstractInsnNode>): Int {
     var index = Int.MAX_VALUE
     for (insn in this) when (insn) {
         is VarInsnNode -> {
+            if (insn in exempt) continue
             if (index > insn.`var`) index = insn.`var`
         }
     }
     return if (index == Int.MAX_VALUE) -1 else index
 }
 
-internal fun InsnList.relocateStack(startIndex: Int): InsnList {
-    val currentBaseIndex = getLowestStackIndex()
+internal fun InsnList.relocateStack(
+    startIndex: Int, exempt: Set<AbstractInsnNode> = emptySet()
+): InsnList {
+    val currentBaseIndex = getLowestStackIndex(exempt)
     if (currentBaseIndex == -1) return this // Nothing to relocate
     for (insn in this) when (insn) {
         is VarInsnNode -> {
+            if (insn in exempt) continue
             insn.`var` -= currentBaseIndex
             insn.`var` += startIndex
         }

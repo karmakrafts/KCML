@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.asm.findInvisibleParameterAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
 import dev.karmakrafts.kcml.agent.asm.implements
+import dev.karmakrafts.kcml.agent.asm.relocateStack
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.signature.SignatureReader
@@ -293,7 +294,7 @@ internal data class InjectComponent( // @formatter:off
             .processReturnFrame(context)
             .processReturnContext(context)
             .processThisAware(context)
-            // TODO: relocateStack() at the end, but extend relocateStack so everything in relocated can be ignored
+            .relocateStack(targetMethod.maxLocals, relocated)
     } // @formatter:on
 
     private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {

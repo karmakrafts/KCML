@@ -76,6 +76,22 @@ class InsnListExtensionsTest {
     }
 
     @Test
+    fun `does not relocate exempt variable instructions`() {
+        val exempt = VarInsnNode(ALOAD, 3)
+        val instructions = InsnList().apply {
+            add(exempt)
+            add(VarInsnNode(ALOAD, 5))
+            add(VarInsnNode(ISTORE, 8))
+        }
+
+        instructions.relocateStack(10, setOf(exempt))
+
+        assertEquals(3, exempt.`var`)
+        assertEquals(10, (instructions[1] as VarInsnNode).`var`)
+        assertEquals(13, (instructions[2] as VarInsnNode).`var`)
+    }
+
+    @Test
     fun `leaves lists without variable instructions unchanged`() {
         val instructions = InsnList().apply {
             add(InsnNode(ICONST_0))
