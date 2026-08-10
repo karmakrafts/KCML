@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.agent.asm.getInvisibleAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
 import dev.karmakrafts.kcml.agent.asm.hasInvisibleAnnotation
 import dev.karmakrafts.kcml.agent.asm.implements
+import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
 import org.objectweb.asm.ClassReader
@@ -90,6 +91,12 @@ internal class MixinLoader(
         return Result.success(Mixin(classNode, targetClassType, priority, logger, this))
     }
 
+    private fun preprocessClass(classNode: ClassNode) {
+        for (method in classNode.methods) {
+            method.restoreParameters()
+        }
+    }
+
     private fun loadFromJar(jarPath: Path): List<Mixin> {
         logger.info { "Loading mixins from JAR at $jarPath" }
         return JarFile(jarPath.toFile()).use { jarFile ->
@@ -103,6 +110,7 @@ internal class MixinLoader(
                         val reader = ClassReader(classBytes)
                         val classNode = ClassNode()
                         reader.accept(classNode, 0)
+                        preprocessClass(classNode)
                         classNode
                     }
                 }

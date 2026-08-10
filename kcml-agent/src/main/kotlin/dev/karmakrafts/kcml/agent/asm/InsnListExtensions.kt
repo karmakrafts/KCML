@@ -18,7 +18,15 @@ package dev.karmakrafts.kcml.agent.asm
 
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.InsnList
+import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.VarInsnNode
+
+internal fun InsnList.copy(): InsnList {
+    val labels = filterIsInstance<LabelNode>().associateWith { LabelNode() }
+    val list = InsnList()
+    forEach { instruction -> list.add(instruction.clone(labels)) }
+    return list
+}
 
 internal fun List<AbstractInsnNode>.toInsnList(): InsnList {
     val list = InsnList()

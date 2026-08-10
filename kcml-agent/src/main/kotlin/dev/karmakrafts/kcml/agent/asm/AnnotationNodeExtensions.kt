@@ -36,9 +36,9 @@ private inline fun <reified T> Any?.unwrapValue(): T? {
 } // @formatter:on
 
 internal inline fun <reified T> AnnotationNode.getValue(name: String): T? {
-    return values.windowed(2, 2)
-        .filter { (valueName, _) -> valueName == name }
-        .map { (_, value) -> value }
-        .firstOrNull()
+    return values?.windowed(2, 2)
+        ?.filter { (valueName, _) -> valueName == name }
+        ?.map { (_, value) -> value }
+        ?.firstOrNull()
         ?.unwrapValue()
 }

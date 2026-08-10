@@ -19,15 +19,43 @@ package dev.karmakrafts.kcml.agent.asm
 import org.objectweb.asm.Opcodes.ALOAD
 import org.objectweb.asm.Opcodes.ICONST_0
 import org.objectweb.asm.Opcodes.ISTORE
+import org.objectweb.asm.Opcodes.GOTO
 import org.objectweb.asm.Opcodes.RETURN
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.JumpInsnNode
+import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.VarInsnNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 class InsnListExtensionsTest {
+    @Test
+    fun `copies instructions without moving or sharing nodes`() {
+        val target = LabelNode()
+        val instructions = InsnList().apply {
+            add(VarInsnNode(ALOAD, 2))
+            add(JumpInsnNode(GOTO, target))
+            add(target)
+            add(InsnNode(RETURN))
+        }
+
+        val copied = instructions.copy()
+
+        assertEquals(4, instructions.size())
+        assertEquals(4, copied.size())
+        instructions.toArray().zip(copied.toArray()).forEach { (original, copy) ->
+            assertNotSame(original, copy)
+        }
+        assertSame(target, (instructions[1] as JumpInsnNode).label)
+        assertSame(copied[2], (copied[1] as JumpInsnNode).label)
+
+        (copied[0] as VarInsnNode).`var` = 7
+        assertEquals(2, (instructions[0] as VarInsnNode).`var`)
+    }
+
     @Test
     fun `relocates variable indexes and preserves all instructions`() {
         val instructions = InsnList().apply {

@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.dottedName
+import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
 import org.objectweb.asm.ClassReader
@@ -58,6 +59,12 @@ internal class MixinClassTransformer( // @formatter:off
         }
     }
 
+    private fun preprocessClass(classNode: ClassNode) {
+        for (method in classNode.methods) {
+            method.restoreParameters()
+        }
+    }
+
     override fun transform(
         module: Module?,
         loader: ClassLoader?,
@@ -84,6 +91,7 @@ internal class MixinClassTransformer( // @formatter:off
             classReader.accept(classNode, ClassReader.SKIP_FRAMES)
             // Explicit mixin instantiations are completely illegal, so we check for them in every class
             checkForMixinInstantiations(classNode)
+            preprocessClass(classNode)
             var wasChanged = false
             for (mixin in this.loader.mixins) {
                 try {

@@ -16,13 +16,19 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
+import dev.karmakrafts.kcml.agent.asm.Types
+import dev.karmakrafts.kcml.agent.asm.copy
 import dev.karmakrafts.kcml.agent.asm.dottedName
+import dev.karmakrafts.kcml.agent.asm.findInvisibleParameterAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
+import dev.karmakrafts.kcml.agent.asm.implements
+import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.VarInsnNode
 
 /**
  * A mixin component for injection constructed from the `Inject` annotation exposed by the runtime API.
@@ -52,14 +58,68 @@ internal data class InjectComponent( // @formatter:off
         )
     }
 
-    private fun processInjection(context: ComponentContext, targetMethod: MethodNode): InsnList {
-        // Parameter capturing analysis
-        // Replace loads of captured values with their respective target indices
-        // Replace all loads & calls to ReturnContext and replace them with target returns
-        // Replace all calls to ThisAware with their intrinsic target this load
-        // Relocate stack to max index of target method
-        TODO()
+    private val mixinMethodType: Type = Type.getMethodType(mixinMethod.desc)
+
+    private fun hasReturnContext(): Boolean = mixinMethodType.argumentTypes.any { type ->
+        type == Types.Mixin.returnContext
     }
+
+    private fun InsnList.processCapturedLocals(context: ComponentContext, targetMethod: MethodNode): InsnList {
+        val (_, _, logger) = context
+        val captures = buildMap {
+            val parameters = mixinMethod.parameters // We know this is non-null from restoring earlier
+            var stackIndex = if (mixinMethod.access and Opcodes.ACC_STATIC == 0) 1 else 0
+            for (index in parameters.indices) {
+                val parameter = parameters[index]
+                val annotation = mixinMethod.findInvisibleParameterAnnotation(index, Types.Mixin.capture)
+                if (annotation != null) {
+                    val capture = Capture.fromAnnotation(annotation)
+                    val targetIndex = capture.findStackIndex(targetMethod, parameter.name)
+                    check(targetIndex != Capture.NOT_FOUND) {
+                        "Could not find captured local ${parameter.name} in target method ${targetMethod.name}${targetMethod.desc}"
+                    }
+                    this[stackIndex] = targetIndex
+                }
+                stackIndex += mixinMethodType.argumentTypes[index].size
+            }
+        }
+        if (captures.isEmpty()) return this // If no captures were found, we return early
+        logger.info { "Found ${captures.size} capturing parameters, indices are [${captures.entries.joinToString { (key, value) -> "$key -> $value" }}]" }
+        for (instruction in this) {
+            if (instruction is VarInsnNode) {
+                instruction.`var` = captures[instruction.`var`] ?: continue
+            }
+        }
+        return this
+    }
+
+    private fun InsnList.processReturnContext(context: ComponentContext): InsnList {
+        // If the mixin function doesn't have a ReturnContext parameter, we return early
+        if (!hasReturnContext()) return this
+        val (_, _, logger) = context
+        logger.info { "Inject component has return context, processing references to returnFromTarget()" }
+        return this
+    }
+
+    private fun InsnList.processThisAware(context: ComponentContext): InsnList {
+        // If the target mixin doesn't implement ThisAware, we return early
+        if (!mixinClass.implements(Types.Mixin.thisAware)) return this
+        val (_, _, logger) = context
+        logger.info { "Mixin is this-aware, processing references to getThis()" }
+        return this
+    }
+
+    // Parameter capturing analysis
+    // Replace loads of captured values with their respective target indices
+    // Replace all loads & calls to ReturnContext and replace them with target returns
+    // Replace all calls to ThisAware with their intrinsic target this load
+    // Relocate stack to max index of target method (using relocateStack extension)
+    private fun createInjection(context: ComponentContext, targetMethod: MethodNode): InsnList { // @formatter:off
+        return mixinMethod.instructions.copy()
+            .processCapturedLocals(context, targetMethod)
+            .processReturnContext(context)
+            .processThisAware(context)
+    } // @formatter:on
 
     private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {
         val (targetClass, _, logger) = context
@@ -67,8 +127,8 @@ internal data class InjectComponent( // @formatter:off
         val needle = with(slice) { target.findWithin(instructions) }
             ?: error("Could not find injection target for ${targetClass.dottedName}.${targetMethod.name}")
         logger.info { "Found injection point in ${targetClass.dottedName}.${targetMethod.name}${targetMethod.desc}" }
-        //val injection = processInjection(context, targetMethod)
-        //order.insert(needle, injection, targetMethod.instructions)
+        val injection = createInjection(context, targetMethod)
+        order.insert(needle, injection, targetMethod.instructions)
     }
 
     override fun apply(context: ComponentContext): Boolean {

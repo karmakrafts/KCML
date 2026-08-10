@@ -29,6 +29,7 @@ internal object Types {
         val order: Type = Type.getObjectType($$"dev/karmakrafts/kcml/api/mixin/Inject$Order")
         val thisAware: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ThisAware")
         val returnContext: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ReturnContext")
+        val capture: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Capture")
     }
 
     fun getMethodOrFieldType(descriptor: String): Type = when {
