@@ -25,16 +25,24 @@ plugins {
 
 configureJava(libs.versions.java)
 
+evaluationDependsOn(":kcml-loader")
+val loaderJar = project(":kcml-loader").tasks.named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
+
 dependencies {
     implementation(libs.ow2.asm.core)
     implementation(libs.ow2.asm.tree)
     implementation(libs.annotations)
 
+    testImplementation(libs.kotlin.compiler.embeddable)
+    testImplementation(libs.kotlin.native.compiler.embeddable)
     testImplementation(libs.kotlin.test)
 }
 
 tasks {
     test {
+        dependsOn(loaderJar)
+        inputs.file(loaderJar)
+        systemProperty("kcml.loader.jar", loaderJar.get().asFile.absolutePath)
         useJUnitPlatform()
     }
     shadowJar {

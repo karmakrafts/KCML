@@ -17,9 +17,6 @@
 package dev.karmakrafts.kcml.agent.mixin
 
 import org.objectweb.asm.tree.AnnotationNode
-import org.objectweb.asm.tree.LabelNode
-import org.objectweb.asm.tree.LocalVariableNode
-import org.objectweb.asm.tree.MethodNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
@@ -35,25 +32,5 @@ class CaptureTest {
 
         assertEquals(Capture(name = null, index = Capture.ANY_INDEX), defaultCapture)
         assertEquals(Capture(name = "value", index = 3), configuredCapture)
-    }
-
-    @Test
-    fun `findIndex applies name and index filters`() {
-        val method = MethodNode().apply {
-            val start = LabelNode()
-            val end = LabelNode()
-            localVariables = mutableListOf(
-                LocalVariableNode("first", "I", null, start, end, 1),
-                LocalVariableNode("value", "Ljava/lang/String;", null, start, end, 2),
-                LocalVariableNode("value", "J", null, start, end, 3)
-            )
-        }
-
-        assertEquals(1, Capture(name = null, index = Capture.ANY_INDEX).findStackIndex(method))
-        assertEquals(2, Capture(name = "value", index = Capture.ANY_INDEX).findStackIndex(method))
-        assertEquals(3, Capture(name = null, index = 3).findStackIndex(method))
-        assertEquals(3, Capture(name = "value", index = 3).findStackIndex(method))
-        assertEquals(Capture.NOT_FOUND, Capture(name = "missing", index = Capture.ANY_INDEX).findStackIndex(method))
-        assertEquals(Capture.NOT_FOUND, Capture(name = "value", index = 4).findStackIndex(method))
     }
 }

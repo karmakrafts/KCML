@@ -16,11 +16,13 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
+import dev.karmakrafts.kcml.agent.asm.NonLoadingClassWriter
 import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
 import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AbstractInsnNode
@@ -88,7 +90,7 @@ internal class MixinClassTransformer( // @formatter:off
             }
             val classReader = ClassReader(classfileBuffer)
             val classNode = ClassNode()
-            classReader.accept(classNode, ClassReader.SKIP_FRAMES)
+            classReader.accept(classNode, 0)
             // Explicit mixin instantiations are completely illegal, so we check for them in every class
             checkForMixinInstantiations(classNode)
             preprocessClass(classNode)
@@ -100,7 +102,14 @@ internal class MixinClassTransformer( // @formatter:off
                     logger.error(error) { "Mixin ${mixin.mixinClass.dottedName} failed to apply" }
                 }
             }
-            return classfileBuffer // TODO: implement class writing by voting
+            if (wasChanged) { // If class changed, rewrite it
+                val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
+                classNode.accept(writer)
+                val newClassfileBuffer = writer.toByteArray()
+                logger.info { "Rewriting ${newClassfileBuffer.size} bytes of class file data for ${type.dottedName}" }
+                return newClassfileBuffer
+            }
+            return classfileBuffer
         } catch (error: MixinRuntimeInstantiationException) {
             throw error // Runtime instantiations are irrecoverable
         } catch (error: Throwable) {

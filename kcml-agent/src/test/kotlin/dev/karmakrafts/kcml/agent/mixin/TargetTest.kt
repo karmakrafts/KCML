@@ -23,6 +23,9 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.InsnList
+import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 import kotlin.test.Test
@@ -31,6 +34,19 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 
 class TargetTest {
+    @Test
+    fun `unconstrained target skips metadata instructions`() {
+        val start = LabelNode()
+        val firstInstruction = InsnNode(org.objectweb.asm.Opcodes.RETURN)
+        val instructions = InsnList().apply {
+            add(start)
+            add(LineNumberNode(1, start))
+            add(firstInstruction)
+        }
+
+        assertSame(firstInstruction, Target().find(instructions))
+    }
+
     @Test
     fun `reads annotation values and defaults`() {
         val defaultTarget = Target.fromAnnotation(AnnotationNode("Lexample/Target;").apply {

@@ -35,6 +35,8 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.JumpInsnNode
 import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.LocalVariableNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.VarInsnNode
@@ -132,7 +134,9 @@ internal data class InjectComponent( // @formatter:off
     private fun InsnList.processCapturedLocals( // @formatter:off
         context: ComponentContext,
         targetMethod: MethodNode,
-        relocated: HashSet<VarInsnNode>
+        injectionPoint: AbstractInsnNode,
+        relocated: HashSet<VarInsnNode>,
+        capturedIndices: HashSet<Int>
     ): InsnList { // @formatter:on
         val (_, _, logger) = context
         val captures = buildMap {
@@ -143,11 +147,12 @@ internal data class InjectComponent( // @formatter:off
                 val annotation = mixinMethod.findInvisibleParameterAnnotation(index, Types.Mixin.capture)
                 if (annotation != null) {
                     val capture = Capture.fromAnnotation(annotation)
-                    val targetIndex = capture.findStackIndex(targetMethod, parameter.name)
+                    val targetIndex = capture.findStackIndexAt(targetMethod, injectionPoint, order, parameter.name)
                     check(targetIndex != Capture.NOT_FOUND) {
-                        "Could not find captured local ${parameter.name} in target method ${targetMethod.name}${targetMethod.desc}"
+                        "Could not find captured local ${parameter.name} at injection point in target method ${targetMethod.name}${targetMethod.desc}"
                     }
                     this[stackIndex] = targetIndex
+                    capturedIndices += stackIndex
                 }
                 stackIndex += mixinMethodType.argumentTypes[index].size
             }
@@ -161,6 +166,35 @@ internal data class InjectComponent( // @formatter:off
             }
         }
         return this
+    }
+
+    private fun allocateLocals( // @formatter:off
+        targetMethod: MethodNode,
+        injection: InsnList,
+        relocated: Set<VarInsnNode>,
+        capturedIndices: Set<Int>,
+        copiedLabels: Map<LabelNode, LabelNode>
+    ): Int { // @formatter:on
+        val targetBase = targetMethod.maxLocals
+        val localBase = injection.filterIsInstance<VarInsnNode>()
+            .filterNot { instruction -> instruction in relocated }
+            .minOfOrNull { instruction -> instruction.`var` } ?: return targetBase
+        targetMethod.maxLocals += mixinMethod.maxLocals - localBase
+        val targetLocals = targetMethod.localVariables ?: mutableListOf<LocalVariableNode>().also { locals ->
+            targetMethod.localVariables = locals
+        }
+        for (local in mixinMethod.localVariables.orEmpty()) {
+            if (local.index < localBase || local.index in capturedIndices) continue
+            targetLocals += LocalVariableNode(
+                "mixin$${mixinMethod.name}$${local.name}",
+                local.desc,
+                local.signature,
+                checkNotNull(copiedLabels[local.start]) { "Could not find start label for mixin local ${local.name}" },
+                checkNotNull(copiedLabels[local.end]) { "Could not find end label for mixin local ${local.name}" },
+                targetBase + local.index - localBase
+            )
+        }
+        return targetBase
     }
 
     private fun InsnList.processReturnFrame(context: ComponentContext): InsnList {
@@ -180,6 +214,32 @@ internal data class InjectComponent( // @formatter:off
         opcode == Opcodes.INVOKEINTERFACE && owner == Types.Mixin.returnContext.internalName && name == "returnFromTarget" && desc == Type.getMethodDescriptor(
             Type.VOID_TYPE, Types.any
         )
+
+    private fun MethodInsnNode.isParameterNullCheck(): Boolean {
+        val ownerParts = owner.split('/')
+        return opcode == Opcodes.INVOKESTATIC && ownerParts == listOf(
+            charArrayOf(
+                'k', 'o', 't', 'l', 'i', 'n'
+            ).concatToString(), "jvm", "internal", "Intrinsics"
+        ) && (name == "checkNotNullParameter" || name == "checkParameterIsNotNull") && desc == Type.getMethodDescriptor(
+            Type.VOID_TYPE, Types.any, Type.getType(String::class.java)
+        )
+    }
+
+    private fun InsnList.removeReturnContextParameterChecks(returnContextIndices: Set<Int>) {
+        val checks = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isParameterNullCheck() }
+        for (check in checks) {
+            var parameterName = check.previous
+            while (parameterName != null && parameterName.opcode == -1) parameterName = parameterName.previous
+            if (parameterName !is LdcInsnNode || parameterName.cst !is String) continue
+            var parameter = parameterName.previous
+            while (parameter != null && parameter.opcode == -1) parameter = parameter.previous
+            if (parameter !is VarInsnNode || parameter.opcode != Opcodes.ALOAD || parameter.`var` !in returnContextIndices) continue
+            remove(parameter)
+            remove(parameterName)
+            remove(check)
+        }
+    }
 
     private fun InsnList.removeUnitArgument(call: MethodInsnNode): AbstractInsnNode? {
         var unitValue = call.previous
@@ -243,13 +303,14 @@ internal data class InjectComponent( // @formatter:off
         if (!hasReturnContext()) return this
         val (_, _, logger) = context
         logger.info { "Inject component has return context, processing references to returnFromTarget()" }
+        val returnContextIndices = getReturnContextStackIndices()
+        removeReturnContextParameterChecks(returnContextIndices)
         // Only rewrite calls to the erased ReturnContext API; unrelated interface calls must remain untouched.
         val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isReturnFromTargetCall() }
         if (calls.isEmpty()) return this
         val returnContextType = getReturnContextType()
         val isUnit = returnContextType == Types.unit
         val returnOpcode = if (isUnit) Opcodes.RETURN else returnContextType.getOpcode(Opcodes.IRETURN)
-        val returnContextIndices = getReturnContextStackIndices()
         for (call in calls) {
             val previous = if (isUnit) {
                 // Unit is passed as Unit.INSTANCE, but a JVM void return must leave no value on the operand stack.
@@ -263,7 +324,9 @@ internal data class InjectComponent( // @formatter:off
         return this
     }
 
-    private fun InsnList.processThisAware(context: ComponentContext): InsnList {
+    private fun InsnList.processThisAware(
+        context: ComponentContext, relocated: HashSet<VarInsnNode>
+    ): InsnList {
         // If the target mixin doesn't implement ThisAware, we return early
         if (!mixinClass.implements(Types.Mixin.thisAware)) return this
         val (_, _, logger) = context
@@ -282,19 +345,35 @@ internal data class InjectComponent( // @formatter:off
                 "ThisAware.getThis() requires the mixin receiver from local 0"
             }
             remove(receiver)
-            set(call, VarInsnNode(Opcodes.ALOAD, 0))
+            val targetReceiver = VarInsnNode(Opcodes.ALOAD, 0)
+            set(call, targetReceiver)
+            relocated += targetReceiver
         }
         return this
     }
 
-    private fun createInjection(context: ComponentContext, targetMethod: MethodNode): InsnList { // @formatter:off
+    private fun createInjection( // @formatter:off
+        context: ComponentContext,
+        targetMethod: MethodNode,
+        injectionPoint: AbstractInsnNode
+    ): InsnList { // @formatter:on
         val relocated = HashSet<VarInsnNode>()
-        return mixinMethod.instructions.copy()
-            .processCapturedLocals(context, targetMethod, relocated)
+        val capturedIndices = HashSet<Int>()
+        val sourceInstructions = mixinMethod.instructions.toArray()
+        val injection = mixinMethod.instructions.copy()
+        val copiedInstructions = injection.toArray()
+        val copiedLabels = buildMap {
+            for (index in sourceInstructions.indices) {
+                val source = sourceInstructions[index]
+                if (source is LabelNode) put(source, copiedInstructions[index] as LabelNode)
+            }
+        }
+        injection.processCapturedLocals(context, targetMethod, injectionPoint, relocated, capturedIndices)
             .processReturnFrame(context)
             .processReturnContext(context)
-            .processThisAware(context)
-            .relocateStack(targetMethod.maxLocals, relocated)
+            .processThisAware(context, relocated)
+        val targetBase = allocateLocals(targetMethod, injection, relocated, capturedIndices, copiedLabels)
+        return injection.relocateStack(targetBase, relocated)
     } // @formatter:on
 
     private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {
@@ -303,7 +382,7 @@ internal data class InjectComponent( // @formatter:off
         val needle = with(slice) { target.findWithin(instructions) }
             ?: error("Could not find injection target for ${targetClass.dottedName}.${targetMethod.name}")
         logger.info { "Found injection point in ${targetClass.dottedName}.${targetMethod.name}${targetMethod.desc}" }
-        val injection = createInjection(context, targetMethod)
+        val injection = createInjection(context, targetMethod, needle)
         order.insert(needle, injection, targetMethod.instructions)
     }
 

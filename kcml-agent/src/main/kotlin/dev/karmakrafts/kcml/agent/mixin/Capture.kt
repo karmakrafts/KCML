@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.getValue
+import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.MethodNode
 
@@ -34,19 +35,28 @@ internal data class Capture( // @formatter:off
         ) // @formatter:on
     }
 
-    fun findStackIndex(method: MethodNode, implicitName: String? = null): Int {
-        val locals = method.localVariables
-        for (local in locals) when {
-            // Filter by index directly
-            index != ANY_INDEX && index != local.index -> continue
-            // Filter by explicit name
-            name != null && name != local.name -> continue
-            // Filter by implicit name (automatically)
-            implicitName != null && index == ANY_INDEX && name == null && local.name != implicitName -> continue
-            // Found the correct local, return slot index
-            else -> return local.index
+    fun findStackIndexAt( // @formatter:off
+        targetMethod: MethodNode,
+        injectionPoint: AbstractInsnNode,
+        order: Order,
+        implicitName: String?
+    ): Int { // @formatter:on
+        val injectionIndex = targetMethod.instructions.indexOf(injectionPoint)
+        for (local in targetMethod.localVariables) {
+            val startIndex = targetMethod.instructions.indexOf(local.start)
+            val endIndex = targetMethod.instructions.indexOf(local.end)
+            val isLive = when (order) {
+                Order.BEFORE -> startIndex < injectionIndex && injectionIndex <= endIndex
+                Order.AFTER -> startIndex <= injectionIndex && injectionIndex < endIndex
+            }
+            when {
+                !isLive -> continue
+                index != ANY_INDEX && index != local.index -> continue
+                name != null && name != local.name -> continue
+                implicitName != null && index == ANY_INDEX && name == null && local.name != implicitName -> continue
+                else -> return local.index
+            }
         }
-        // Couldn't find the correct slot index
         return NOT_FOUND
     }
 }

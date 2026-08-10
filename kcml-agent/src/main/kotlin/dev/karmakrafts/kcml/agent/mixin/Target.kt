@@ -62,6 +62,7 @@ internal data class Target(
         for (currentIndex in startIndex until endIndex) {
             val insn = instructions[currentIndex]
             val currentOpcode = insn.opcode
+            if (currentOpcode < 0) continue
             // First we filter by opcode itself
             if (opcode != ANY_OPCODE && currentOpcode != opcode) continue
             // Then we apply specified target filter based on target opcode
