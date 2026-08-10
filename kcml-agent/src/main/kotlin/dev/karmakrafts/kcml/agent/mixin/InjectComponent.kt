@@ -210,21 +210,19 @@ internal data class InjectComponent( // @formatter:off
         return this
     }
 
-    private fun MethodInsnNode.isReturnFromTargetCall(): Boolean =
-        opcode == Opcodes.INVOKEINTERFACE && owner == Types.Mixin.returnContext.internalName && name == "returnFromTarget" && desc == Type.getMethodDescriptor(
-            Type.VOID_TYPE, Types.any
-        )
+    private fun MethodInsnNode.isReturnFromTargetCall(): Boolean { // @formatter:off
+        return opcode == Opcodes.INVOKEINTERFACE
+            && owner == Types.Mixin.returnContext.internalName
+            && name == "returnFromTarget"
+            && desc == Type.getMethodDescriptor(Type.VOID_TYPE, Types.any)
+    } // @formatter:on
 
-    private fun MethodInsnNode.isParameterNullCheck(): Boolean {
-        val ownerParts = owner.split('/')
-        return opcode == Opcodes.INVOKESTATIC && ownerParts == listOf(
-            charArrayOf(
-                'k', 'o', 't', 'l', 'i', 'n'
-            ).concatToString(), "jvm", "internal", "Intrinsics"
-        ) && (name == "checkNotNullParameter" || name == "checkParameterIsNotNull") && desc == Type.getMethodDescriptor(
-            Type.VOID_TYPE, Types.any, Type.getType(String::class.java)
-        )
-    }
+    private fun MethodInsnNode.isParameterNullCheck(): Boolean { // @formatter:off
+        return opcode == Opcodes.INVOKESTATIC
+            && owner == Types.intrinsics.internalName
+            && (name == "checkNotNullParameter" || name == "checkParameterIsNotNull")
+            && desc == Type.getMethodDescriptor(Type.VOID_TYPE, Types.any, Types.string)
+    } // @formatter:on
 
     private fun InsnList.removeReturnContextParameterChecks(returnContextIndices: Set<Int>) {
         val checks = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isParameterNullCheck() }
