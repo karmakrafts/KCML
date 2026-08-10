@@ -68,14 +68,15 @@ class InjectComponentTest {
 
     private fun createComponent(
         mixinMethod: MethodNode,
-        targetOpcode: Int = Opcodes.RETURN
+        targetOpcode: Int = Opcodes.RETURN,
+        mixinClass: ClassNode = ClassNode()
     ): InjectComponent = InjectComponent(
         name = "target",
         descriptor = null,
         slice = Slice(),
         target = Target(opcode = targetOpcode),
         order = Order.BEFORE,
-        mixinClass = ClassNode(),
+        mixinClass = mixinClass,
         mixinMethod = mixinMethod
     )
 
@@ -140,6 +141,100 @@ class InjectComponentTest {
         assertTrue(jumps.all { it.opcode == Opcodes.GOTO })
         assertSame(jumps.first().label, jumps.last().label)
         assertEquals(Opcodes.RETURN, jumps.first().label.next.opcode)
+    }
+
+    @Test
+    fun `replaces every this aware call with one target receiver load`() {
+        val mixinName = "example/Mixin"
+        val mixinMethod = MethodNode(0, "inject", "()V", null, null).apply {
+            parameters = mutableListOf()
+            repeat(2) {
+                instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
+                instructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        mixinName,
+                        "getThis",
+                        "()Ljava/lang/Object;",
+                        false
+                    )
+                )
+                instructions.add(InsnNode(Opcodes.POP))
+            }
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
+            instructions.add(
+                MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    "example/Other",
+                    "getThis",
+                    "()Ljava/lang/Object;",
+                    false
+                )
+            )
+            instructions.add(InsnNode(Opcodes.POP))
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val mixinClass = ClassNode().apply {
+            name = mixinName
+            interfaces = mutableListOf(Types.Mixin.thisAware.internalName)
+        }
+        val targetMethod = MethodNode(0, "target", "()V", null, null).apply {
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val component = createComponent(mixinMethod, mixinClass = mixinClass)
+
+        assertTrue(component.apply(createContext(targetMethod)))
+
+        assertEquals(
+            listOf(
+                Opcodes.ALOAD,
+                Opcodes.POP,
+                Opcodes.ALOAD,
+                Opcodes.POP,
+                Opcodes.ALOAD,
+                Opcodes.INVOKEVIRTUAL,
+                Opcodes.POP,
+                Opcodes.GOTO,
+                Opcodes.RETURN
+            ),
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
+        )
+        assertEquals(
+            listOf("example/Other"),
+            targetMethod.instructions.filterIsInstance<MethodInsnNode>().map { it.owner }
+        )
+        assertEquals(listOf(0, 0, 0), targetMethod.instructions.filterIsInstance<VarInsnNode>().map { it.`var` })
+    }
+
+    @Test
+    fun `leaves this aware calls unchanged for a mixin without the interface`() {
+        val mixinName = "example/Mixin"
+        val mixinMethod = MethodNode(0, "inject", "()V", null, null).apply {
+            parameters = mutableListOf()
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
+            instructions.add(
+                MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    mixinName,
+                    "getThis",
+                    "()Ljava/lang/Object;",
+                    false
+                )
+            )
+            instructions.add(InsnNode(Opcodes.POP))
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val targetMethod = MethodNode(0, "target", "()V", null, null).apply {
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val component = createComponent(mixinMethod, mixinClass = ClassNode().apply { name = mixinName })
+
+        assertTrue(component.apply(createContext(targetMethod)))
+
+        assertEquals(
+            listOf(Opcodes.ALOAD, Opcodes.INVOKEVIRTUAL, Opcodes.POP, Opcodes.GOTO, Opcodes.RETURN),
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
+        )
     }
 
     @Test

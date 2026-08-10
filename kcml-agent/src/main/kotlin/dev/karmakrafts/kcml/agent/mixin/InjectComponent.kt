@@ -267,9 +267,22 @@ internal data class InjectComponent( // @formatter:off
         if (!mixinClass.implements(Types.Mixin.thisAware)) return this
         val (_, _, logger) = context
         logger.info { "Mixin is this-aware, processing references to getThis()" }
-        // TODO:
-        //   All calls to ThisAware.getThis() in this instruction list should be replaced with ALOAD 0 instructions,
-        //   also taking into account the extra ALOAD already present because of the virtual getThis call
+        val getThisDescriptor = Type.getMethodDescriptor(Types.any)
+        val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> // @formatter:off
+            instruction.opcode == Opcodes.INVOKEVIRTUAL
+                && instruction.owner == mixinClass.name
+                && instruction.name == "getThis"
+                && instruction.desc == getThisDescriptor
+        } // @formatter:on
+        for (call in calls) {
+            var receiver = call.previous
+            while (receiver != null && receiver.opcode == -1) receiver = receiver.previous
+            check(receiver is VarInsnNode && receiver.opcode == Opcodes.ALOAD && receiver.`var` == 0) {
+                "ThisAware.getThis() requires the mixin receiver from local 0"
+            }
+            remove(receiver)
+            set(call, VarInsnNode(Opcodes.ALOAD, 0))
+        }
         return this
     }
 
