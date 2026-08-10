@@ -21,9 +21,13 @@ import dev.karmakrafts.kcml.agent.log.NoopLogger
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.JumpInsnNode
 import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.LocalVariableNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.ParameterNode
 import org.objectweb.asm.tree.VarInsnNode
@@ -62,11 +66,14 @@ class InjectComponentTest {
             }
         }
 
-    private fun createComponent(mixinMethod: MethodNode): InjectComponent = InjectComponent(
+    private fun createComponent(
+        mixinMethod: MethodNode,
+        targetOpcode: Int = Opcodes.RETURN
+    ): InjectComponent = InjectComponent(
         name = "target",
         descriptor = null,
         slice = Slice(),
-        target = Target(opcode = Opcodes.RETURN),
+        target = Target(opcode = targetOpcode),
         order = Order.BEFORE,
         mixinClass = ClassNode(),
         mixinMethod = mixinMethod
@@ -109,11 +116,135 @@ class InjectComponentTest {
                 Opcodes.LSTORE,
                 Opcodes.ALOAD,
                 Opcodes.ASTORE,
-                Opcodes.RETURN,
+                Opcodes.GOTO,
                 Opcodes.RETURN
             ),
             targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
         )
+    }
+
+    @Test
+    fun `redirects all mixin returns to one local return frame`() {
+        val mixinMethod = MethodNode(0, "inject", "()V", null, null).apply {
+            parameters = mutableListOf()
+            instructions.add(InsnNode(Opcodes.RETURN))
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val targetMethod = createTargetMethod()
+        val component = createComponent(mixinMethod)
+
+        assertTrue(component.apply(createContext(targetMethod)))
+
+        val jumps = targetMethod.instructions.filterIsInstance<JumpInsnNode>()
+        assertEquals(2, jumps.size)
+        assertTrue(jumps.all { it.opcode == Opcodes.GOTO })
+        assertSame(jumps.first().label, jumps.last().label)
+        assertEquals(Opcodes.RETURN, jumps.first().label.next.opcode)
+    }
+
+    @Test
+    fun `replaces return context call with typed target return`() {
+        val mixinMethod = MethodNode(
+            0,
+            "inject",
+            "(${Types.Mixin.returnContext.descriptor})V",
+            "(${Types.Mixin.returnContext.descriptor.dropLast(1)}<Ljava/lang/String;>;)V",
+            null
+        ).apply {
+            parameters = mutableListOf(ParameterNode("returnContext", 0))
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 1))
+            instructions.add(LdcInsnNode("result"))
+            instructions.add(
+                MethodInsnNode(
+                    Opcodes.INVOKEINTERFACE,
+                    Types.Mixin.returnContext.internalName,
+                    "returnFromTarget",
+                    "(Ljava/lang/Object;)V",
+                    true
+                )
+            )
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val targetMethod = MethodNode(
+            Opcodes.ACC_STATIC,
+            "target",
+            "()Ljava/lang/String;",
+            null,
+            null
+        ).apply {
+            instructions.add(InsnNode(Opcodes.ACONST_NULL))
+            instructions.add(InsnNode(Opcodes.ARETURN))
+        }
+        val component = createComponent(mixinMethod, Opcodes.ARETURN)
+
+        assertTrue(component.apply(createContext(targetMethod)))
+
+        assertEquals(
+            listOf(Opcodes.ACONST_NULL, Opcodes.LDC, Opcodes.ARETURN, Opcodes.GOTO, Opcodes.ARETURN),
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
+        )
+    }
+
+    @Test
+    fun `replaces unit return context call with void target return`() {
+        val mixinMethod = MethodNode(
+            0,
+            "inject",
+            "(${Types.Mixin.returnContext.descriptor})V",
+            "(${Types.Mixin.returnContext.descriptor.dropLast(1)}<Lkotlin/Unit;>;)V",
+            null
+        ).apply {
+            parameters = mutableListOf(ParameterNode("returnContext", 0))
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 1))
+            instructions.add(VarInsnNode(Opcodes.ASTORE, 2))
+            instructions.add(InsnNode(Opcodes.ICONST_0))
+            instructions.add(VarInsnNode(Opcodes.ISTORE, 3))
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 2))
+            instructions.add(FieldInsnNode(Opcodes.GETSTATIC, "kotlin/Unit", "INSTANCE", "Lkotlin/Unit;"))
+            instructions.add(
+                MethodInsnNode(
+                    Opcodes.INVOKEINTERFACE,
+                    Types.Mixin.returnContext.internalName,
+                    "returnFromTarget",
+                    "(Ljava/lang/Object;)V",
+                    true
+                )
+            )
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val targetMethod = createTargetMethod()
+        val component = createComponent(mixinMethod)
+
+        assertTrue(component.apply(createContext(targetMethod)))
+
+        assertEquals(
+            listOf(Opcodes.ICONST_0, Opcodes.ISTORE, Opcodes.RETURN, Opcodes.GOTO, Opcodes.RETURN),
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
+        )
+    }
+
+    @Test
+    fun `requires generic signature for return context`() {
+        val mixinMethod = MethodNode(0, "inject", "(${Types.Mixin.returnContext.descriptor})V", null, null).apply {
+            parameters = mutableListOf(ParameterNode("returnContext", 0))
+            instructions.add(VarInsnNode(Opcodes.ALOAD, 1))
+            instructions.add(LdcInsnNode("result"))
+            instructions.add(
+                MethodInsnNode(
+                    Opcodes.INVOKEINTERFACE,
+                    Types.Mixin.returnContext.internalName,
+                    "returnFromTarget",
+                    "(Ljava/lang/Object;)V",
+                    true
+                )
+            )
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val component = createComponent(mixinMethod)
+
+        assertFailsWith<IllegalStateException> {
+            component.apply(createContext(createTargetMethod()))
+        }
     }
 
     @Test

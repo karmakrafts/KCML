@@ -24,9 +24,17 @@ import dev.karmakrafts.kcml.agent.asm.getValue
 import dev.karmakrafts.kcml.agent.asm.implements
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
+import org.objectweb.asm.signature.SignatureReader
+import org.objectweb.asm.signature.SignatureVisitor
+import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
+import org.objectweb.asm.tree.FieldInsnNode
 import org.objectweb.asm.tree.InsnList
+import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.JumpInsnNode
+import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.VarInsnNode
 
@@ -64,7 +72,67 @@ internal data class InjectComponent( // @formatter:off
         type == Types.Mixin.returnContext
     }
 
-    private fun InsnList.processCapturedLocals(context: ComponentContext, targetMethod: MethodNode): InsnList {
+    private fun getReturnContextStackIndices(): Set<Int> = buildSet {
+        var stackIndex = if (mixinMethod.access and Opcodes.ACC_STATIC == 0) 1 else 0
+        for (argumentType in mixinMethodType.argumentTypes) {
+            if (argumentType == Types.Mixin.returnContext) add(stackIndex)
+            stackIndex += argumentType.size
+        }
+    }
+
+    private fun getReturnContextType(): Type {
+        val signature = checkNotNull(mixinMethod.signature) {
+            "ReturnContext parameter in ${mixinMethod.name}${mixinMethod.desc} requires a generic signature"
+        }
+        var parameterIndex = -1
+        var returnContextType: Type? = null
+        SignatureReader(signature).accept(object : SignatureVisitor(Opcodes.ASM9) {
+            override fun visitParameterType(): SignatureVisitor {
+                parameterIndex++
+                if (mixinMethodType.argumentTypes[parameterIndex] != Types.Mixin.returnContext) return this
+                return object : SignatureVisitor(Opcodes.ASM9) {
+                    private var isReturnContext: Boolean = false
+
+                    override fun visitClassType(name: String) {
+                        isReturnContext = name == Types.Mixin.returnContext.internalName
+                    }
+
+                    override fun visitTypeArgument(wildcard: Char): SignatureVisitor? {
+                        if (!isReturnContext || returnContextType != null) return null
+                        return object : SignatureVisitor(Opcodes.ASM9) {
+                            private var arrayDimensions: Int = 0
+
+                            override fun visitArrayType(): SignatureVisitor {
+                                arrayDimensions++
+                                return this
+                            }
+
+                            override fun visitBaseType(descriptor: Char) {
+                                returnContextType = Type.getType("[".repeat(arrayDimensions) + descriptor)
+                            }
+
+                            override fun visitClassType(name: String) {
+                                returnContextType = Type.getType("[".repeat(arrayDimensions) + "L$name;")
+                            }
+
+                            override fun visitTypeVariable(name: String) {
+                                error("ReturnContext type variable $name is not supported")
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        return checkNotNull(returnContextType) {
+            "Could not determine ReturnContext type in ${mixinMethod.name}${mixinMethod.desc}"
+        }
+    }
+
+    private fun InsnList.processCapturedLocals( // @formatter:off
+        context: ComponentContext,
+        targetMethod: MethodNode,
+        relocated: HashSet<VarInsnNode>
+    ): InsnList { // @formatter:on
         val (_, _, logger) = context
         val captures = buildMap {
             val parameters = mixinMethod.parameters // We know this is non-null from restoring earlier
@@ -88,9 +156,85 @@ internal data class InjectComponent( // @formatter:off
         for (instruction in this) {
             if (instruction is VarInsnNode) {
                 instruction.`var` = captures[instruction.`var`] ?: continue
+                relocated += instruction
             }
         }
         return this
+    }
+
+    private fun InsnList.processReturnFrame(context: ComponentContext): InsnList {
+        val (_, _, logger) = context
+        logger.info { "Inserting return frame and replacing returns" }
+        val returnFrame = LabelNode()
+        for (instruction in this) {
+            if (instruction.opcode == Opcodes.RETURN) {
+                set(instruction, JumpInsnNode(Opcodes.GOTO, returnFrame))
+            }
+        }
+        add(returnFrame)
+        return this
+    }
+
+    private fun MethodInsnNode.isReturnFromTargetCall(): Boolean =
+        opcode == Opcodes.INVOKEINTERFACE && owner == Types.Mixin.returnContext.internalName && name == "returnFromTarget" && desc == Type.getMethodDescriptor(
+            Type.VOID_TYPE, Types.any
+        )
+
+    private fun InsnList.removeUnitArgument(call: MethodInsnNode): AbstractInsnNode? {
+        var unitValue = call.previous
+        while (unitValue != null && unitValue.opcode == -1) unitValue = unitValue.previous
+        check( // @formatter:off
+            unitValue is FieldInsnNode && unitValue.opcode == Opcodes.GETSTATIC
+                && unitValue.owner == Types.unit.internalName
+                && unitValue.name == "INSTANCE"
+        ) { "ReturnContext<Unit>.returnFromTarget() requires a Unit.INSTANCE argument" } // @formatter:on
+        val previous = unitValue.previous
+        remove(unitValue)
+        return previous
+    }
+
+    private fun findReturnContextReceiver( // @formatter:off
+        start: AbstractInsnNode?,
+        returnContextIndices: Set<Int>,
+        allowSyntheticReceiver: Boolean
+    ): VarInsnNode { // @formatter:on
+        var receiver = start
+        while (receiver != null && (receiver !is VarInsnNode // @formatter:off
+                || receiver.opcode != Opcodes.ALOAD
+                || (!allowSyntheticReceiver && receiver.`var` !in returnContextIndices)
+        )
+        ) { // @formatter:on
+            receiver = receiver.previous
+        }
+        return checkNotNull(receiver) { "Could not find ReturnContext receiver for returnFromTarget()" }
+    }
+
+    private fun InsnList.removeReturnContextReceiver( // @formatter:off
+        receiver: VarInsnNode,
+        returnContextIndices: Set<Int>
+    ) { // @formatter:on
+        if (receiver.`var` !in returnContextIndices) {
+            // The inline Unit overload aliases its receiver in a synthetic local; remove that alias as well.
+            var receiverStore = receiver.previous
+            while (receiverStore != null && (receiverStore !is VarInsnNode  // @formatter:off
+                    || receiverStore.opcode != Opcodes.ASTORE
+                    || receiverStore.`var` != receiver.`var`
+            )
+            ) { // @formatter:on
+                receiverStore = receiverStore.previous
+            }
+            checkNotNull(receiverStore) { "Could not find synthetic ReturnContext receiver store" }
+            var originalReceiver = receiverStore.previous
+            while (originalReceiver != null && originalReceiver.opcode == -1) {
+                originalReceiver = originalReceiver.previous
+            }
+            check(
+                originalReceiver is VarInsnNode && originalReceiver.opcode == Opcodes.ALOAD && originalReceiver.`var` in returnContextIndices
+            ) { "Could not find original ReturnContext receiver load" }
+            remove(originalReceiver)
+            remove(receiverStore)
+        }
+        remove(receiver)
     }
 
     private fun InsnList.processReturnContext(context: ComponentContext): InsnList {
@@ -98,6 +242,23 @@ internal data class InjectComponent( // @formatter:off
         if (!hasReturnContext()) return this
         val (_, _, logger) = context
         logger.info { "Inject component has return context, processing references to returnFromTarget()" }
+        // Only rewrite calls to the erased ReturnContext API; unrelated interface calls must remain untouched.
+        val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isReturnFromTargetCall() }
+        if (calls.isEmpty()) return this
+        val returnContextType = getReturnContextType()
+        val isUnit = returnContextType == Types.unit
+        val returnOpcode = if (isUnit) Opcodes.RETURN else returnContextType.getOpcode(Opcodes.IRETURN)
+        val returnContextIndices = getReturnContextStackIndices()
+        for (call in calls) {
+            val previous = if (isUnit) {
+                // Unit is passed as Unit.INSTANCE, but a JVM void return must leave no value on the operand stack.
+                removeUnitArgument(call)
+            }
+            else call.previous
+            val receiver = findReturnContextReceiver(previous, returnContextIndices, isUnit)
+            removeReturnContextReceiver(receiver, returnContextIndices)
+            set(call, InsnNode(returnOpcode))
+        }
         return this
     }
 
@@ -106,19 +267,20 @@ internal data class InjectComponent( // @formatter:off
         if (!mixinClass.implements(Types.Mixin.thisAware)) return this
         val (_, _, logger) = context
         logger.info { "Mixin is this-aware, processing references to getThis()" }
+        // TODO:
+        //   All calls to ThisAware.getThis() in this instruction list should be replaced with ALOAD 0 instructions,
+        //   also taking into account the extra ALOAD already present because of the virtual getThis call
         return this
     }
 
-    // Parameter capturing analysis
-    // Replace loads of captured values with their respective target indices
-    // Replace all loads & calls to ReturnContext and replace them with target returns
-    // Replace all calls to ThisAware with their intrinsic target this load
-    // Relocate stack to max index of target method (using relocateStack extension)
     private fun createInjection(context: ComponentContext, targetMethod: MethodNode): InsnList { // @formatter:off
+        val relocated = HashSet<VarInsnNode>()
         return mixinMethod.instructions.copy()
-            .processCapturedLocals(context, targetMethod)
+            .processCapturedLocals(context, targetMethod, relocated)
+            .processReturnFrame(context)
             .processReturnContext(context)
             .processThisAware(context)
+            // TODO: relocateStack() at the end, but extend relocateStack so everything in relocated can be ignored
     } // @formatter:on
 
     private fun injectIntoTarget(context: ComponentContext, targetMethod: MethodNode) {

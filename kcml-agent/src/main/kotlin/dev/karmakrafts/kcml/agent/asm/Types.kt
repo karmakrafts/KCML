@@ -20,6 +20,7 @@ import org.objectweb.asm.Type
 
 internal object Types {
     val any: Type = Type.getObjectType("java/lang/Object")
+    val unit: Type = Type.getObjectType("kotlin/Unit")
 
     object Mixin {
         val mixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Mixin")
