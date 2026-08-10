@@ -95,8 +95,7 @@ class TargetTest {
             Target(owner = Type.getObjectType("example/MethodOwner"), opcode = INVOKEVIRTUAL) to ownerMethod,
             Target(name = "methodName", opcode = INVOKEVIRTUAL) to nameMethod,
             Target(
-                methodOrFieldType = Type.getMethodType("(Ljava/lang/String;)V"),
-                opcode = INVOKEVIRTUAL
+                methodOrFieldType = Type.getMethodType("(Ljava/lang/String;)V"), opcode = INVOKEVIRTUAL
             ) to descriptorMethod,
             Target(
                 owner = Type.getObjectType("example/MethodOwnerName"), name = "methodOwnerName", opcode = INVOKEVIRTUAL

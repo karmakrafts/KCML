@@ -123,8 +123,7 @@ class SliceTest {
             )
             assertNull(Target(name = "candidate", opcode = INVOKEVIRTUAL, ordinal = 2).findWithin(instructions))
             assertSame(
-                secondCandidate,
-                Target(name = "candidate", opcode = INVOKEVIRTUAL, offset = 1).findWithin(instructions)
+                secondCandidate, Target(name = "candidate", opcode = INVOKEVIRTUAL, offset = 1).findWithin(instructions)
             )
             assertNull(
                 Target(name = "candidate", opcode = INVOKEVIRTUAL, ordinal = 1, offset = 1).findWithin(

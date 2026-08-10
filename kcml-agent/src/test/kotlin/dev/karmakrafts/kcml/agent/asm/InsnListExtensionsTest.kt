@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.agent.asm
 
 import org.objectweb.asm.Opcodes.ALOAD
+import org.objectweb.asm.Opcodes.GOTO
 import org.objectweb.asm.Opcodes.ICONST_0
 import org.objectweb.asm.Opcodes.ISTORE
-import org.objectweb.asm.Opcodes.GOTO
 import org.objectweb.asm.Opcodes.RETURN
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode

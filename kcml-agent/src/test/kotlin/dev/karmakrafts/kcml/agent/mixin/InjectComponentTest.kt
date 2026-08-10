@@ -67,9 +67,7 @@ class InjectComponentTest {
         }
 
     private fun createComponent(
-        mixinMethod: MethodNode,
-        targetOpcode: Int = Opcodes.RETURN,
-        mixinClass: ClassNode = ClassNode()
+        mixinMethod: MethodNode, targetOpcode: Int = Opcodes.RETURN, mixinClass: ClassNode = ClassNode()
     ): InjectComponent = InjectComponent(
         name = "target",
         descriptor = null,
@@ -112,16 +110,14 @@ class InjectComponentTest {
         }
         assertEquals(
             listOf(
-                Opcodes.ALOAD,
-                Opcodes.LLOAD,
-                Opcodes.LSTORE,
-                Opcodes.ALOAD,
-                Opcodes.ASTORE,
-                Opcodes.GOTO,
-                Opcodes.RETURN
-            ),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
-        )
+            Opcodes.ALOAD,
+            Opcodes.LLOAD,
+            Opcodes.LSTORE,
+            Opcodes.ALOAD,
+            Opcodes.ASTORE,
+            Opcodes.GOTO,
+            Opcodes.RETURN
+        ), targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
     }
 
     @Test
@@ -152,11 +148,7 @@ class InjectComponentTest {
                 instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
                 instructions.add(
                     MethodInsnNode(
-                        Opcodes.INVOKEVIRTUAL,
-                        mixinName,
-                        "getThis",
-                        "()Ljava/lang/Object;",
-                        false
+                        Opcodes.INVOKEVIRTUAL, mixinName, "getThis", "()Ljava/lang/Object;", false
                     )
                 )
                 instructions.add(InsnNode(Opcodes.POP))
@@ -164,11 +156,7 @@ class InjectComponentTest {
             instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
             instructions.add(
                 MethodInsnNode(
-                    Opcodes.INVOKEVIRTUAL,
-                    "example/Other",
-                    "getThis",
-                    "()Ljava/lang/Object;",
-                    false
+                    Opcodes.INVOKEVIRTUAL, "example/Other", "getThis", "()Ljava/lang/Object;", false
                 )
             )
             instructions.add(InsnNode(Opcodes.POP))
@@ -187,22 +175,18 @@ class InjectComponentTest {
 
         assertEquals(
             listOf(
-                Opcodes.ALOAD,
-                Opcodes.POP,
-                Opcodes.ALOAD,
-                Opcodes.POP,
-                Opcodes.ALOAD,
-                Opcodes.INVOKEVIRTUAL,
-                Opcodes.POP,
-                Opcodes.GOTO,
-                Opcodes.RETURN
-            ),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
-        )
+            Opcodes.ALOAD,
+            Opcodes.POP,
+            Opcodes.ALOAD,
+            Opcodes.POP,
+            Opcodes.ALOAD,
+            Opcodes.INVOKEVIRTUAL,
+            Opcodes.POP,
+            Opcodes.GOTO,
+            Opcodes.RETURN
+        ), targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
         assertEquals(
-            listOf("example/Other"),
-            targetMethod.instructions.filterIsInstance<MethodInsnNode>().map { it.owner }
-        )
+            listOf("example/Other"), targetMethod.instructions.filterIsInstance<MethodInsnNode>().map { it.owner })
         assertEquals(listOf(0, 0, 0), targetMethod.instructions.filterIsInstance<VarInsnNode>().map { it.`var` })
     }
 
@@ -214,11 +198,7 @@ class InjectComponentTest {
             instructions.add(VarInsnNode(Opcodes.ALOAD, 0))
             instructions.add(
                 MethodInsnNode(
-                    Opcodes.INVOKEVIRTUAL,
-                    mixinName,
-                    "getThis",
-                    "()Ljava/lang/Object;",
-                    false
+                    Opcodes.INVOKEVIRTUAL, mixinName, "getThis", "()Ljava/lang/Object;", false
                 )
             )
             instructions.add(InsnNode(Opcodes.POP))
@@ -233,8 +213,7 @@ class InjectComponentTest {
 
         assertEquals(
             listOf(Opcodes.ALOAD, Opcodes.INVOKEVIRTUAL, Opcodes.POP, Opcodes.GOTO, Opcodes.RETURN),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
-        )
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
     }
 
     @Test
@@ -261,11 +240,7 @@ class InjectComponentTest {
             instructions.add(InsnNode(Opcodes.RETURN))
         }
         val targetMethod = MethodNode(
-            Opcodes.ACC_STATIC,
-            "target",
-            "()Ljava/lang/String;",
-            null,
-            null
+            Opcodes.ACC_STATIC, "target", "()Ljava/lang/String;", null, null
         ).apply {
             instructions.add(InsnNode(Opcodes.ACONST_NULL))
             instructions.add(InsnNode(Opcodes.ARETURN))
@@ -276,8 +251,7 @@ class InjectComponentTest {
 
         assertEquals(
             listOf(Opcodes.ACONST_NULL, Opcodes.LDC, Opcodes.ARETURN, Opcodes.GOTO, Opcodes.ARETURN),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
-        )
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
     }
 
     @Test
@@ -314,8 +288,7 @@ class InjectComponentTest {
 
         assertEquals(
             listOf(Opcodes.ICONST_0, Opcodes.ISTORE, Opcodes.RETURN, Opcodes.GOTO, Opcodes.RETURN),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode }
-        )
+            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
     }
 
     @Test

@@ -36,11 +36,7 @@ class MethodNodeExtensionsTest {
         val start = LabelNode()
         val end = LabelNode()
         val method = MethodNode(
-            ACC_PUBLIC,
-            "method",
-            "(JDLjava/util/List;)V",
-            "(JDLjava/util/List<Ljava/lang/String;>;)V",
-            null
+            ACC_PUBLIC, "method", "(JDLjava/util/List;)V", "(JDLjava/util/List<Ljava/lang/String;>;)V", null
         ).apply {
             parameters = mutableListOf(ParameterNode("stale", 0))
             localVariables = mutableListOf(
@@ -48,12 +44,7 @@ class MethodNodeExtensionsTest {
                 LocalVariableNode("first", "J", null, start, end, 1),
                 LocalVariableNode("second", "D", null, start, end, 3),
                 LocalVariableNode(
-                    "third",
-                    "Ljava/util/List;",
-                    "Ljava/util/List<Ljava/lang/String;>;",
-                    start,
-                    end,
-                    5
+                    "third", "Ljava/util/List;", "Ljava/util/List<Ljava/lang/String;>;", start, end, 5
                 )
             )
         }
