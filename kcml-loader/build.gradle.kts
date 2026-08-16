@@ -51,6 +51,7 @@ configurations {
 dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
     compileOnly(libs.kotlin.native.compiler.embeddable)
+    compileOnly(projects.kcmlMixinBridge)
 
     shadeApi(projects.kcmlPluginApi)
     shadeApi(libs.semver)
@@ -75,8 +76,10 @@ tasks {
     shadowJar {
         configurations = setOf(shadeImplementation, shadeApi)
         archiveClassifier = ""
-        relocate("io.github.z4kn4fein.semver", "${rootProject.group}.shaded.io.github.z4kn4fein.semver")
-        relocate("io.github.alexandrepiveteau.graphs", "${rootProject.group}.shaded.io.github.alexandrepiveteau.graphs")
-        relocate("kotlinx.serialization", "${rootProject.group}.shaded.kotlinx.serialization")
+        val relocationPrefix = "${rootProject.group}.internal"
+        relocate("io.github.z4kn4fein.semver", "$relocationPrefix.io.github.z4kn4fein.semver")
+        relocate("io.github.alexandrepiveteau.graphs", "$relocationPrefix.io.github.alexandrepiveteau.graphs")
+        relocate("kotlinx.serialization", "$relocationPrefix.kotlinx.serialization")
+        relocate("org.objectweb.asm", "$relocationPrefix.org.objectweb.asm")
     }
 }

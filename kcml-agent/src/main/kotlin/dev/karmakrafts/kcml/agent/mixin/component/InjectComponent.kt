@@ -14,15 +14,18 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.mixin
+package dev.karmakrafts.kcml.agent.mixin.component
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.copy
 import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.asm.findInvisibleParameterAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
-import dev.karmakrafts.kcml.agent.asm.implements
 import dev.karmakrafts.kcml.agent.asm.relocateStack
+import dev.karmakrafts.kcml.agent.mixin.Capture
+import dev.karmakrafts.kcml.agent.mixin.Order
+import dev.karmakrafts.kcml.agent.mixin.Slice
+import dev.karmakrafts.kcml.agent.mixin.Target
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.signature.SignatureReader
@@ -322,34 +325,6 @@ internal data class InjectComponent( // @formatter:off
         return this
     }
 
-    private fun InsnList.processThisAware(
-        context: ComponentContext, relocated: HashSet<VarInsnNode>
-    ): InsnList {
-        // If the target mixin doesn't implement ThisAware, we return early
-        if (!mixinClass.implements(Types.Mixin.thisAware)) return this
-        val (_, _, logger) = context
-        logger.info { "Mixin is this-aware, processing references to getThis()" }
-        val getThisDescriptor = Type.getMethodDescriptor(Types.any)
-        val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> // @formatter:off
-            instruction.opcode == Opcodes.INVOKEVIRTUAL
-                && instruction.owner == mixinClass.name
-                && instruction.name == "getThis"
-                && instruction.desc == getThisDescriptor
-        } // @formatter:on
-        for (call in calls) {
-            var receiver = call.previous
-            while (receiver != null && receiver.opcode == -1) receiver = receiver.previous
-            check(receiver is VarInsnNode && receiver.opcode == Opcodes.ALOAD && receiver.`var` == 0) {
-                "ThisAware.getThis() requires the mixin receiver from local 0"
-            }
-            remove(receiver)
-            val targetReceiver = VarInsnNode(Opcodes.ALOAD, 0)
-            set(call, targetReceiver)
-            relocated += targetReceiver
-        }
-        return this
-    }
-
     private fun createInjection( // @formatter:off
         context: ComponentContext,
         targetMethod: MethodNode,
@@ -369,7 +344,7 @@ internal data class InjectComponent( // @formatter:off
         injection.processCapturedLocals(context, targetMethod, injectionPoint, relocated, capturedIndices)
             .processReturnFrame(context)
             .processReturnContext(context)
-            .processThisAware(context, relocated)
+        ThisAwareComponent(mixinClass).prepareInjection(injection, relocated)
         val targetBase = allocateLocals(targetMethod, injection, relocated, capturedIndices, copiedLabels)
         return injection.relocateStack(targetBase, relocated)
     } // @formatter:on

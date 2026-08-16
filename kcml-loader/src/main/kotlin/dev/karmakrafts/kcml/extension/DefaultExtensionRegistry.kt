@@ -35,8 +35,6 @@ internal class DefaultExtensionRegistry( // @formatter:off
     private val sortedExtensions: LinkedHashMap<String, Extension> by lazy { sortExtensions() }
     private var isFrozen: Boolean = false
 
-    val extensionCount: Int get() = extensions.size
-
     override fun register(extension: Extension) {
         check(!isFrozen) { "Extension registry is already frozen" }
         val id = extension.id

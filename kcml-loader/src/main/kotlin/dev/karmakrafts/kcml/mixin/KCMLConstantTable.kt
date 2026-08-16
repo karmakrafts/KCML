@@ -14,8 +14,15 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.mixin
+package dev.karmakrafts.kcml.mixin
 
-internal interface MixinComponent {
-    fun apply(context: ComponentContext): Boolean
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import java.io.File
+
+internal object KCMLConstantTable {
+    fun init() {
+        MixinBridge.INSTANCE.putConstant(
+            "loader_path", File(this::class.java.protectionDomain.codeSource.location.toURI()).absolutePath
+        )
+    }
 }

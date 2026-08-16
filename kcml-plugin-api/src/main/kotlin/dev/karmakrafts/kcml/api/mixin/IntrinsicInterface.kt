@@ -16,10 +16,6 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
-import kotlin.reflect.KClass
-
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
-annotation class MixinPlugin(
-    val target: KClass<*> = Any::class // Plugin applies to all mixins
-)
+annotation class IntrinsicInterface

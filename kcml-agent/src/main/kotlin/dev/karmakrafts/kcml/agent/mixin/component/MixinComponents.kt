@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.mixin
+package dev.karmakrafts.kcml.agent.mixin.component
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.getAnnotation
+import dev.karmakrafts.kcml.agent.asm.implements
 import dev.karmakrafts.kcml.agent.log.Logger
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
@@ -38,8 +39,19 @@ internal class MixinComponents(private val logger: Logger) {
         annotation: AnnotationNode
     ) -> MixinComponent // @formatter:on
 
+    private typealias ComponentFactory = ( // @formatter:off
+        mixinClass: ClassNode
+    ) -> MixinComponent // @formatter:on
+
+    private val componentFactories: ArrayList<ComponentFactory> = ArrayList()
     private val methodComponentFactories: HashMap<Type, MethodComponentFactory> = HashMap()
     private val fieldComponentFactories: HashMap<Type, FieldComponentFactory> = HashMap()
+    private val interfaceComponentFactories: HashMap<Type, ComponentFactory> = HashMap()
+
+    fun registerComponent(factory: ComponentFactory) {
+        require(factory !in componentFactories) { "Mixin component is already registered" }
+        componentFactories += factory
+    }
 
     fun registerFieldComponent(type: Type, factory: FieldComponentFactory) {
         require(type !in fieldComponentFactories) {
@@ -55,8 +67,16 @@ internal class MixinComponents(private val logger: Logger) {
         methodComponentFactories[type] = factory
     }
 
+    fun registerInterfaceComponent(type: Type, factory: ComponentFactory) {
+        require(type !in methodComponentFactories) {
+            "Mixin interface component for type $type is already registered"
+        }
+        interfaceComponentFactories[type] = factory
+    }
+
     init {
         logger.info { "Registering mixin component factories" }
+        registerInterfaceComponent(Types.Mixin.thisAware, ::ThisAwareComponent)
         registerMethodComponent(Types.Mixin.inject, InjectComponent::fromAnnotation)
     }
 
@@ -64,17 +84,25 @@ internal class MixinComponents(private val logger: Logger) {
     private inline fun List<AnnotationNode>.findComponentType(factories: Map<Type, *>): Type? =
         map { annotation -> Type.getType(annotation.desc) }.find { type -> type in factories }
 
-    fun findMixinComponentType(method: MethodNode): Type? { // @formatter:off
+    fun findMethodComponentType(method: MethodNode): Type? { // @formatter:off
         return method.visibleAnnotations?.findComponentType(methodComponentFactories)
             ?: method.invisibleAnnotations?.findComponentType(methodComponentFactories)
     } // @formatter:on
 
-    fun findMixinComponentType(field: FieldNode): Type? { // @formatter:off
+    fun findFieldComponentType(field: FieldNode): Type? { // @formatter:off
         return field.visibleAnnotations?.findComponentType(fieldComponentFactories)
             ?: field.invisibleAnnotations?.findComponentType(fieldComponentFactories)
     } // @formatter:on
 
-    fun tryCreateComponent( // @formatter:off
+    fun createDefaultComponents(mixinClass: ClassNode): List<MixinComponent> =
+        componentFactories.map { factory -> factory(mixinClass) }
+
+    fun tryCreateInterfaceComponent(type: Type, mixinClass: ClassNode): MixinComponent? = when {
+        !mixinClass.implements(type) -> null
+        else -> interfaceComponentFactories[type]?.invoke(mixinClass)
+    }
+
+    fun tryCreateMethodComponent( // @formatter:off
         type: Type,
         mixinClass: ClassNode,
         mixinMethod: MethodNode
@@ -85,7 +113,7 @@ internal class MixinComponents(private val logger: Logger) {
         return component
     }
 
-    fun tryCreateComponent( // @formatter:off
+    fun tryCreateFieldComponent( // @formatter:off
         type: Type,
         mixinClass: ClassNode,
         mixinField: FieldNode

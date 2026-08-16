@@ -21,7 +21,6 @@ import dev.karmakrafts.kcml.api.mixin.IndirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Order
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
-import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.wasm.WASMHooks
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
@@ -33,7 +32,7 @@ import org.objectweb.asm.Opcodes
 @Suppress("UNUSED")
 @OptIn(KCMLHookApi::class)
 @IndirectMixin("org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleFragmentGeneratorKt", -999)
-internal object WasmModuleFragmentGeneratorKtMixin : Mixin {
+internal object WasmModuleFragmentGeneratorKtMixin {
     @Inject( // @formatter:off
         name = "compileIrFile",
         target = Target(opcode = Opcodes.NEW),

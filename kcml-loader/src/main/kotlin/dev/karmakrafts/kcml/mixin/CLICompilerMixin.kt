@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.mixin
 
 import dev.karmakrafts.kcml.api.mixin.Capture
+import dev.karmakrafts.kcml.api.mixin.ConstantTable
 import dev.karmakrafts.kcml.api.mixin.DirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
-import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.api.mixin.ThisAware
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
@@ -33,7 +33,7 @@ import kotlin.io.path.Path
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
 @DirectMixin(CLICompiler::class)
-internal class CLICompilerMixin<A : CommonCompilerArguments> : Mixin, ThisAware<CLICompiler<A>> {
+internal class CLICompilerMixin<A : CommonCompilerArguments> : ThisAware<CLICompiler<A>> {
     @Inject("execImpl")
     fun execImpl( // @formatter:off
         @Capture messageCollector: MessageCollector,
@@ -42,11 +42,12 @@ internal class CLICompilerMixin<A : CommonCompilerArguments> : Mixin, ThisAware<
     ) { // @formatter:on
         val classLoader = getThis()::class.java.classLoader
         val classLoaderType = classLoader::class.java
-        val addURLMethod = classLoaderType.getMethod("addURL", URL::class.java)
-        val loaderUrl = Path(constantTable.getString("loader_path")!!).toUri().toURL()
-        addURLMethod.isAccessible = true
-        addURLMethod.invoke(classLoader, loaderUrl)
-        addURLMethod.isAccessible = false
-        CommonHooks.onExecImpl(arguments)
+        val loaderUrl = Path(ConstantTable.getString("loader_path")).toUri().toURL()
+        val addUrlMethod = classLoaderType.getDeclaredMethod("addURL", URL::class.java)
+        addUrlMethod.isAccessible = true
+        addUrlMethod.invoke(classLoader, loaderUrl)
+        addUrlMethod.isAccessible = false
+        // ======================== KCML loader class loading boundary ========================
+        CommonHooks.onExecImpl(getThis(), arguments)
     }
 }

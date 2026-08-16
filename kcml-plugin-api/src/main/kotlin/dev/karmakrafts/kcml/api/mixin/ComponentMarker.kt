@@ -14,13 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.agent.mixin
+package dev.karmakrafts.kcml.api.mixin
 
-import dev.karmakrafts.kcml.agent.log.Logger
-import org.objectweb.asm.tree.ClassNode
-
-internal data class ComponentContext( // @formatter:off
-    val target: ClassNode,
-    val loader: MixinLoader,
-    val logger: Logger
-) // @formatter:on
+@Retention(AnnotationRetention.BINARY)
+@Target(AnnotationTarget.CLASS)
+annotation class ComponentMarker

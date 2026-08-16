@@ -22,7 +22,6 @@ import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Order
 import dev.karmakrafts.kcml.api.mixin.Inject.Slice
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
-import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
 import dev.karmakrafts.kcml.api.mixin.ThisAware
 import dev.karmakrafts.kcml.api.mixin.returnFromTarget
@@ -35,7 +34,7 @@ import org.objectweb.asm.Opcodes
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
 @DirectMixin(BodyGenerator::class, -999)
-internal class BodyGeneratorMixin : Mixin, ThisAware<BodyGenerator> {
+internal class BodyGeneratorMixin : ThisAware<BodyGenerator> {
     @Inject( // @formatter:off
         name = "generateCall",
         slice = Slice(

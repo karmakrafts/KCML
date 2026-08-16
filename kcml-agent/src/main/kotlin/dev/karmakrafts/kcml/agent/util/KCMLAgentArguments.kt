@@ -23,6 +23,7 @@ internal object KCMLAgentArguments {
     val moduleName: Argument<String> = Argument.create("module_name")
     val logging: Argument<Boolean> = Argument.create("logging")
     val loaderPath: Argument<String> = Argument.create("loader_path")
+    val bridgePath: Argument<String> = Argument.create("bridge_path")
 
     fun parse(input: String): AgentArguments = AgentArguments.parse(
         input, commPort, moduleName, logging, loaderPath
@@ -40,3 +41,6 @@ internal inline val AgentArguments.logging: Boolean
 
 internal inline val AgentArguments.loaderPath: String
     get() = this[KCMLAgentArguments.loaderPath]
+
+internal inline val AgentArguments.bridgePath: String
+    get() = this[KCMLAgentArguments.bridgePath]

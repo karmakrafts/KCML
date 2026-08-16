@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks
 
+import org.jetbrains.kotlin.cli.common.CLICompiler
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import kotlin.concurrent.atomics.AtomicReference
 
@@ -29,7 +30,7 @@ object CommonHooks {
         }
 
     @JvmStatic
-    fun onExecImpl(arguments: CommonCompilerArguments) {
+    fun <A : CommonCompilerArguments> onExecImpl(compiler: CLICompiler<A>, arguments: A) {
         _compilerArguments.store(arguments)
     }
 }

@@ -42,7 +42,6 @@ class TypeExtensionsTest {
     @Test
     fun `defines the runtime API type descriptors`() {
         assertEquals("java/lang/Object", Types.any.internalName)
-        assertEquals("dev/karmakrafts/kcml/api/mixin/Mixin", Types.Mixin.mixin.internalName)
         assertEquals("dev/karmakrafts/kcml/api/mixin/DirectMixin", Types.Mixin.directMixin.internalName)
         assertEquals("dev/karmakrafts/kcml/api/mixin/IndirectMixin", Types.Mixin.indirectMixin.internalName)
         assertEquals("dev/karmakrafts/kcml/api/mixin/Inject", Types.Mixin.inject.internalName)

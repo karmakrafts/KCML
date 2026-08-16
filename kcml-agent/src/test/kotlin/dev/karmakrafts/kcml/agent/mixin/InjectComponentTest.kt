@@ -19,6 +19,9 @@ package dev.karmakrafts.kcml.agent.mixin
 import dev.karmakrafts.kcml.agent.asm.NonLoadingClassWriter
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.log.NoopLogger
+import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
+import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
+import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -426,7 +429,9 @@ class InjectComponentTest {
         }
         val component = createComponent(mixinMethod, mixinClass = mixinClass)
 
-        assertTrue(component.apply(createContext(targetMethod)))
+        val context = createContext(targetMethod)
+        assertTrue(component.apply(context))
+        assertTrue(ThisAwareComponent(mixinClass).apply(context))
 
         assertEquals(
             listOf(

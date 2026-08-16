@@ -17,7 +17,7 @@
 package dev.karmakrafts.kcml.api.mixin
 
 /**
- * Used to define injections into existing code within a [Mixin] class.
+ * Used to define injections into existing code within a mixin class.
  * The parameters of this annotation are used to find a needle instruction
  * in the body of the target function, which is used as a reference point
  * of where to inject the trampoline call to the mixin function.
@@ -30,6 +30,7 @@ package dev.karmakrafts.kcml.api.mixin
  *  By default, an empty [Target] is passed which means match all calls.
  * @param order The ordering in which the injection happens relative to the needle.
  */
+@ComponentMarker
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION)
 annotation class Inject( // @formatter:off

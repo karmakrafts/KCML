@@ -20,7 +20,6 @@ import dev.karmakrafts.kcml.api.mixin.Capture
 import dev.karmakrafts.kcml.api.mixin.IndirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
-import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
 import dev.karmakrafts.kcml.api.mixin.ThisAware
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
@@ -33,7 +32,7 @@ import org.objectweb.asm.Opcodes
 @OptIn(ExperimentalForeignApi::class, KCMLHookApi::class)
 @Suppress("UNUSED_PARAMETER")
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.llvm.CodeGeneratorVisitor", -999)
-internal class CodeGeneratorVisitorMixin : Mixin, ThisAware<Any> {
+internal class CodeGeneratorVisitorMixin : ThisAware<Any> {
     @Inject( // @formatter:off
         name = "evaluateFunctionCall",
         target = Target(opcode = Opcodes.NOP)

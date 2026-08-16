@@ -67,9 +67,11 @@ tasks {
         val agentJarTask = project(":kcml-agent").tasks.named<Jar>("jar")
         val loaderShadowJarTask = project(":kcml-loader").tasks.named<Jar>("shadowJar")
         val loaderJarTask = project(":kcml-loader").tasks.named<Jar>("jar")
-        dependsOn(agentShadowJarTask, agentJarTask, loaderJarTask, loaderJarTask)
+        val bridgeJarTask = project(":kcml-mixin-bridge").tasks.named<Jar>("jar")
+        dependsOn(agentShadowJarTask, agentJarTask, loaderJarTask, loaderJarTask, bridgeJarTask)
         from(agentShadowJarTask) { rename { "kcml-agent.jar" } }
         from(loaderShadowJarTask) { rename { "kcml-loader.jar" } }
+        from(bridgeJarTask) { rename { "kcml-mixin-bridge.jar" } }
     }
     val version = version.toString()
     val createVersionFile = register("createVersionFile") {

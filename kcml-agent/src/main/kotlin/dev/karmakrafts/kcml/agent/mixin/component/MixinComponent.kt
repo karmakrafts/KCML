@@ -14,17 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.mixin.component
 
-/**
- * Base type for all mixin classes to inherit intrinsic functionality
- * of the mixin runtime compiler.
- */
-interface Mixin {
-    companion object {
-        const val DEFAULT_PRIORITY: Int = 0
-    }
-
-    val constantTable: ConstantTable
-        get() = throw NotImplementedError("This should not be called directly")
+internal interface MixinComponent {
+    fun apply(context: ComponentContext): Boolean
 }

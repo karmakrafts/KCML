@@ -17,6 +17,8 @@
 package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.log.Logger
+import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
+import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 
@@ -28,11 +30,19 @@ internal data class Mixin( // @formatter:off
     private val loader: MixinLoader
 ) : Comparable<Mixin> { // @formatter:on
     val components: List<MixinComponent> = buildList {
-        // Handle creating all required method based mixin components
         val components = loader.components
+        this += components.createDefaultComponents(mixinClass)
+        for (field in mixinClass.fields) {
+            val componentType = components.findFieldComponentType(field) ?: continue
+            this += components.tryCreateFieldComponent(componentType, mixinClass, field) ?: continue
+        }
         for (method in mixinClass.methods) {
-            val componentType = components.findMixinComponentType(method) ?: continue
-            this += components.tryCreateComponent(componentType, mixinClass, method) ?: continue
+            val componentType = components.findMethodComponentType(method) ?: continue
+            this += components.tryCreateMethodComponent(componentType, mixinClass, method) ?: continue
+        }
+        for (iface in mixinClass.interfaces) {
+            val type = Type.getObjectType(iface)
+            this += components.tryCreateInterfaceComponent(type, mixinClass) ?: continue
         }
     }
 

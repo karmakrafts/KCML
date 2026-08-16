@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.mixin
+package dev.karmakrafts.kcml.agent.mixin.component
 
-/**
- * Interface recognized by marked [MixinPlugin]s for populating
- * the constant table(s) of one or more mixin(s).
- */
-interface ConstantTablePopulator {
-    fun populateConstantTable(values: MutableMap<String, Any?>)
-}
+import dev.karmakrafts.kcml.agent.log.Logger
+import dev.karmakrafts.kcml.agent.mixin.MixinLoader
+import org.objectweb.asm.tree.ClassNode
+
+internal data class ComponentContext( // @formatter:off
+    val target: ClassNode,
+    val loader: MixinLoader,
+    val logger: Logger
+) // @formatter:on

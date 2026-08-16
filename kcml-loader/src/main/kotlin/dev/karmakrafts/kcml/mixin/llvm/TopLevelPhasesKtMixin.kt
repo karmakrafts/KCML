@@ -20,14 +20,13 @@ import dev.karmakrafts.kcml.api.mixin.Capture
 import dev.karmakrafts.kcml.api.mixin.IndirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Order
-import dev.karmakrafts.kcml.api.mixin.Mixin
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.llvm.LLVMHooks
 
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.driver.phases.TopLevelPhasesKt", -999)
-internal object TopLevelPhasesKtMixin : Mixin {
+internal object TopLevelPhasesKtMixin {
     @Inject(name = $$"runBackend$lambda$0$runAfterLowerings", order = Order.BEFORE)
     @JvmStatic
     fun runAfterLowerings(@Capture generationState: Any) {

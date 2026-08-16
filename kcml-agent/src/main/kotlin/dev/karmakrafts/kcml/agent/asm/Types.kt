@@ -25,7 +25,8 @@ internal object Types {
     val intrinsics: Type = Type.getObjectType("kotlin/jvm/internal/Intrinsics")
 
     object Mixin {
-        val mixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Mixin")
+        val intrinsicInterface: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/IntrinsicInterface")
+        val componentMarker: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ComponentMarker")
         val directMixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/DirectMixin")
         val indirectMixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/IndirectMixin")
         val inject: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Inject")
@@ -33,6 +34,7 @@ internal object Types {
         val thisAware: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ThisAware")
         val returnContext: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ReturnContext")
         val capture: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Capture")
+        val constantTable: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ConstantTable")
     }
 
     fun getMethodOrFieldType(descriptor: String): Type = when {

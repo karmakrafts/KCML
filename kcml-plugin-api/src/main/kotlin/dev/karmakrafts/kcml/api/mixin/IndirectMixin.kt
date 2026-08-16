@@ -17,12 +17,12 @@
 package dev.karmakrafts.kcml.api.mixin
 
 /**
- * May be used to indicate a [Mixin] whose target class is either internal or synthetic
+ * May be used to indicate a mixin whose target class is either internal or synthetic
  * and cannot be identified with a concrete type at compile time.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 annotation class IndirectMixin( // @formatter:off
     val target: String,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
+    val priority: Int = 0
 ) // @formatter:on

@@ -36,7 +36,8 @@ class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
     private fun buildAgentArgs(
         configuration: CompilerConfiguration
     ): Map<String, Any> = buildMap {
-        this["loader_path"] = KCMLBootstrap.loaderPath.absolutePathString()
+        this["loader_path"] = """"${KCMLBootstrap.loaderPath.absolutePathString()}""""
+        this["bridge_path"] = """"${KCMLBootstrap.bridgePath.absolutePathString()}""""
         configuration.kcmlAgentCommPort?.let { port ->
             this["logging"] = configuration.kcmlAgentLogging
             this["comm_port"] = port

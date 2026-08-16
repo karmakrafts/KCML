@@ -19,12 +19,12 @@ package dev.karmakrafts.kcml.api.mixin
 import kotlin.reflect.KClass
 
 /**
- * May be used to indicate a [Mixin] whose target class is publicly visible
+ * May be used to indicate a mixin whose target class is publicly visible
  * and may be identified by concrete type at compile time.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 annotation class DirectMixin( // @formatter:off
     val target: KClass<*>,
-    val priority: Int = Mixin.DEFAULT_PRIORITY
+    val priority: Int = 0
 ) // @formatter:on

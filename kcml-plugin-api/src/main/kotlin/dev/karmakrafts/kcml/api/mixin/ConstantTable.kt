@@ -4,7 +4,7 @@
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ *     
  * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
@@ -16,15 +16,28 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
-/**
- * Allows materializing runtime values from the mixin as constants in the transformed code.
- * To add values to a mixin's constant table, define a class which implements [ConstantTablePopulator]
- * and is marked with the [MixinPlugin] annotation.
- */
-interface ConstantTable {
-    fun getString(key: String): String?
-    fun getInt(key: String): Int?
-    fun getLong(key: String): Long?
-    fun getFloat(key: String): Float?
-    fun getDouble(key: String): Double?
+object ConstantTable {
+    @JvmStatic
+    fun getString(name: String): String = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getByte(name: String): Byte = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getShort(name: String): Short = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getInt(name: String): Int = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getLong(name: String): Long = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getFloat(name: String): Float = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getDouble(name: String): Double = throw NotImplementedError("This should not be called directly")
+
+    @JvmStatic
+    fun getBoolean(name: String): Boolean = throw NotImplementedError("This should not be called directly")
 }

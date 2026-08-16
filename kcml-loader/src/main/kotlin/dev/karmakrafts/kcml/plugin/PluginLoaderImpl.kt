@@ -30,6 +30,7 @@ import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
+import dev.karmakrafts.kcml.mixin.KCMLConstantTable
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
@@ -53,8 +54,11 @@ import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
 object PluginLoaderImpl : PluginLoader {
+    init {
+        KCMLConstantTable.init() // Initialize the constant table
+    }
+
     private lateinit var loggerFactory: MessageCollectorLoggerFactory
-    private val loaderLock: Any = Any()
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
@@ -220,21 +224,21 @@ object PluginLoaderImpl : PluginLoader {
     }
 
     // Invoked standalone for things like linking tasks
-    fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) =
-        synchronized(loaderLock) {
-            setupLogging(config)
-            loadAllPlugins(config, loadCandidates(arguments))
-        }
+    @Synchronized
+    fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) {
+        setupLogging(config)
+        loadAllPlugins(config, loadCandidates(arguments))
+    }
 
     // Invoked through a delegate IR plugin
-    fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) =
-        synchronized(loaderLock) {
-            setupLogging(config)
-            loadAllPlugins(config)
-            // Register adapters for extension dispatcher
-            extensionDispatcher.registerAdapters(this, config, loggerFactory)
-            logger.info("Registered extension adapters")
-        }
+    @Synchronized
+    fun CompilerPluginRegistrar.ExtensionStorage.loadAndInvoke(config: CompilerConfiguration) {
+        setupLogging(config)
+        loadAllPlugins(config)
+        // Register adapters for extension dispatcher
+        extensionDispatcher.registerAdapters(this, config, loggerFactory)
+        logger.info("Registered extension adapters")
+    }
 
     private fun buildPluginGraph(): Pair<DirectedGraph, HashMap<String, Vertex>> {
         val vertices = HashMap<String, Vertex>()

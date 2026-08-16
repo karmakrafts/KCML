@@ -21,10 +21,10 @@ import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.asm.getInvisibleAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
 import dev.karmakrafts.kcml.agent.asm.hasInvisibleAnnotation
-import dev.karmakrafts.kcml.agent.asm.implements
 import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
+import dev.karmakrafts.kcml.agent.mixin.component.MixinComponents
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
@@ -38,12 +38,12 @@ internal class MixinLoader(
     private val logger: Logger
 ) {
     val components: MixinComponents = MixinComponents(logger)
-    private val lock: Any = Any()
 
     val mixins: List<Mixin>
         field: ArrayList<Mixin> = ArrayList()
 
-    fun load(paths: List<Path>) = synchronized(lock) {
+    @Synchronized
+    fun load(paths: List<Path>) {
         mixins.clear() // Allow re-loading all mixins
         val startTime = Clock.System.now()
         for (path in paths) {
@@ -64,9 +64,8 @@ internal class MixinLoader(
     }
 
     private fun isValidMixin(classNode: ClassNode): Boolean { // @formatter:off
-        return (classNode.hasInvisibleAnnotation(Types.Mixin.directMixin)
-            || classNode.hasInvisibleAnnotation(Types.Mixin.indirectMixin))
-            && classNode.implements(Types.Mixin.mixin)
+        return classNode.hasInvisibleAnnotation(Types.Mixin.directMixin)
+            || classNode.hasInvisibleAnnotation(Types.Mixin.indirectMixin)
     } // @formatter:on
 
     private fun createMixin(classNode: ClassNode): Result<Mixin> {

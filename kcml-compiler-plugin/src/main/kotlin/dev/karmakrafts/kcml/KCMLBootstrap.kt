@@ -31,24 +31,29 @@ import kotlin.io.path.div
 
 internal object KCMLBootstrap {
     private lateinit var messageCollector: MessageCollector
-    private val initializationLock: Any = Any()
     private val initializationSet: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
 
     lateinit var kcmlDirectory: Path
         private set
     lateinit var loaderPath: Path
         private set
+    lateinit var bridgePath: Path
+        private set
 
     private val loaderJar: EmbeddedJar = EmbeddedJar("/kcml-loader.jar", ::log)
+    private val bridgeJar: EmbeddedJar = EmbeddedJar("/kcml-mixin-bridge.jar", ::log)
 
     private fun log(message: String) =
         messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
 
-    fun init(configuration: CompilerConfiguration) = synchronized(initializationLock) {
-        if (configuration in initializationSet) return@synchronized
+    @Synchronized
+    fun init(configuration: CompilerConfiguration) {
+        if (configuration in initializationSet) return
         messageCollector = configuration.messageCollector
         log("Bootstrapping KCML ${KCMLVersion.version}..")
         initPaths()
+        loaderJar.unpackIfNeeded(loaderPath)
+        bridgeJar.unpackIfNeeded(bridgePath)
         val compilerClassLoader = configuration::class.java.classLoader
         log("Compiler ClassLoader is $compilerClassLoader")
         try {
@@ -60,7 +65,6 @@ internal object KCMLBootstrap {
         } catch (_: Throwable) {
             // The fallback method of injecting the loader for early bootstrap for direct compiler invocations
             log("KCML loader not found on classpath, injecting at runtime")
-            loaderJar.unpackIfNeeded(loaderPath)
             injectLoader(compilerClassLoader)
         }
         initializationSet += configuration
@@ -74,6 +78,7 @@ internal object KCMLBootstrap {
         kcmlDirectory.createDirectories()
         log("KCML home directory is $kcmlDirectory")
         loaderPath = kcmlDirectory / "loader.jar" // This path might not exist initially
+        bridgePath = kcmlDirectory / "bridge.jar" // This path might not exist initially
     }
 
     /**
