@@ -56,6 +56,10 @@ class InjectComponentTest {
 
     private fun loadClass(classNode: ClassNode): Class<*> {
         val bytecode = writeClass(classNode)
+        return loadClass(bytecode)
+    }
+
+    private fun loadClass(bytecode: ByteArray): Class<*> {
         return object : ClassLoader(javaClass.classLoader) {
             fun define(): Class<*> {
                 val type = defineClass(null, bytecode, 0, bytecode.size)
@@ -321,26 +325,44 @@ class InjectComponentTest {
 
         assertTrue(mixin.apply(secondPass))
         val targetMethod = secondPass.methods.single { method ->
-            method.name == "evaluateFunctionCall"
-                && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrCall;Ljava/util/List;Lorg/jetbrains/kotlin/backend/konan/llvm/Lifetime;Lkotlinx/cinterop/CPointer;)Lkotlinx/cinterop/CPointer;"
+            method.name == "evaluateFunctionCall" && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrCall;Ljava/util/List;Lorg/jetbrains/kotlin/backend/konan/llvm/Lifetime;Lkotlinx/cinterop/CPointer;)Lkotlinx/cinterop/CPointer;"
         }
         val hookCalls = targetMethod.instructions.filterIsInstance<MethodInsnNode>().filter { instruction ->
-            instruction.opcode == Opcodes.INVOKESTATIC
-                && instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks"
-                && instruction.name == "onEvaluateFunctionCall"
+            instruction.opcode == Opcodes.INVOKESTATIC && instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks" && instruction.name == "onEvaluateFunctionCall"
         }
         assertEquals(2, hookCalls.size)
         for (call in hookCalls) {
-            val arguments = generateSequence(call.previous) { instruction -> instruction.previous }
-                .filterIsInstance<VarInsnNode>()
-                .take(3)
-                .toList()
-                .reversed()
+            val arguments =
+                generateSequence(call.previous) { instruction -> instruction.previous }.filterIsInstance<VarInsnNode>()
+                    .take(3)
+                    .toList()
+                    .reversed()
             assertEquals(listOf(Opcodes.ALOAD, Opcodes.ALOAD, Opcodes.ALOAD), arguments.map { it.opcode })
             assertEquals(listOf(0, 1, 2), arguments.map { it.`var` })
         }
         val transformedClass = loadClass(secondPass)
         assertEquals(secondPass.name.replace('/', '.'), transformedClass.name)
+    }
+
+    @Test
+    fun `produces verifiable llvm injection through consecutive transformers`() {
+        val targetResource = "org/jetbrains/kotlin/backend/konan/llvm/CodeGeneratorVisitor.class"
+        val targetBytecode = checkNotNull(javaClass.classLoader.getResourceAsStream(targetResource)).use { stream ->
+            stream.readBytes()
+        }
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val firstLoader = MixinLoader(NoopLogger).apply { load(listOf(loaderJar)) }
+        val secondLoader = MixinLoader(NoopLogger).apply { load(listOf(loaderJar)) }
+        val firstTransformer = MixinClassTransformer(NoopLogger, firstLoader)
+        val secondTransformer = MixinClassTransformer(NoopLogger, secondLoader)
+
+        val firstPass =
+            firstTransformer.transform(null, null, targetResource.removeSuffix(".class"), null, null, targetBytecode)
+        val secondPass =
+            secondTransformer.transform(null, null, targetResource.removeSuffix(".class"), null, null, firstPass)
+        val transformedClass = loadClass(secondPass)
+
+        assertEquals(targetResource.removeSuffix(".class").replace('/', '.'), transformedClass.name)
     }
 
     @Test

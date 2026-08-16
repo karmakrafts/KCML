@@ -42,17 +42,31 @@ dependencies {
 }
 
 tasks {
+    val agentJar = named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
     test {
-        dependsOn(loaderJar)
-        inputs.file(loaderJar)
+        dependsOn(agentJar, loaderJar)
+        inputs.files(agentJar, loaderJar)
+        systemProperty("kcml.agent.jar", agentJar.get().asFile.absolutePath)
         systemProperty("kcml.loader.jar", loaderJar.get().asFile.absolutePath)
         useJUnitPlatform()
     }
     shadowJar {
+        val relocationPrefix = "${rootProject.group}.agent.internal"
         archiveClassifier = ""
         addMultiReleaseAttribute = false
-        relocationPrefix = "${rootProject.group}.agent.internal"
-        enableAutoRelocation = true
+        enableAutoRelocation = false
+        relocate("io.github.alexandrepiveteau.graphs", "$relocationPrefix.io.github.alexandrepiveteau.graphs") {
+            skipStringConstants = true
+        }
+        relocate("kotlin", "$relocationPrefix.kotlin") {
+            skipStringConstants = true
+        }
+        relocate("org.jetbrains.annotations", "$relocationPrefix.org.jetbrains.annotations") {
+            skipStringConstants = true
+        }
+        relocate("org.objectweb.asm", "$relocationPrefix.org.objectweb.asm") {
+            skipStringConstants = true
+        }
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
         manifest {
             attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgent"

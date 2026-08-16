@@ -21,7 +21,6 @@ import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.log.RemoteLogger
 import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
-import dev.karmakrafts.kcml.agent.util.AgentArguments
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
 import dev.karmakrafts.kcml.agent.util.bridgePath
@@ -35,15 +34,14 @@ import kotlin.io.path.Path
 
 @Suppress("UNUSED")
 object KCMLAgent {
-    private fun injectMixinBridge( // @formatter:off
-        arguments: AgentArguments,
+    internal fun injectMixinBridge( // @formatter:off
+        path: String,
         logger: Logger,
         instrumentation: Instrumentation
     ) { // @formatter:on
-        val path = arguments.bridgePath
-        logger.info { "Injecting KCML mixin bridge JAR $path into system classpath" }
+        logger.info { "Injecting KCML mixin bridge JAR $path into bootstrap classpath" }
         val file = JarFile(File(path))
-        instrumentation.appendToSystemClassLoaderSearch(file)
+        instrumentation.appendToBootstrapClassLoaderSearch(file)
     }
 
     @JvmStatic
@@ -54,7 +52,7 @@ object KCMLAgent {
         val logger = if (args.logging) RemoteLogger(commClient) else NoopLogger
         logger.info { "Agent invoked with options: $joinedArgs" }
         logger.info { "Initializing KCML compiler agent.." }
-        injectMixinBridge(args, logger, instrumentation)
+        injectMixinBridge(args.bridgePath, logger, instrumentation)
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader mixins" }
         loader.load(listOf(Path(args.loaderPath))) // Load builtin mixins from loader JAR

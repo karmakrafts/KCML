@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
-import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
@@ -50,7 +49,7 @@ internal data class Mixin( // @formatter:off
             this += components.tryCreateInterfaceComponent(type, mixinClass) ?: continue
         }
         sortComponents()
-        logger.info { "Established components for mixin ${mixinClass.dottedName}:\n\t- ${joinToString("\n\t- ")}" }
+        logger.info { "Created $size mixin components" }
     }
 
     private fun MutableList<MixinComponent>.sortComponents() {
