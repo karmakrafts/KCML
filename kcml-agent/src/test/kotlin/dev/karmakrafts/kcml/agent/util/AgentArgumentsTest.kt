@@ -79,4 +79,13 @@ class AgentArgumentsTest {
         assertNull(arguments.getOrNull(enabled))
         assertEquals("accepted", arguments[message])
     }
+
+    @Test
+    fun `parses KCML agent bridge path`() {
+        val arguments = KCMLAgentArguments.parse(
+            "comm_port=1:logging=false:loader_path=loader.jar:bridge_path=bridge.jar"
+        )
+
+        assertEquals("bridge.jar", arguments.bridgePath)
+    }
 }

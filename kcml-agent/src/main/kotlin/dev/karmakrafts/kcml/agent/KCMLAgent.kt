@@ -54,7 +54,7 @@ object KCMLAgent {
         val logger = if (args.logging) RemoteLogger(commClient) else NoopLogger
         logger.info { "Agent invoked with options: $joinedArgs" }
         logger.info { "Initializing KCML compiler agent.." }
-        //injectMixinBridge(args, logger, instrumentation)
+        injectMixinBridge(args, logger, instrumentation)
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader mixins" }
         loader.load(listOf(Path(args.loaderPath))) // Load builtin mixins from loader JAR

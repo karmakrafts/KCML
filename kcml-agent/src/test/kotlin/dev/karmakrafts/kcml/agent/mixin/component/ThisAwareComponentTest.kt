@@ -65,14 +65,8 @@ class ThisAwareComponentTest {
 
         assertEquals(
             listOf(
-                Opcodes.ALOAD,
-                Opcodes.POP,
-                Opcodes.ALOAD,
-                Opcodes.INVOKEVIRTUAL,
-                Opcodes.POP,
-                Opcodes.RETURN
-            ),
-            targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
+            Opcodes.ALOAD, Opcodes.POP, Opcodes.ALOAD, Opcodes.INVOKEVIRTUAL, Opcodes.POP, Opcodes.RETURN
+        ), targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
         assertEquals(listOf(0, 3), targetMethod.instructions.filterIsInstance<VarInsnNode>().map { it.`var` })
     }
 

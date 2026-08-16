@@ -26,7 +26,7 @@ internal object KCMLAgentArguments {
     val bridgePath: Argument<String> = Argument.create("bridge_path")
 
     fun parse(input: String): AgentArguments = AgentArguments.parse(
-        input, commPort, moduleName, logging, loaderPath
+        input, commPort, moduleName, logging, loaderPath, bridgePath
     )
 }
 

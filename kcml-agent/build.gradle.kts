@@ -34,6 +34,7 @@ dependencies {
     implementation(libs.annotations)
     compileOnly(projects.kcmlMixinBridge)
 
+    testImplementation(projects.kcmlMixinBridge)
     testImplementation(libs.kotlin.compiler.embeddable)
     testImplementation(libs.kotlin.native.compiler.embeddable)
     testImplementation(libs.kotlin.test)
