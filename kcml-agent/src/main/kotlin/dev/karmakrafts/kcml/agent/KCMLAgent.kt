@@ -41,9 +41,9 @@ object KCMLAgent {
         instrumentation: Instrumentation
     ) { // @formatter:on
         val path = arguments.bridgePath
-        logger.info { "Injecting KCML mixin bridge JAR $path into bootstrap classpath" }
+        logger.info { "Injecting KCML mixin bridge JAR $path into system classpath" }
         val file = JarFile(File(path))
-        instrumentation.appendToBootstrapClassLoaderSearch(file)
+        instrumentation.appendToSystemClassLoaderSearch(file)
     }
 
     @JvmStatic
