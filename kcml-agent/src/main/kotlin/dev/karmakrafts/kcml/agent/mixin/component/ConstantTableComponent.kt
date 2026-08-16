@@ -26,9 +26,10 @@ import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
+@DependsOn(InjectComponent::class)
 internal class ConstantTableComponent(
     private val mixinClass: ClassNode
-) : MixinComponent {
+) : AbstractMixinComponent() {
     companion object {
         private val getterDescriptors: Map<String, String> = mapOf(
             "getString" to Type.getMethodDescriptor(Types.string, Types.string),
@@ -79,7 +80,7 @@ internal class ConstantTableComponent(
             val value = call.resolveConstant(constantName.cst as String)
             remove(constantName)
             set(
-                call, when (value) { // Optimize constant loads with BIPUSH and SIPUSH
+                call, when (value) {
                     is Byte -> IntInsnNode(Opcodes.BIPUSH, value.toInt())
                     is Short -> IntInsnNode(Opcodes.SIPUSH, value.toInt())
                     else -> LdcInsnNode(value)

@@ -55,7 +55,7 @@ internal data class InjectComponent( // @formatter:off
     val order: Order,
     val mixinClass: ClassNode,
     val mixinMethod: MethodNode
-) : MixinComponent { // @formatter:on
+) : AbstractMixinComponent() { // @formatter:on
     companion object {
         fun fromAnnotation( // @formatter:off
             mixinClass: ClassNode,
@@ -344,7 +344,9 @@ internal data class InjectComponent( // @formatter:off
         injection.processCapturedLocals(context, targetMethod, injectionPoint, relocated, capturedIndices)
             .processReturnFrame(context)
             .processReturnContext(context)
-        ThisAwareComponent(mixinClass).prepareInjection(injection, relocated)
+        context.otherComponents.filterIsInstance<ThisAwareComponent>()
+            .singleOrNull()
+            ?.prepareInjection(injection, relocated)
         val targetBase = allocateLocals(targetMethod, injection, relocated, capturedIndices, copiedLabels)
         return injection.relocateStack(targetBase, relocated)
     } // @formatter:on

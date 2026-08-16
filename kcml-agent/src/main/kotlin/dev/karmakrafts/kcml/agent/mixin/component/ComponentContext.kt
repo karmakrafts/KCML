@@ -21,7 +21,8 @@ import dev.karmakrafts.kcml.agent.mixin.MixinLoader
 import org.objectweb.asm.tree.ClassNode
 
 internal data class ComponentContext( // @formatter:off
-    val target: ClassNode,
+    val targetClass: ClassNode,
     val loader: MixinLoader,
-    val logger: Logger
+    val logger: Logger,
+    val otherComponents: List<MixinComponent>
 ) // @formatter:on

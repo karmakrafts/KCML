@@ -32,6 +32,7 @@ dependencies {
     implementation(libs.ow2.asm.core)
     implementation(libs.ow2.asm.tree)
     implementation(libs.annotations)
+    implementation(libs.kotlinGraphs)
     compileOnly(projects.kcmlMixinBridge)
 
     testImplementation(projects.kcmlMixinBridge)

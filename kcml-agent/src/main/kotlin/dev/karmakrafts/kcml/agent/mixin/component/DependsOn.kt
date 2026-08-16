@@ -18,7 +18,8 @@ package dev.karmakrafts.kcml.agent.mixin.component
 
 import kotlin.reflect.KClass
 
-internal interface MixinComponent {
-    val dependencies: List<KClass<out MixinComponent>>
-    fun apply(context: ComponentContext): Boolean
-}
+@Retention(AnnotationRetention.RUNTIME)
+@Target(AnnotationTarget.CLASS)
+internal annotation class DependsOn(
+    vararg val components: KClass<out MixinComponent>
+)

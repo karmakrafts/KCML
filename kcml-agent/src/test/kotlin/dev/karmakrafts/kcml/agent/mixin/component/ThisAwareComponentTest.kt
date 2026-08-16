@@ -33,9 +33,10 @@ import kotlin.test.assertTrue
 
 class ThisAwareComponentTest {
     private fun createContext(method: MethodNode): ComponentContext = ComponentContext(
-        target = ClassNode().apply { methods = mutableListOf(method) },
+        targetClass = ClassNode().apply { methods = mutableListOf(method) },
         loader = MixinLoader(NoopLogger),
-        logger = NoopLogger
+        logger = NoopLogger,
+        otherComponents = emptyList()
     )
 
     @Test

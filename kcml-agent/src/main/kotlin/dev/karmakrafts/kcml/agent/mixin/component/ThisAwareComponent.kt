@@ -25,9 +25,10 @@ import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 
+@DependsOn(InjectComponent::class)
 internal class ThisAwareComponent(
     private val mixinClass: ClassNode
-) : MixinComponent {
+) : AbstractMixinComponent() {
     private fun InsnList.findGetThisCalls(): List<MethodInsnNode> {
         val getThisDescriptor = Type.getMethodDescriptor(Types.any)
         return filterIsInstance<MethodInsnNode>().filter { instruction -> // @formatter:off
@@ -57,7 +58,10 @@ internal class ThisAwareComponent(
             check(receiver.`var` == 0) {
                 "ThisAware.getThis() requires the mixin receiver from local 0"
             }
-            relocated += receiver
+            instructions.remove(receiver)
+            val targetReceiver = VarInsnNode(Opcodes.ALOAD, 0)
+            instructions.set(call, targetReceiver)
+            relocated += targetReceiver
         }
     }
 

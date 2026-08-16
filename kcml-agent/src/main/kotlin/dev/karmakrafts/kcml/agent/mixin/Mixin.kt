@@ -16,9 +16,14 @@
 
 package dev.karmakrafts.kcml.agent.mixin
 
+import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
+import io.github.alexandrepiveteau.graphs.Vertex
+import io.github.alexandrepiveteau.graphs.algorithms.topologicalSort
+import io.github.alexandrepiveteau.graphs.arcTo
+import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 
@@ -26,8 +31,8 @@ internal data class Mixin( // @formatter:off
     val mixinClass: ClassNode,
     val target: Type,
     val priority: Int,
-    private val logger: Logger,
-    private val loader: MixinLoader
+    val logger: Logger,
+    val loader: MixinLoader
 ) : Comparable<Mixin> { // @formatter:on
     val components: List<MixinComponent> = buildList {
         val components = loader.components
@@ -44,18 +49,48 @@ internal data class Mixin( // @formatter:off
             val type = Type.getObjectType(iface)
             this += components.tryCreateInterfaceComponent(type, mixinClass) ?: continue
         }
+        sortComponents()
+        logger.info { "Established components for mixin ${mixinClass.dottedName}:\n\t- ${joinToString("\n\t- ")}" }
+    }
+
+    private fun MutableList<MixinComponent>.sortComponents() {
+        val componentVertices = ArrayList<Pair<MixinComponent, Vertex>>(size)
+        val graph = buildDirectedGraph {
+            for (component in this@sortComponents) {
+                componentVertices += component to addVertex()
+            }
+            for ((component, componentVertex) in componentVertices) {
+                for (dependencyType in component.dependencies) {
+                    for ((dependency, dependencyVertex) in componentVertices) {
+                        if (dependency::class == dependencyType) {
+                            addArc(dependencyVertex arcTo componentVertex)
+                        }
+                    }
+                }
+            }
+        }
+        val sortedComponents = ArrayList<MixinComponent>(size)
+        for (vertex in graph.topologicalSort()) {
+            sortedComponents += componentVertices.first { (_, componentVertex) ->
+                componentVertex == vertex
+            }.first
+        }
+        clear()
+        this += sortedComponents
     }
 
     fun apply(classNode: ClassNode): Boolean {
         if (classNode.name != target.internalName) return false
-        val componentContext = ComponentContext( // @formatter:off
-            target = classNode,
-            loader = loader,
-            logger = logger
-        ) // @formatter:on
         var wasChanged = false
         for (component in components) {
-            wasChanged = wasChanged or component.apply(componentContext)
+            wasChanged = wasChanged or component.apply(
+                ComponentContext( // @formatter:off
+                    targetClass = classNode,
+                    loader = loader,
+                    logger = logger,
+                    otherComponents = components - component
+                ) // @formatter:on
+            )
         }
         return wasChanged
     }

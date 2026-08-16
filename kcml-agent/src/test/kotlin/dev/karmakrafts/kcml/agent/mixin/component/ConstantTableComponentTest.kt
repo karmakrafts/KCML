@@ -47,7 +47,7 @@ class ConstantTableComponentTest {
     }
 
     private fun createContext(): ComponentContext = ComponentContext(
-        target = ClassNode(), loader = MixinLoader(NoopLogger), logger = NoopLogger
+        targetClass = ClassNode(), loader = MixinLoader(NoopLogger), logger = NoopLogger, otherComponents = emptyList()
     )
 
     private fun MethodNode.addConstantCall(name: String, getterName: String, returnType: Type) {

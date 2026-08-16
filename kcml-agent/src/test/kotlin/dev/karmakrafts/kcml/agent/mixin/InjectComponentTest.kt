@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
+import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -41,17 +42,26 @@ import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class InjectComponentTest {
-    private fun loadClass(classNode: ClassNode): Class<*> {
+    private fun writeClass(classNode: ClassNode): ByteArray {
         val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
         classNode.accept(writer)
-        val bytecode = writer.toByteArray()
+        return writer.toByteArray()
+    }
+
+    private fun loadClass(classNode: ClassNode): Class<*> {
+        val bytecode = writeClass(classNode)
         return object : ClassLoader(javaClass.classLoader) {
-            fun define(): Class<*> = defineClass(null, bytecode, 0, bytecode.size)
+            fun define(): Class<*> {
+                val type = defineClass(null, bytecode, 0, bytecode.size)
+                resolveClass(type)
+                return type
+            }
         }.define()
     }
 
@@ -107,12 +117,14 @@ class InjectComponentTest {
         mixinMethod = mixinMethod
     )
 
-    private fun createContext(targetMethod: MethodNode): ComponentContext {
+    private fun createContext(
+        targetMethod: MethodNode, otherComponents: List<MixinComponent> = emptyList()
+    ): ComponentContext {
         val targetClass = ClassNode().apply {
             name = "example/Target"
             methods = mutableListOf(targetMethod)
         }
-        return ComponentContext(targetClass, MixinLoader(NoopLogger), NoopLogger)
+        return ComponentContext(targetClass, MixinLoader(NoopLogger), NoopLogger, otherComponents)
     }
 
     @Test
@@ -265,6 +277,73 @@ class InjectComponentTest {
     }
 
     @Test
+    fun `produces verifiable this aware llvm injection independently`() {
+        val parsedTargetClass = ClassNode()
+        val targetResource = "org/jetbrains/kotlin/backend/konan/llvm/CodeGeneratorVisitor.class"
+        val targetBytecode = checkNotNull(javaClass.classLoader.getResourceAsStream(targetResource)).use { stream ->
+            stream.readBytes()
+        }
+        ClassReader(targetBytecode).accept(parsedTargetClass, 0)
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val loader = MixinLoader(NoopLogger)
+        loader.load(listOf(loaderJar))
+        val mixin = loader.mixins.single { candidate ->
+            candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/llvm/CodeGeneratorVisitorMixin"
+        }
+        val inject = mixin.components.single { component -> component is InjectComponent }
+        val context = ComponentContext(
+            parsedTargetClass, loader, NoopLogger, mixin.components - inject
+        )
+
+        assertTrue(inject.apply(context))
+        val transformedClass = loadClass(parsedTargetClass)
+        assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
+        assertTrue(transformedClass.declaredMethods.any { method -> method.name == "evaluateFunctionCall" })
+    }
+
+    @Test
+    fun `produces verifiable llvm injection after serialized retransformation`() {
+        val targetResource = "org/jetbrains/kotlin/backend/konan/llvm/CodeGeneratorVisitor.class"
+        val targetBytecode = checkNotNull(javaClass.classLoader.getResourceAsStream(targetResource)).use { stream ->
+            stream.readBytes()
+        }
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val loader = MixinLoader(NoopLogger)
+        loader.load(listOf(loaderJar))
+        val mixin = loader.mixins.single { candidate ->
+            candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/llvm/CodeGeneratorVisitorMixin"
+        }
+        val firstPass = ClassNode()
+        ClassReader(targetBytecode).accept(firstPass, 0)
+        assertTrue(mixin.apply(firstPass))
+        val secondPass = ClassNode()
+        ClassReader(writeClass(firstPass)).accept(secondPass, 0)
+
+        assertTrue(mixin.apply(secondPass))
+        val targetMethod = secondPass.methods.single { method ->
+            method.name == "evaluateFunctionCall"
+                && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrCall;Ljava/util/List;Lorg/jetbrains/kotlin/backend/konan/llvm/Lifetime;Lkotlinx/cinterop/CPointer;)Lkotlinx/cinterop/CPointer;"
+        }
+        val hookCalls = targetMethod.instructions.filterIsInstance<MethodInsnNode>().filter { instruction ->
+            instruction.opcode == Opcodes.INVOKESTATIC
+                && instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks"
+                && instruction.name == "onEvaluateFunctionCall"
+        }
+        assertEquals(2, hookCalls.size)
+        for (call in hookCalls) {
+            val arguments = generateSequence(call.previous) { instruction -> instruction.previous }
+                .filterIsInstance<VarInsnNode>()
+                .take(3)
+                .toList()
+                .reversed()
+            assertEquals(listOf(Opcodes.ALOAD, Opcodes.ALOAD, Opcodes.ALOAD), arguments.map { it.opcode })
+            assertEquals(listOf(0, 1, 2), arguments.map { it.`var` })
+        }
+        val transformedClass = loadClass(secondPass)
+        assertEquals(secondPass.name.replace('/', '.'), transformedClass.name)
+    }
+
+    @Test
     fun `does not allocate captured target locals again`() {
         val start = LabelNode()
         val end = LabelNode()
@@ -346,7 +425,7 @@ class InjectComponentTest {
             mixinMethod = mixinMethod
         )
 
-        assertTrue(component.apply(ComponentContext(targetClass, MixinLoader(NoopLogger), NoopLogger)))
+        assertTrue(component.apply(ComponentContext(targetClass, MixinLoader(NoopLogger), NoopLogger, emptyList())))
 
         val generatedClass = loadClass(targetClass)
         assertEquals("expected", generatedClass.getMethod("target").invoke(null))
@@ -428,10 +507,11 @@ class InjectComponentTest {
             maxLocals = 4
         }
         val component = createComponent(mixinMethod, mixinClass = mixinClass)
+        val thisAwareComponent = ThisAwareComponent(mixinClass)
 
-        val context = createContext(targetMethod)
+        val context = createContext(targetMethod, listOf(thisAwareComponent))
         assertTrue(component.apply(context))
-        assertTrue(ThisAwareComponent(mixinClass).apply(context))
+        assertFalse(thisAwareComponent.apply(context))
 
         assertEquals(
             listOf(

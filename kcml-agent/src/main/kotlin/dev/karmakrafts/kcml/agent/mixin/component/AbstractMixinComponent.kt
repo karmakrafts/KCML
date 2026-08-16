@@ -18,7 +18,10 @@ package dev.karmakrafts.kcml.agent.mixin.component
 
 import kotlin.reflect.KClass
 
-internal interface MixinComponent {
-    val dependencies: List<KClass<out MixinComponent>>
-    fun apply(context: ComponentContext): Boolean
+internal abstract class AbstractMixinComponent : MixinComponent {
+    override val dependencies: List<KClass<out MixinComponent>> by lazy {
+        val clazz = this::class.java
+        if (!clazz.isAnnotationPresent(DependsOn::class.java)) return@lazy emptyList()
+        clazz.getAnnotation(DependsOn::class.java).components.toList()
+    }
 }
