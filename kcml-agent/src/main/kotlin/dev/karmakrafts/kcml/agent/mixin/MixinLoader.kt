@@ -125,6 +125,7 @@ internal class MixinLoader(
                 }
                 .toList()
                 .filterNotNull()
+                .sorted() // Sort mixins by priority
             // @formatter:on
         }
     }
