@@ -37,9 +37,6 @@ public final class MixinBridge {
     }
 
     public void putConstant(final String name, final Object value) {
-        if (constantTable.containsKey(name)) {
-            throw new IllegalArgumentException(String.format("Mixin constant %s is already defined", name));
-        }
         constantTable.put(name, value);
     }
 }
