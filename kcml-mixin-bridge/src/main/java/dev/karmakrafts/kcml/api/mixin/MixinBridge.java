@@ -25,12 +25,11 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class MixinBridge {
     public static final MixinBridge INSTANCE = new MixinBridge();
+    private final ConcurrentHashMap<String, Object> constantTable = new ConcurrentHashMap<>();
+    // @formatter:on
 
     // @formatter:off
     private MixinBridge() {}
-    // @formatter:on
-
-    private final ConcurrentHashMap<String, Object> constantTable = new ConcurrentHashMap<>();
 
     public Map<String, Object> getConstantTable() {
         return constantTable;

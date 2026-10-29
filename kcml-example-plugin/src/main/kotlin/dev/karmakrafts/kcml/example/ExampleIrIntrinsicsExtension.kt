@@ -22,9 +22,9 @@ import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.IrIntrinsicsExtension
 import org.jetbrains.kotlin.ir.expressions.IrCall
 import org.jetbrains.kotlin.ir.expressions.IrExpression
+import org.jetbrains.kotlin.ir.expressions.impl.IrConstImpl
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.kotlin.ir.util.hasAnnotation
-import org.jetbrains.kotlin.ir.util.toIrConst
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
@@ -42,6 +42,6 @@ internal class ExampleIrIntrinsicsExtension : AbstractExtension(), IrIntrinsicsE
     }
 
     override fun process(call: IrCall, backend: IrBackend): IrExpression {
-        return 44.toIrConst(backend.irBuiltIns.intType)
+        return IrConstImpl.int(call.startOffset, call.endOffset, backend.irBuiltIns.intType, 44)
     }
 }

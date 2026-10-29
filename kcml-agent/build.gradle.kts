@@ -29,11 +29,15 @@ evaluationDependsOn(":kcml-loader")
 val loaderJar = project(":kcml-loader").tasks.named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
 
 dependencies {
+    compileOnly(projects.kcmlMixinBridge)
+
+    implementation(projects.kcmlAgentProtocol)
     implementation(libs.ow2.asm.core)
     implementation(libs.ow2.asm.tree)
     implementation(libs.annotations)
     implementation(libs.kotlinGraphs)
-    compileOnly(projects.kcmlMixinBridge)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(projects.kcmlMixinBridge)
     testImplementation(libs.kotlin.compiler.embeddable)
@@ -43,12 +47,17 @@ dependencies {
 
 tasks {
     val agentJar = named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
+    val plainAgentJar = named<Jar>("jar").flatMap { task -> task.archiveFile }
     test {
-        dependsOn(agentJar, loaderJar)
-        inputs.files(agentJar, loaderJar)
+        dependsOn(agentJar, plainAgentJar, loaderJar)
+        inputs.files(agentJar, plainAgentJar, loaderJar)
         systemProperty("kcml.agent.jar", agentJar.get().asFile.absolutePath)
+        systemProperty("kcml.agent.plain.jar", plainAgentJar.get().asFile.absolutePath)
         systemProperty("kcml.loader.jar", loaderJar.get().asFile.absolutePath)
         useJUnitPlatform()
+    }
+    jar {
+        archiveClassifier = "slim"
     }
     shadowJar {
         val relocationPrefix = "${rootProject.group}.agent.internal"
@@ -59,6 +68,9 @@ tasks {
             skipStringConstants = true
         }
         relocate("kotlin", "$relocationPrefix.kotlin") {
+            skipStringConstants = true
+        }
+        relocate("kotlinx", "$relocationPrefix.kotlinx") {
             skipStringConstants = true
         }
         relocate("org.jetbrains.annotations", "$relocationPrefix.org.jetbrains.annotations") {

@@ -16,22 +16,23 @@
 
 package dev.karmakrafts.kcml.agent.log
 
+import dev.karmakrafts.kcml.agent.proto.A2SLog
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 
 internal class RemoteLogger(val client: AgentCommClient) : Logger {
     override fun debug(message: () -> Any?) {
-        client.log("[DEBUG] ${message()}")
+        client.send(A2SLog("[DEBUG] ${message()}"))
     }
 
     override fun info(message: () -> Any?) {
-        client.log("[-INFO] ${message()}")
+        client.send(A2SLog("[-INFO] ${message()}"))
     }
 
     override fun warn(message: () -> Any?) {
-        client.log("[-WARN] ${message()}")
+        client.send(A2SLog("[-WARN] ${message()}"))
     }
 
     override fun error(message: () -> Any?) {
-        client.log("[ERROR] ${message()}")
+        client.send(A2SLog("[ERROR] ${message()}"))
     }
 }

@@ -36,6 +36,8 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmAndroidCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -48,6 +50,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
         private const val OPT_PLUGIN_CLASSPATH: String = "pluginClasspaths"
         private const val OPT_AGENT_LOGGING: String = "agentLogging"
         private const val OPT_AGENT_COMM_PORT: String = "agentCommPort"
+        private const val OPT_AGENT_DUMP_CLASSES: String = "agentDumpClasses"
+        private const val OPT_AGENT_DUMP_PATH: String = "agentDumpPath"
         private const val OPT_MODULE_NAME: String = "moduleName"
         private const val OPT_IS_ANDROID: String = "isAndroid"
     }
@@ -56,13 +60,42 @@ internal open class KCMLGradlePlugin @Inject constructor(
         val logger = target.logger
         logger.info("KCML ${BuildInfo.version}")
         val extension = target.extensions.create("kcml", KCMLExtension::class.java, target)
-        target.gradle.sharedServices.registerIfAbsent(KCMLBuildService.NAME, KCMLBuildService::class.java) { service ->
+        val pluginConfiguration = target.configurations.create(CONFIGURATION_NAME)
+        val runtimeConfiguration = target.configurations.create("kcmlRuntime") {
+            it.isCanBeConsumed = false
+            it.isTransitive = false
+        }
+        target.dependencies.add(
+            runtimeConfiguration.name,
+            "${BuildInfo.pluginArtifact.groupId}:${BuildInfo.pluginArtifact.artifactId}:${BuildInfo.version}"
+        )
+        val prepareRuntime = target.tasks.register("kcmlPrepareRuntime", KCMLPrepareRuntimeTask::class.java) { task ->
+            task.compilerClasspath.from(runtimeConfiguration)
+            task.outputDirectory.set(target.layout.buildDirectory.dir("kcml_runtime"))
+        }
+        val buildService = target.gradle.sharedServices.registerIfAbsent(
+            "${KCMLBuildService.NAME}${target.path}", KCMLBuildService::class.java
+        ) { service ->
             val port = extension.agentPort
             logger.info("Using port $port for KCML agent comm server")
             service.parameters.agentCommPort.value(port)
+            service.parameters.loaderFile.set(prepareRuntime.flatMap { it.outputDirectory.file("kcml-loader.jar") })
+            service.parameters.bridgeFile.set(prepareRuntime.flatMap { it.outputDirectory.file("kcml-mixin-bridge.jar") })
+            service.parameters.pluginPaths.set(pluginConfiguration.elements.map { files -> files.map { it.asFile.absolutePath } })
+            service.parameters.dumpClasses.set(extension.agentDumpClasses)
+            service.parameters.dumpPath.set(extension.agentDumpPath.map { it.asFile.absolutePath })
+        }
+        val startServer = target.tasks.register("kcmlStartAgentServer", KCMLPreBuildTask::class.java) { task ->
+            task.dependsOn(prepareRuntime, pluginConfiguration)
+            task.buildService.set(buildService)
+        }
+        target.tasks.configureEach { task ->
+            if (task is KotlinCompilationTask<*> || task is KotlinNativeLink) {
+                task.dependsOn(startServer)
+                task.usesService(buildService)
+            }
         }
         logger.info("Created KCML project extension")
-        target.configurations.create(CONFIGURATION_NAME) // Custom configuration for declaring KCML plugin dependencies
         logger.info("Created KCML plugin configuration")
         registerPreBuildTasks(target)
         registerPostBuildTasks(target)
@@ -99,6 +132,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
     private fun createPreBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPreBuildTask> {
         val taskName = "kcmlPreBuild${target.name.capitalized()}"
         return project.tasks.register(taskName, KCMLPreBuildTask::class.java) { task ->
+            task.dependsOn("kcmlStartAgentServer")
+            task.buildService.set(project.gradle.sharedServices.registrations.getByName("${KCMLBuildService.NAME}${project.path}").service.map { it as KCMLBuildService })
             task.apply {
                 group = "kcml"
                 description =
@@ -134,6 +169,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
     private fun createPostBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPostBuildTask> {
         val taskName = "kcmlPostBuild${target.name.capitalized()}"
         return project.tasks.register(taskName, KCMLPostBuildTask::class.java) { task ->
+            task.buildService.set(project.gradle.sharedServices.registrations.getByName("${KCMLBuildService.NAME}${project.path}").service.map { it as KCMLBuildService })
             task.apply {
                 group = "kcml"
                 description =
@@ -194,6 +230,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))
+                add(SubpluginOption(OPT_AGENT_DUMP_CLASSES, extension.agentDumpClasses.get().toString()))
+                add(SubpluginOption(OPT_AGENT_DUMP_PATH, extension.agentDumpPath.get().asFile.absolutePath))
                 if (moduleName?.isNotEmpty() == true) { // @formatter:off
                     add(SubpluginOption(OPT_MODULE_NAME, moduleName.replace('.', '_')
                         .replace('-', '_')

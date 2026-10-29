@@ -25,6 +25,8 @@ internal object KCMLConfigurationKeys {
     val pluginClasspaths: CompilerConfigurationKey<List<Path>> = CompilerConfigurationKey.create("kcmlPluginClasspaths")
     val agentLogging: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentLogging")
     val agentCommPort: CompilerConfigurationKey<Int> = CompilerConfigurationKey.create("kcmlAgentCommPort")
+    val agentDumpClasses: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentDumpClasses")
+    val agentDumpPath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentDumpPath")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
     val isAndroid: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlIsAndroid")
 }
@@ -45,6 +47,18 @@ inline var CompilerConfiguration.kcmlAgentCommPort: Int?
     get() = get(KCMLConfigurationKeys.agentCommPort)
     set(value) {
         put(KCMLConfigurationKeys.agentCommPort, value ?: return)
+    }
+
+inline var CompilerConfiguration.kcmlAgentDumpClasses: Boolean
+    get() = get(KCMLConfigurationKeys.agentDumpClasses) == true
+    set(value) {
+        put(KCMLConfigurationKeys.agentDumpClasses, value)
+    }
+
+inline var CompilerConfiguration.kcmlAgentDumpPath: Path?
+    get() = get(KCMLConfigurationKeys.agentDumpPath)
+    set(value) {
+        put(KCMLConfigurationKeys.agentDumpPath, value ?: return)
     }
 
 inline var CompilerConfiguration.kcmlModuleName: String?

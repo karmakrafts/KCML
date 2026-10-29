@@ -16,26 +16,29 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import dev.karmakrafts.kcml.agent.proto.A2SHandshake
+import dev.karmakrafts.kcml.agent.proto.A2SLog
+import dev.karmakrafts.kcml.agent.proto.S2AHandshake
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketHandler
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketReader
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketWriter
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.serializer
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.BindException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.random.Random
 import kotlin.time.Clock
 
-internal class AgentCommServer( // @formatter:off
-    port: Int,
-    private val messageConsumer: (String) -> Unit = { message ->
-        val logger = Logging.getLogger(AgentCommServer::class.java)
-        logger.info("[KCML Agent]$message")
-    }
-) : AutoCloseable { // @formatter:on
+internal class AgentCommServer(
+    port: Int, private val handshakeProvider: ((A2SHandshake) -> S2AHandshake)? = null
+) : AutoCloseable {
     companion object {
         fun isPortInUse(port: Int): Boolean = try {
             ServerSocket(port).close()
@@ -68,16 +71,23 @@ internal class AgentCommServer( // @formatter:off
 
     private class Connection(
         private val socket: Socket,
-        private val messageConsumer: (String) -> Unit,
+        private val handlerProvider: (String) -> AgentPacketHandler<*>?,
+        handshakeProvider: ((A2SHandshake) -> S2AHandshake)?,
         private val onClosed: (Connection) -> Unit
     ) : AutoCloseable {
         private val isOpen: AtomicBoolean = AtomicBoolean(true)
-        private val reader: BufferedReader = BufferedReader(InputStreamReader(socket.getInputStream()))
+        private val reader: AgentPacketReader = AgentPacketReader(socket.getInputStream())
+        private val writer: AgentPacketWriter = AgentPacketWriter(socket.getOutputStream())
+        private val writerLock: Any = Any()
+        private val handshakeHandler: AgentPacketHandler<A2SHandshake>? = handshakeProvider?.let { provider ->
+            AgentPacketHandler(A2SHandshake.serializer()) { request ->
+                send(S2AHandshake.serializer(), provider(request))
+            }
+        }
         private val ioThread: Thread = Thread {
             try {
                 while (isOpen.load()) {
-                    val line = reader.readLine() ?: break
-                    messageConsumer(line)
+                    reader.read { type -> handshakeHandler?.takeIf { it.type == type } ?: handlerProvider(type) }
                 }
             } catch (_: Throwable) {
                 // Can't do anything here
@@ -90,12 +100,15 @@ internal class AgentCommServer( // @formatter:off
 
         fun start() = ioThread.start()
 
+        fun <T> send(serializer: KSerializer<T>, message: T) = synchronized(writerLock) {
+            writer.write(serializer, message)
+        }
+
         override fun close() {
             if (!isOpen.compareAndSet(expectedValue = true, newValue = false)) {
                 return
             }
             runCatching { socket.close() }
-            runCatching { reader.close() }
             if (Thread.currentThread() != ioThread) {
                 ioThread.join()
             }
@@ -105,6 +118,7 @@ internal class AgentCommServer( // @formatter:off
     private val isRunning: AtomicBoolean = AtomicBoolean(true)
     private val socket: ServerSocket = ServerSocket(port, 100, InetAddress.getLoopbackAddress())
     private val connections: ConcurrentLinkedQueue<Connection> = ConcurrentLinkedQueue()
+    private val handlers: ConcurrentHashMap<String, AgentPacketHandler<*>> = ConcurrentHashMap()
 
     val port: Int
         get() = socket.localPort
@@ -116,7 +130,7 @@ internal class AgentCommServer( // @formatter:off
         try {
             while (isRunning.load()) {
                 val socket = socket.accept()
-                val connection = Connection(socket, messageConsumer) { closedConnection ->
+                val connection = Connection(socket, handlers::get, handshakeProvider) { closedConnection ->
                     connections.remove(closedConnection)
                     logger.info("KCML agent disconnected")
                 }
@@ -130,8 +144,35 @@ internal class AgentCommServer( // @formatter:off
     }
 
     init {
+        receive<A2SLog> { message ->
+            logger.info("[KCML Agent]${message.message}")
+        }
         logger.info("Starting KCML agent comm server..")
         connectionThread.start()
+    }
+
+    inline fun <reified T> send(message: T) = send(serializer(), message)
+
+    @PublishedApi
+    internal fun <T> send(serializer: KSerializer<T>, message: T) {
+        connections.forEach { connection ->
+            runCatching { connection.send(serializer, message) }
+        }
+    }
+
+    inline fun <reified T> receive(noinline handler: (T) -> Unit) {
+        receive(serializer(), handler)
+    }
+
+    @PublishedApi
+    internal fun <T> receive(serializer: KSerializer<T>, handler: (T) -> Unit) {
+        val packetHandler = AgentPacketHandler(serializer, handler)
+        handlers[packetHandler.type]?.let { existingHandler -> // @formatter:off
+            @Suppress("UNCHECKED_CAST")
+            handlers[packetHandler.type] = (existingHandler as AgentPacketHandler<T>) + packetHandler
+            return
+        } // @formatter:on
+        handlers[packetHandler.type] = packetHandler
     }
 
     override fun close() {

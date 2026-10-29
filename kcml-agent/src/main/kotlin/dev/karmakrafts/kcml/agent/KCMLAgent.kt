@@ -23,10 +23,9 @@ import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
-import dev.karmakrafts.kcml.agent.util.bridgePath
 import dev.karmakrafts.kcml.agent.util.commPort
-import dev.karmakrafts.kcml.agent.util.loaderPath
 import dev.karmakrafts.kcml.agent.util.logging
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import java.io.File
 import java.lang.instrument.Instrumentation
 import java.util.jar.JarFile
@@ -49,13 +48,27 @@ object KCMLAgent {
         require(joinedArgs != null) { "KCML compiler agent requires initial startup options" }
         val args = KCMLAgentArguments.parse(joinedArgs)
         val commClient = AgentCommClient(args.commPort)
+        val handshake = try {
+            commClient.handshake()
+        } catch (error: Throwable) {
+            commClient.close()
+            throw error
+        }
         val logger = if (args.logging) RemoteLogger(commClient) else NoopLogger
         logger.info { "Agent invoked with options: $joinedArgs" }
         logger.info { "Initializing KCML compiler agent.." }
-        injectMixinBridge(args.bridgePath, logger, instrumentation)
+        injectMixinBridge(handshake.bridgePath, logger, instrumentation)
+        // ================== Mixin Bridge boundary ==================
+        logger.info { "Initializing default constant table entries" }
+        MixinBridge.INSTANCE.apply {
+            putConstant("loader_path", handshake.loaderPath)
+            putConstant("bridge_path", handshake.bridgePath)
+            putConstant("plugin_paths", handshake.pluginPaths)
+        }
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader mixins" }
-        loader.load(listOf(Path(args.loaderPath))) // Load builtin mixins from loader JAR
-        instrumentation.addTransformer(MixinClassTransformer(logger, loader))
+        loader.load(listOf(Path(handshake.loaderPath))) // Load builtin mixins from loader JAR
+        val dumpPath = if (handshake.dumpClasses) handshake.dumpPath?.let(::Path) else null
+        instrumentation.addTransformer(MixinClassTransformer(logger, loader, dumpPath))
     }
 }

@@ -16,9 +16,16 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import org.gradle.api.file.RegularFileProperty
+import org.gradle.api.provider.ListProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildServiceParameters
 
 internal interface KCMLBuildServiceParameters : BuildServiceParameters {
     val agentCommPort: Property<Int>
+    val loaderFile: RegularFileProperty
+    val bridgeFile: RegularFileProperty
+    val pluginPaths: ListProperty<String>
+    val dumpClasses: Property<Boolean>
+    val dumpPath: Property<String>
 }

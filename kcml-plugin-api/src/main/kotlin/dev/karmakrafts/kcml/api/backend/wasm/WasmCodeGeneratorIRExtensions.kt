@@ -19,7 +19,6 @@
 package dev.karmakrafts.kcml.api.backend.wasm
 
 import org.jetbrains.kotlin.wasm.ir.WasmElement
-import org.jetbrains.kotlin.wasm.ir.WasmFunctionType
 import org.jetbrains.kotlin.wasm.ir.WasmHeapType
 import org.jetbrains.kotlin.wasm.ir.WasmImmediate
 import org.jetbrains.kotlin.wasm.ir.WasmLocal
@@ -201,11 +200,11 @@ inline fun WasmCodeGenerator.const(value: WasmSymbol<Int>, location: SourceLocat
 /**
  * Emits a function-typed [`block`](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/block).
  * @param label Optional diagnostic label for the block.
- * @param resultType Symbolic function type describing block parameters and results.
+ * @param resultType Function type index describing block parameters and results.
  * @param body Callback that emits the block body and receives its absolute block level.
  */
 inline fun WasmCodeGenerator.functionTypedBlock(
-    label: String?, resultType: WasmSymbolReadOnly<WasmFunctionType>, body: (Int) -> Unit
+    label: String?, resultType: WasmImmediate.TypeIdx, body: (Int) -> Unit
 ) {
     expressionBuilder.buildFunctionTypedBlock(label, resultType, body)
 }

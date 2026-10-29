@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import dev.karmakrafts.conventions.configureJava
-import dev.karmakrafts.conventions.dokka.configureDokka
-import dev.karmakrafts.conventions.dokka.withKotlin
-import dev.karmakrafts.conventions.dokka.withKotlinGradle
-import dev.karmakrafts.conventions.dokka.withGradle
-import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
-import dev.karmakrafts.conventions.setProjectInfo
 import dev.karmakrafts.conventions.GitLabCI
 import dev.karmakrafts.conventions.apache2License
+import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.defaultDependencyLocking
+import dev.karmakrafts.conventions.dokka.configureDokka
+import dev.karmakrafts.conventions.dokka.withGradle
+import dev.karmakrafts.conventions.dokka.withKotlin
+import dev.karmakrafts.conventions.dokka.withKotlinGradle
+import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
+import dev.karmakrafts.conventions.setProjectInfo
 import dev.karmakrafts.conventions.setRepository
 import dev.karmakrafts.conventions.signPublications
 import kotlin.io.path.createDirectories
@@ -53,10 +53,13 @@ configureDokka {
 configureJava(rootProject.libs.versions.java)
 
 dependencies {
+    implementation(project(":kcml-agent-protocol"))
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
-    compileOnly(libs.kotlinx.serialization.core)
-    compileOnly(libs.kotlinx.serialization.json)
+
+    implementation(projects.kcmlAgentProtocol)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(libs.kotlin.test)
 }

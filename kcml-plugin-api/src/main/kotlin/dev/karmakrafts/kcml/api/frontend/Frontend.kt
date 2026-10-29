@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.fir.FirSession
 
@@ -56,5 +57,5 @@ interface Frontend {
 
     /** Collects compiler diagnostics emitted by KCML extensions. */
     val messageCollector: MessageCollector
-        get() = config.messageCollector
+        @OptIn(MessageCollectorAccess::class) get() = config.messageCollector
 }

@@ -27,14 +27,13 @@ import llvm.LLVMModuleRef
 import org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig
 import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
-import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.ir.IrBuiltIns
 
 @OptIn(ExperimentalForeignApi::class)
 internal data class NativeGenerationStateView(
     val moduleId: String,
-    val builtIns: KonanBuiltIns,
     val irBuiltIns: IrBuiltIns,
     val symbols: BackendNativeSymbols,
     val phaseContext: NativePhaseContext,
@@ -44,6 +43,7 @@ internal data class NativeGenerationStateView(
     val llvmModule: LLVMModuleRef
 ) {
     companion object {
+        @OptIn(MessageCollectorAccess::class)
         fun fromImpl( // @formatter:off
             @ActualType("NativeGenerationState") impl: Any,
             loader: PluginLoader
@@ -64,7 +64,6 @@ internal data class NativeGenerationStateView(
             ) // @formatter:on
             val moduleId = secondStageConfig.moduleId
             logger.info("Creating NativeGenerationStateView for module '$moduleId'")
-            val builtIns = ReflectionUtils.getField<Any, KonanBuiltIns>("builtIns", context)
             val irBuiltIns = ReflectionUtils.getField<Any, IrBuiltIns>("irBuiltIns", context)
             val symbols = ReflectionUtils.getField<Any, BackendNativeSymbols>("symbols", context)
             val llvmContext = ReflectionUtils.getField<Any, LLVMContextRef>("llvmContext", impl)
@@ -79,7 +78,6 @@ internal data class NativeGenerationStateView(
             logger.info("Extracted internals of NativeGenerationState")
             NativeGenerationStateView(
                 moduleId = moduleId,
-                builtIns = builtIns,
                 irBuiltIns = irBuiltIns,
                 symbols = symbols,
                 phaseContext = phaseContext,

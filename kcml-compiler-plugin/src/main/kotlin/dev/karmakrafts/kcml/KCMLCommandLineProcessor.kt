@@ -18,6 +18,8 @@ package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.util.kcmlAgentCommPort
+import dev.karmakrafts.kcml.util.kcmlAgentDumpClasses
+import dev.karmakrafts.kcml.util.kcmlAgentDumpPath
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import dev.karmakrafts.kcml.util.kcmlIsAndroid
 import dev.karmakrafts.kcml.util.kcmlModuleName
@@ -37,6 +39,8 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
         private const val PLUGIN_CLASSPATHS: String = "pluginClasspaths"
         private const val AGENT_LOGGING: String = "agentLogging"
         private const val AGENT_COMM_PORT: String = "agentCommPort"
+        private const val AGENT_DUMP_CLASSES: String = "agentDumpClasses"
+        private const val AGENT_DUMP_PATH: String = "agentDumpPath"
         private const val MODULE_NAME: String = "moduleName"
         private const val IS_ANDROID: String = "isAndroid"
     }
@@ -62,6 +66,18 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
             required = false
         ),
         CliOption(
+            optionName = AGENT_DUMP_CLASSES,
+            valueDescription = "<true|false>",
+            description = "Whether to dump classes transformed by KCML agent",
+            required = false
+        ),
+        CliOption(
+            optionName = AGENT_DUMP_PATH,
+            valueDescription = "<string>",
+            description = "The path where the KCML agent dumps transformed classes",
+            required = false
+        ),
+        CliOption(
             optionName = MODULE_NAME,
             valueDescription = "<string>",
             description = "Name of the module currently being compiled",
@@ -81,6 +97,8 @@ class KCMLCommandLineProcessor : CommandLineProcessor {
             PLUGIN_CLASSPATHS -> configuration.kcmlPluginClasspaths = value.split(";").map(::Path)
             AGENT_LOGGING -> configuration.kcmlAgentLogging = value.lowercase().toBooleanStrictOrNull() == true
             AGENT_COMM_PORT -> configuration.kcmlAgentCommPort = value.toInt()
+            AGENT_DUMP_CLASSES -> configuration.kcmlAgentDumpClasses = value.lowercase().toBooleanStrictOrNull() == true
+            AGENT_DUMP_PATH -> configuration.kcmlAgentDumpPath = Path(value)
             MODULE_NAME -> configuration.kcmlModuleName = value
             IS_ANDROID -> configuration.kcmlIsAndroid = value.lowercase().toBooleanStrictOrNull() == true
         }

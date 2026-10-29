@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.hooks.wasm
 
 import dev.karmakrafts.kcml.api.extension.wasm.WasmIntrinsicsExtension
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
-import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
@@ -31,6 +31,7 @@ import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.util.render
 import java.util.*
+import kotlin.io.path.Path
 
 @Suppress("UNUSED")
 @KCMLHookApi
@@ -40,7 +41,12 @@ object WASMHooks {
 
     private fun initIfNeeded(config: CompilerConfiguration) = synchronized(initializationLock) {
         if (config in initializedInstances) return@synchronized
-        PluginLoaderImpl.loadAndInvokeStandalone(config, CommonHooks.compilerArguments)
+        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.constantTable["plugin_paths"] as? List<*>) {
+            "KCML agent handshake has not supplied plugin paths"
+        }
+        PluginLoaderImpl.loadAndInvokeStandalone(
+            config,
+            pluginPaths.map { path -> Path(path as String).toUri().toURL() })
         initializedInstances += config
     }
 

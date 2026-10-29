@@ -24,10 +24,22 @@ import java.nio.channels.FileLock as NioFileLock
 
 internal class FileLock(path: Path) : AutoCloseable {
     private val channel: FileChannel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
-    private val lock: NioFileLock = channel.lock()
+    private var lock: NioFileLock? = null
 
+    @Synchronized
+    fun <R> withLock(block: () -> R): R {
+        return try {
+            lock = channel.lock()
+            block()
+        }
+        finally {
+            lock?.close()
+            lock = null
+        }
+    }
+
+    @Synchronized
     override fun close() {
-        lock.close()
         channel.close()
     }
 }

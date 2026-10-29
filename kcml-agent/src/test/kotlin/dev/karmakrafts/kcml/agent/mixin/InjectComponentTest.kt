@@ -23,6 +23,7 @@ import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -236,9 +237,59 @@ class InjectComponentTest {
         assertTrue(mixin.apply(parsedTargetClass))
         assertEquals(initialMaxLocals + 1, targetMethod.maxLocals)
 
+        val hookIndex = targetMethod.instructions.indexOfFirst { instruction ->
+            instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/hooks/wasm/WASMHooks" && instruction.name == "onGenerateCall"
+        }
+        val ownerIndices = targetMethod.instructions.withIndex().filter { (_, instruction) ->
+            instruction is MethodInsnNode && instruction.name == "getOwner"
+        }.map { it.index }
+        val intrinsicIndex = targetMethod.instructions.indexOfFirst { instruction ->
+            instruction is MethodInsnNode && instruction.name == "tryToGenerateIntrinsicCall"
+        }
+        assertTrue(
+            hookIndex > ownerIndices[1],
+            "Hook must follow the ordinary-call owner lookup, not the call-ref branch"
+        )
+        assertTrue(hookIndex < intrinsicIndex, "Hook must run before built-in intrinsic handling")
+
         val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
         parsedTargetClass.accept(writer)
         assertTrue(writer.toByteArray().isNotEmpty())
+    }
+
+    @Test
+    fun `captures compiler arguments from typed CLI exec entry point`() {
+        val parsedTargetClass = ClassNode()
+        val targetResource = "org/jetbrains/kotlin/cli/common/CLICompiler.class"
+        val targetBytecode = checkNotNull(javaClass.classLoader.getResourceAsStream(targetResource)).use { stream ->
+            stream.readBytes()
+        }
+        ClassReader(targetBytecode).accept(parsedTargetClass, 0)
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val loader = MixinLoader(NoopLogger)
+        loader.load(listOf(loaderJar))
+        val mixin = loader.mixins.single { candidate ->
+            candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/CLICompilerMixin"
+        }
+
+        val constantTable = MixinBridge.INSTANCE.constantTable
+        val previousLoaderPath = constantTable.put("loader_path", loaderJar.toString())
+        try {
+            mixin.apply(parsedTargetClass)
+        }
+        finally {
+            if (previousLoaderPath == null) constantTable.remove("loader_path")
+            else constantTable["loader_path"] = previousLoaderPath
+        }
+        val targetMethod = parsedTargetClass.methods.single { method ->
+            method.name == "exec" && method.desc == "(Lorg/jetbrains/kotlin/cli/common/messages/MessageCollector;Lorg/jetbrains/kotlin/config/Services;Lorg/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments;)Lorg/jetbrains/kotlin/cli/common/ExitCode;"
+        }
+        val hookCalls = targetMethod.instructions.filterIsInstance<MethodInsnNode>().filter { instruction ->
+            instruction.opcode == Opcodes.INVOKESTATIC && instruction.owner == "dev/karmakrafts/kcml/hooks/CommonHooks" && instruction.name == "onExecImpl"
+        }
+        assertEquals(1, hookCalls.size)
+        val transformedClass = loadClass(parsedTargetClass)
+        assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
     }
 
     @Test
@@ -353,8 +404,8 @@ class InjectComponentTest {
         val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
         val firstLoader = MixinLoader(NoopLogger).apply { load(listOf(loaderJar)) }
         val secondLoader = MixinLoader(NoopLogger).apply { load(listOf(loaderJar)) }
-        val firstTransformer = MixinClassTransformer(NoopLogger, firstLoader)
-        val secondTransformer = MixinClassTransformer(NoopLogger, secondLoader)
+        val firstTransformer = MixinClassTransformer(NoopLogger, firstLoader, null)
+        val secondTransformer = MixinClassTransformer(NoopLogger, secondLoader, null)
 
         val firstPass =
             firstTransformer.transform(null, null, targetResource.removeSuffix(".class"), null, null, targetBytecode)
@@ -397,7 +448,7 @@ class InjectComponentTest {
         assertEquals(10, targetMethod.maxLocals)
         assertEquals(listOf(8, 9, 9), targetMethod.instructions.filterIsInstance<VarInsnNode>().map { it.`var` })
         assertEquals(
-            listOf("wide", "captured", "mixin\$captureAndAllocate\$local"), targetMethod.localVariables.map { it.name })
+            listOf("wide", "captured", $$"mixin$captureAndAllocate$local"), targetMethod.localVariables.map { it.name })
         assertEquals(listOf(5, 8, 9), targetMethod.localVariables.map { it.index })
     }
 

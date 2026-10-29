@@ -17,68 +17,56 @@
 package dev.karmakrafts.kcml
 
 import dev.karmakrafts.kcml.util.EmbeddedJar
+import dev.karmakrafts.kcml.util.FileLock
 import dev.karmakrafts.kcml.util.KCMLVersion
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.util.*
 import kotlin.io.path.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.div
 
 internal object KCMLBootstrap {
-    private lateinit var messageCollector: MessageCollector
-    private val initializationSet: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
+    private val userDir: Path by lazy { Path(System.getProperty("user.home")) }
+    private val kcmlDir: Path by lazy { userDir / ".kcml" }
+    val kcmlVersionDir: Path by lazy { (kcmlDir / KCMLVersion.version).also { path -> path.createDirectories() } }
+    val loaderPath: Path by lazy { kcmlVersionDir / "loader.jar" }
+    val bridgePath: Path by lazy { kcmlVersionDir / "bridge.jar" }
+    val lock: Any = Any()
 
-    lateinit var kcmlDirectory: Path
-        private set
-    lateinit var loaderPath: Path
-        private set
-    lateinit var bridgePath: Path
-        private set
+    private fun MessageCollector.log(message: String) =
+        report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
 
-    private val loaderJar: EmbeddedJar = EmbeddedJar("/kcml-loader.jar", ::log)
-    private val bridgeJar: EmbeddedJar = EmbeddedJar("/kcml-mixin-bridge.jar", ::log)
-
-    private fun log(message: String) =
-        messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
-
-    @Synchronized
-    fun init(configuration: CompilerConfiguration) {
-        if (configuration in initializationSet) return
-        messageCollector = configuration.messageCollector
-        log("Bootstrapping KCML ${KCMLVersion.version}..")
-        initPaths()
-        loaderJar.unpackIfNeeded(loaderPath)
-        bridgeJar.unpackIfNeeded(bridgePath)
-        val compilerClassLoader = configuration::class.java.classLoader
-        log("Compiler ClassLoader is $compilerClassLoader")
-        try {
-            // Try to resolve the PluginLoaderImpl class from the loader JAR to check if it is already injected
-            log("Checking for loader presence")
-            Class.forName("dev.karmakrafts.kcml.plugin.PluginLoaderImpl", false, compilerClassLoader)
-            log("Found loader on classpath, skipping runtime injection")
-            // If we fall through here, no need to inject anything
-        } catch (_: Throwable) {
-            // The fallback method of injecting the loader for early bootstrap for direct compiler invocations
-            log("KCML loader not found on classpath, injecting at runtime")
-            injectLoader(compilerClassLoader)
+    @OptIn(MessageCollectorAccess::class)
+    fun init(configuration: CompilerConfiguration) = synchronized(lock) {
+        val lockPath = kcmlVersionDir / "bootstrap.lock"
+        val messageCollector = configuration.messageCollector
+        messageCollector.log("Acquiring KCML bootstrap lock at $lockPath")
+        FileLock(lockPath).use { lock ->
+            lock.withLock {
+                messageCollector.log("Bootstrapping KCML ${KCMLVersion.version}..")
+                EmbeddedJar("/kcml-loader.jar") { messageCollector.log(it) }.unpackIfNeeded(loaderPath)
+                EmbeddedJar("/kcml-mixin-bridge.jar") { messageCollector.log(it) }.unpackIfNeeded(bridgePath)
+                val compilerClassLoader = configuration::class.java.classLoader
+                messageCollector.log("Compiler ClassLoader is $compilerClassLoader")
+                try {
+                    // Try to resolve the PluginLoaderImpl class from the loader JAR to check if it is already injected
+                    messageCollector.log("Checking for loader presence")
+                    Class.forName("dev.karmakrafts.kcml.plugin.PluginLoaderImpl", false, compilerClassLoader)
+                    messageCollector.log("Found loader on classpath, skipping runtime injection")
+                    // If we fall through here, no need to inject anything
+                } catch (_: Throwable) {
+                    // The fallback method of injecting the loader for early bootstrap for direct compiler invocations
+                    messageCollector.log("KCML loader not found on classpath, injecting at runtime")
+                    injectLoader(compilerClassLoader, messageCollector)
+                }
+            }
         }
-        initializationSet += configuration
-    }
-
-    private fun initPaths() {
-        log("Initializing paths")
-        val userDir = Path(System.getProperty("user.home"))
-        val kcmlDir = userDir / ".kcml"
-        kcmlDirectory = kcmlDir / KCMLVersion.version
-        kcmlDirectory.createDirectories()
-        log("KCML home directory is $kcmlDirectory")
-        loaderPath = kcmlDirectory / "loader.jar" // This path might not exist initially
-        bridgePath = kcmlDirectory / "bridge.jar" // This path might not exist initially
+        messageCollector.log("Releasing KCML bootstrap lock at $lockPath")
     }
 
     /**
@@ -87,17 +75,16 @@ internal object KCMLBootstrap {
      * the loader in their compiler CP via a direct injection.
      * See `CLICompilerTransformer` in the agent.
      */
-    private fun injectLoader(classLoader: ClassLoader) {
+    private fun injectLoader(classLoader: ClassLoader, messageCollector: MessageCollector) {
         try {
             val urlClassLoader = classLoader as? URLClassLoader ?: return
-            log("Target ClassLoader is a URLClassLoader, appending loader URL")
+            messageCollector.log("Target ClassLoader is a URLClassLoader, appending loader URL")
             val clClass = urlClassLoader::class.java
             val method = clClass.declaredMethods.first { method -> method.name == "addURL" }
-            val url = loaderPath.toUri().toURL()
             method.isAccessible = true
-            method.invoke(urlClassLoader, url)
+            method.invoke(urlClassLoader, loaderPath.toUri().toURL())
             method.isAccessible = false
-            log("Appended KCML loader URL to classpath of ClassLoader")
+            messageCollector.log("Appended KCML loader URL to classpath of ClassLoader")
         } catch (error: Throwable) {
             error("Could not inject KCML loader into compiler classpath: ${error.stackTraceToString()}")
         }

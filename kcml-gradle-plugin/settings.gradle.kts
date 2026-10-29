@@ -42,7 +42,7 @@ pluginManagement {
 
 plugins {
     id("org.gradle.toolchains.foojay-resolver") version "1.0.0"
-    id("com.gradleup.nmcp.settings") version "1.6.1"
+    id("com.gradleup.nmcp.settings") version "1.6.2"
 }
 
 nmcpSettings {
@@ -57,3 +57,5 @@ nmcpSettings {
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+include(":kcml-agent-protocol")
+project(":kcml-agent-protocol").projectDir = file("../kcml-agent-protocol")

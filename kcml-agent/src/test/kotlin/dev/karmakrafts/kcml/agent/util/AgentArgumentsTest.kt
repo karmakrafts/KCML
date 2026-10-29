@@ -81,11 +81,38 @@ class AgentArgumentsTest {
     }
 
     @Test
-    fun `parses KCML agent bridge path`() {
-        val arguments = KCMLAgentArguments.parse(
-            "comm_port=1:logging=false:loader_path=loader.jar:bridge_path=bridge.jar"
+    fun `ignores unknown quoted arguments without losing subsequent arguments`() {
+        val port = AgentArguments.Argument.create<Int>("port")
+        val message = AgentArguments.Argument.create<String>("message")
+
+        val arguments = AgentArguments.parse(
+            "unknown=\"before:after\":port=11000:message=\"accepted\"", port, message
         )
 
-        assertEquals("bridge.jar", arguments.bridgePath)
+        assertEquals(11000, arguments[port])
+        assertEquals("accepted", arguments[message])
+    }
+
+    @Test
+    fun `ignores legacy KCML options before communication options`() {
+        val arguments = KCMLAgentArguments.parse(
+            "loader_path=\"loader.jar\":bridge_path=\"bridge.jar\":dump_classes=true:" + "dump_path=\"build/kcml:dump\":comm_port=11000:logging=true:module_name=example"
+        )
+
+        assertEquals(11000, arguments.commPort)
+        assertEquals(true, arguments.logging)
+        assertNull(arguments.getOrNull(AgentArguments.Argument.create<String>("loader_path")))
+        assertNull(arguments.getOrNull(AgentArguments.Argument.create<String>("bridge_path")))
+        assertNull(arguments.getOrNull(AgentArguments.Argument.create<String>("dump_path")))
+    }
+
+    @Test
+    fun `parses minimal KCML agent startup options`() {
+        val arguments = KCMLAgentArguments.parse(
+            "comm_port=1:logging=false"
+        )
+
+        assertEquals(1, arguments.commPort)
+        assertEquals(false, arguments.logging)
     }
 }

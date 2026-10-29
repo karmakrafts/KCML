@@ -26,7 +26,6 @@ import org.jetbrains.kotlin.backend.konan.NativeCompilationConfig
 import org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig
 import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
-import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrBuiltIns
 
@@ -47,9 +46,6 @@ interface LateNativeBackend : Backend {
 
     /** Built-in IR definitions provided by Kotlin */
     val irBuiltIns: IrBuiltIns
-
-    /** Kotlin/Native built-ins for the active Konan compilation. */
-    val builtIns: KonanBuiltIns
 
     /** Kotlin/Native backend symbols resolved for the active compilation. */
     val symbols: BackendNativeSymbols

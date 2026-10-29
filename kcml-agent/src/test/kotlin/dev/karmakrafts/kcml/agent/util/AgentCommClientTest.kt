@@ -16,28 +16,59 @@
 
 package dev.karmakrafts.kcml.agent.util
 
+import dev.karmakrafts.kcml.agent.proto.A2SHandshake
+import dev.karmakrafts.kcml.agent.proto.A2SLog
+import dev.karmakrafts.kcml.agent.proto.S2AHandshake
+import kotlinx.serialization.ExperimentalSerializationApi
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
+import kotlinx.serialization.json.encodeToStream
+import kotlinx.serialization.serializer
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.DataInputStream
+import java.io.DataOutputStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertNull
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
+@OptIn(ExperimentalSerializationApi::class)
 class AgentCommClientTest {
     private class TestConnection(
         private val socket: Socket
     ) {
-        private val reader = socket.getInputStream().bufferedReader()
-        private val writer = socket.getOutputStream().bufferedWriter()
+        private val input = DataInputStream(socket.getInputStream())
+        private val output = DataOutputStream(socket.getOutputStream())
 
-        fun readLine(): String? = reader.readLine()
+        fun read(): Int = input.read()
 
         fun shutdownOutput() = socket.shutdownOutput()
 
-        fun send(message: String) {
-            writer.write(message)
-            writer.newLine()
-            writer.flush()
+        inline fun <reified T> receive(): T {
+            val serializer = serializer<T>()
+            assertEquals(serializer.descriptor.serialName, input.readUTF())
+            val payload = input.readNBytes(input.readInt())
+            return JSON.decodeFromStream(serializer, ByteArrayInputStream(payload))
+        }
+
+        inline fun <reified T> send(message: T) {
+            val serializer = serializer<T>()
+            val payload = ByteArrayOutputStream().apply {
+                JSON.encodeToStream(serializer, message, this)
+            }.toByteArray()
+            output.writeUTF(serializer.descriptor.serialName)
+            output.writeInt(payload.size)
+            output.write(payload)
+            output.flush()
         }
     }
 
@@ -52,36 +83,96 @@ class AgentCommClientTest {
                 }
                 finally {
                     runCatching { socket.shutdownOutput() }
+                    client.close()
                 }
             }
         }
     }
 
     @Test
-    fun `sends log messages`() = withClient { client, connection ->
-        val messages = listOf("First message", "Second message", "Third message")
-        messages.forEach(client::log)
+    fun `sends typed messages`() = withClient { client, connection ->
+        val messages = listOf(
+            A2SLog("First message"), A2SLog("Second message"), A2SLog("Third message")
+        )
+        messages.forEach(client::send)
 
-        assertEquals(messages, List(messages.size) { connection.readLine() })
+        assertEquals(messages, List(messages.size) { connection.receive<A2SLog>() })
     }
 
     @Test
-    fun `treats shutdown as a regular server message`() = withClient { client, connection ->
-        connection.send("shutdown")
+    fun `dispatches incoming messages by type`() = withClient { client, connection ->
+        val handshake = S2AHandshake("signature", "loader", "bridge", listOf("plugin"))
+        val log = A2SLog("message")
+        val latch = CountDownLatch(2)
+        var receivedHandshake: S2AHandshake? = null
+        var receivedLog: A2SLog? = null
+        client.receive<S2AHandshake> {
+            receivedHandshake = it
+            latch.countDown()
+        }
+        client.receive<A2SLog> {
+            receivedLog = it
+            latch.countDown()
+        }
 
-        val messages = listOf("First message after shutdown", "Second message after shutdown")
-        messages.forEach(client::log)
-        assertEquals(messages, List(messages.size) { connection.readLine() })
+        connection.send(handshake)
+        connection.send(log)
+
+        assertTrue(latch.await(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+        assertEquals(handshake, receivedHandshake)
+        assertEquals(log, receivedLog)
+    }
+
+    @Test
+    fun `handshake correlates responses and refreshes runtime paths`() = withClient { client, connection ->
+        repeat(2) { index ->
+            val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+            val request = connection.receive<A2SHandshake>()
+            val expected = S2AHandshake(
+                request.signature,
+                "loader-$index",
+                "bridge-$index",
+                listOf("plugin-$index"),
+                true,
+                "dump-$index"
+            )
+            connection.send(expected.copy(signature = "another-client"))
+            connection.send(expected)
+            assertEquals(expected, response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+        }
+    }
+
+    @Test
+    fun `handshake times out when server does not respond`() = withClient { client, _ ->
+        assertFailsWith<TimeoutException> { client.handshake(50) }
+    }
+
+    @Test
+    fun `handshake fails when server disconnects`() = withClient { client, connection ->
+        val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+        connection.receive<A2SHandshake>()
+        connection.shutdownOutput()
+        assertFailsWith<ExecutionException> { response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS) }
+    }
+
+    @Test
+    fun `handshake rejects missing runtime paths`() = withClient { client, connection ->
+        val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+        val request = connection.receive<A2SHandshake>()
+        connection.send(S2AHandshake(request.signature, "", "bridge", emptyList()))
+        val error = assertFailsWith<ExecutionException> { response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS) }
+        assertTrue(error.cause is IllegalArgumentException)
     }
 
     @Test
     fun `stops when remote closes connection`() = withClient { _, connection ->
         connection.shutdownOutput()
 
-        assertNull(connection.readLine(), "Client did not close its connection")
+        assertEquals(-1, connection.read(), "Client did not close its connection")
     }
 
     private companion object {
         const val TIMEOUT_MILLIS: Int = 5_000
+        val JSON: Json = Json { ignoreUnknownKeys = true }
     }
 }

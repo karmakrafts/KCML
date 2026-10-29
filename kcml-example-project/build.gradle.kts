@@ -20,7 +20,10 @@ import dev.karmakrafts.conventions.kotlin.withBrowser
 import dev.karmakrafts.conventions.kotlin.withJvm
 import dev.karmakrafts.conventions.kotlin.withNative
 import dev.karmakrafts.conventions.kotlin.withNodeJs
+import dev.karmakrafts.conventions.kotlin.withWasmWasi
+import dev.karmakrafts.conventions.kotlin.withWasmtime
 import dev.karmakrafts.conventions.kotlin.withWeb
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -41,6 +44,10 @@ kotlin {
         withBrowser()
         withNodeJs()
     }
+    withWasmWasi {
+        @OptIn(ExperimentalWasmDsl::class) //
+        withWasmtime()
+    }
     applyDefaultHierarchyTemplate()
     sourceSets {
         commonTest {
@@ -53,6 +60,12 @@ kotlin {
 
 dependencies {
     kcml(projects.kcmlExamplePlugin)
+}
+
+configurations.configureEach {
+    resolutionStrategy.dependencySubstitution {
+        substitute(module("${rootProject.group}:kcml-compiler-plugin")).using(project(":kcml-compiler-plugin"))
+    }
 }
 
 val pluginJarTask = project(":kcml-example-plugin").tasks.named<Jar>("jar")

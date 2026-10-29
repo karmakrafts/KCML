@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.mixin
+package dev.karmakrafts.kcml.agent.proto.io
 
-import dev.karmakrafts.kcml.api.mixin.MixinBridge
-import java.io.File
-
-internal object KCMLConstantTable {
-    fun init() {
-        MixinBridge.INSTANCE.putConstant(
-            "loader_path", File(this::class.java.protectionDomain.codeSource.location.toURI()).absolutePath
-        )
-    }
-}
+internal const val MAX_PACKET_SIZE: Int = 16 * 1024 * 1024

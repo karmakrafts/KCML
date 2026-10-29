@@ -30,7 +30,6 @@ import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.mixin.KCMLConstantTable
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
@@ -44,6 +43,7 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 import java.net.URL
 import java.net.URLClassLoader
@@ -54,10 +54,6 @@ import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
 object PluginLoaderImpl : PluginLoader {
-    init {
-        KCMLConstantTable.init() // Initialize the constant table
-    }
-
     private lateinit var loggerFactory: MessageCollectorLoggerFactory
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
@@ -128,6 +124,7 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
+    @OptIn(MessageCollectorAccess::class)
     private fun setupLogging(config: CompilerConfiguration) {
         loggerFactory = MessageCollectorLoggerFactory(this, config.messageCollector)
         logger = loggerFactory("KCML")
@@ -228,6 +225,12 @@ object PluginLoaderImpl : PluginLoader {
     fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) {
         setupLogging(config)
         loadAllPlugins(config, loadCandidates(arguments))
+    }
+
+    @Synchronized
+    fun loadAndInvokeStandalone(config: CompilerConfiguration, pluginPaths: List<URL>) {
+        setupLogging(config)
+        loadAllPlugins(config, loadCandidates(pluginPaths))
     }
 
     // Invoked through a delegate IR plugin

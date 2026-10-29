@@ -28,22 +28,25 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.Services
 import java.net.URL
+import java.net.URLClassLoader
 import kotlin.io.path.Path
 
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
 @DirectMixin(CLICompiler::class)
 internal class CLICompilerMixin<A : CommonCompilerArguments> : ThisAware<CLICompiler<A>> {
-    @Inject("execImpl")
-    fun execImpl( // @formatter:off
+    @Inject(
+        "exec",
+        "(Lorg/jetbrains/kotlin/cli/common/messages/MessageCollector;Lorg/jetbrains/kotlin/config/Services;Lorg/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments;)Lorg/jetbrains/kotlin/cli/common/ExitCode;"
+    )
+    fun exec( // @formatter:off
         @Capture messageCollector: MessageCollector,
         @Capture services: Services,
         @Capture arguments: A
     ) { // @formatter:on
         val classLoader = getThis()::class.java.classLoader
-        val classLoaderType = classLoader::class.java
         val loaderUrl = Path(ConstantTable.getString("loader_path")).toUri().toURL()
-        val addUrlMethod = classLoaderType.getDeclaredMethod("addURL", URL::class.java)
+        val addUrlMethod = URLClassLoader::class.java.getDeclaredMethod("addURL", URL::class.java)
         addUrlMethod.isAccessible = true
         addUrlMethod.invoke(classLoader, loaderUrl)
         addUrlMethod.isAccessible = false

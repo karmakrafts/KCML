@@ -29,14 +29,12 @@ import llvm.LLVMModuleRef
 import org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig
 import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.backend.konan.ir.BackendNativeSymbols
-import org.jetbrains.kotlin.builtins.konan.KonanBuiltIns
 import org.jetbrains.kotlin.ir.IrBuiltIns
 
 @OptIn(ExperimentalForeignApi::class)
 internal data class LateNativeBackendImpl(
     override val pluginId: String,
     override val irBuiltIns: IrBuiltIns,
-    override val builtIns: KonanBuiltIns,
     override val symbols: BackendNativeSymbols,
     override val phaseContext: NativePhaseContext,
     override val secondStageConfig: NativeSecondStageCompilationConfig,
@@ -54,7 +52,6 @@ internal data class LateNativeBackendImpl(
         ): LateNativeBackendImpl = LateNativeBackendImpl( // @formatter:on
             pluginId = pluginId,
             irBuiltIns = stateView.irBuiltIns,
-            builtIns = stateView.builtIns,
             symbols = stateView.symbols,
             phaseContext = stateView.phaseContext,
             secondStageConfig = stateView.secondStageConfig,

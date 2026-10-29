@@ -29,11 +29,16 @@ import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.TypeInsnNode
 import java.lang.instrument.ClassFileTransformer
+import java.nio.file.Path
+import java.nio.file.StandardOpenOption
 import java.security.ProtectionDomain
+import kotlin.io.path.div
+import kotlin.io.path.writeBytes
 
 internal class MixinClassTransformer( // @formatter:off
     private val logger: Logger,
-    private val loader: MixinLoader
+    private val loader: MixinLoader,
+    private val dumpPath: Path?
 ) : ClassFileTransformer { // @formatter:on
     companion object {
         private val packageBlacklist: List<String> = listOf( // @formatter:off
@@ -41,6 +46,10 @@ internal class MixinClassTransformer( // @formatter:off
             "javax/",
             "dev/karmakrafts/kcml/agent/"
         ) // @formatter:on
+    }
+
+    init {
+        logger.info { "Dumping transformed classes to $dumpPath" }
     }
 
     private fun findMixinInstantiation(insn: AbstractInsnNode): Type? = when {
@@ -106,6 +115,18 @@ internal class MixinClassTransformer( // @formatter:off
                 val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
                 classNode.accept(writer)
                 val newClassfileBuffer = writer.toByteArray()
+                if (dumpPath != null) try { // Dump class if enabled from Gradle plugin
+                    val filePath = dumpPath / "${classNode.dottedName}.class"
+                    logger.info { "Dumping class ${classNode.dottedName} to $filePath" }
+                    filePath.writeBytes(
+                        newClassfileBuffer,
+                        StandardOpenOption.CREATE,
+                        StandardOpenOption.TRUNCATE_EXISTING,
+                        StandardOpenOption.WRITE
+                    )
+                } catch (error: Throwable) {
+                    logger.error(error) { "Could not dump class ${classNode.dottedName}" }
+                }
                 logger.info { "Rewriting ${newClassfileBuffer.size} bytes of class file data for ${type.dottedName}" }
                 return newClassfileBuffer
             }

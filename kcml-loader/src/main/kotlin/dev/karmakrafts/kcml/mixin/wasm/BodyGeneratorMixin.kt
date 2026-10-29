@@ -38,7 +38,7 @@ internal class BodyGeneratorMixin : ThisAware<BodyGenerator> {
     @Inject( // @formatter:off
         name = "generateCall",
         slice = Slice(
-            start = Target(opcode = Opcodes.INVOKEINTERFACE, name = "getOwner"),
+            start = Target(opcode = Opcodes.INVOKEINTERFACE, name = "getOwner", ordinal = 1),
             end = Target(opcode = Opcodes.INVOKEVIRTUAL, name = "getReturnType")
         ),
         target = Target(opcode = Opcodes.ALOAD, index = 0),

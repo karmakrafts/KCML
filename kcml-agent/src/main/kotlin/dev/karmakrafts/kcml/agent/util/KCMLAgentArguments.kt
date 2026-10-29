@@ -20,27 +20,15 @@ import dev.karmakrafts.kcml.agent.util.AgentArguments.Argument
 
 internal object KCMLAgentArguments {
     val commPort: Argument<Int> = Argument.create("comm_port")
-    val moduleName: Argument<String> = Argument.create("module_name")
     val logging: Argument<Boolean> = Argument.create("logging")
-    val loaderPath: Argument<String> = Argument.create("loader_path")
-    val bridgePath: Argument<String> = Argument.create("bridge_path")
 
     fun parse(input: String): AgentArguments = AgentArguments.parse(
-        input, commPort, moduleName, logging, loaderPath, bridgePath
+        input, commPort, logging
     )
 }
 
 internal inline val AgentArguments.commPort: Int
     get() = this[KCMLAgentArguments.commPort]
 
-internal inline val AgentArguments.moduleName: String?
-    get() = getOrNull(KCMLAgentArguments.moduleName)
-
 internal inline val AgentArguments.logging: Boolean
     get() = this[KCMLAgentArguments.logging]
-
-internal inline val AgentArguments.loaderPath: String
-    get() = this[KCMLAgentArguments.loaderPath]
-
-internal inline val AgentArguments.bridgePath: String
-    get() = this[KCMLAgentArguments.bridgePath]

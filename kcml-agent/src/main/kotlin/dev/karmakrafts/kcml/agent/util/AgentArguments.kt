@@ -89,8 +89,8 @@ internal value class AgentArguments private constructor(private val values: Map<
 
                 '"' -> when (isString) { // String literals
                     true if !isEscaped -> { // If we are not escaped and see a quote, finish the string and flush the arg
-                        if (!flushArgument()) continue
                         isString = false
+                        if (!flushArgument()) continue
                     }
 
                     true -> {

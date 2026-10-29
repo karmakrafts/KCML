@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import dev.karmakrafts.kcml.agent.proto.S2AHandshake
 import org.gradle.api.logging.Logger
 import org.gradle.api.logging.Logging
 import org.gradle.api.services.BuildService
@@ -26,7 +27,16 @@ internal abstract class KCMLBuildService : BuildService<KCMLBuildServiceParamete
     }
 
     private val logger: Logger = Logging.getLogger(this::class.java)
-    val agentCommServer: AgentCommServer = AgentCommServer(parameters.agentCommPort.get())
+    val agentCommServer: AgentCommServer = AgentCommServer(parameters.agentCommPort.get()) { request ->
+        S2AHandshake(
+            signature = request.signature,
+            loaderPath = parameters.loaderFile.get().asFile.absolutePath,
+            bridgePath = parameters.bridgeFile.get().asFile.absolutePath,
+            pluginPaths = parameters.pluginPaths.get(),
+            dumpClasses = parameters.dumpClasses.get(),
+            dumpPath = parameters.dumpPath.orNull
+        )
+    }
 
     init {
         logger.info("Starting KCML build service..")

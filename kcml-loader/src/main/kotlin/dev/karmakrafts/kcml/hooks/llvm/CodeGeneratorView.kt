@@ -41,8 +41,8 @@ internal data class CodeGeneratorView( // @formatter:off
         ): Result<CodeGeneratorView> = runCatching { // @formatter:on
             loader.logger.info("Creating CodeGeneratorView")
             val type = impl::class.java
-            val llvmFunctionOrNull = type.declaredMethods.first { method -> method.name == "llvmFunctionOrNull" }
-            loader.logger.info("Got llvmFunctionOrNull method reference")
+            val llvmFunctionOrNull = type.getDeclaredMethod("getLlvmFunctionOrNullFrom", IrSimpleFunction::class.java)
+            loader.logger.info("Got getLlvmFunctionOrNullFrom method reference")
             val llvm = ReflectionUtils.getSuperProperty<Any, Any>( // @formatter:off
                 superClassName = "ContextUtils",
                 name = "llvm",
