@@ -55,9 +55,20 @@ dependencies {
     kapt(libs.autoService.processor)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.iridium)
+    testRuntimeOnly(projects.kcmlPluginLoader)
 }
 
 tasks {
+    val testAgentJar = register<Jar>("testAgentJar") {
+        dependsOn(compileTestJava)
+        archiveFileName = "kcml-agent.jar"
+        destinationDirectory = layout.buildDirectory.dir("test-agent")
+        from(compileTestJava.map { it.destinationDirectory })
+        manifest.attributes["Agent-Class"] = "dev.karmakrafts.kcml.util.TestAgent"
+    }
+    processTestResources {
+        from(testAgentJar)
+    }
     test {
         useJUnitPlatform()
         maxParallelForks = Runtime.getRuntime().availableProcessors()

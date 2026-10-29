@@ -53,15 +53,20 @@ class AgentInjector( // @formatter:off
     }
 
     fun inject(options: Map<String, Any> = emptyMap()): Boolean {
-        FileLock(lockPath).use { lock -> lock.withLock { agentJar.unpackIfNeeded(agentPath) } }
-        return tryAttachSelf().fold(onSuccess = { vm ->
-            val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
-            try {
-                vm.loadAgent(agentPath.absolutePathString(), "${agentPath.toUri()}\n$args")
-            } finally {
-                vm.detach()
+        // Serialize across compiler classloaders to avoid overflowing the JVM attach listener's backlog.
+        return FileLock(lockPath).use { lock ->
+            lock.withLock {
+                agentJar.unpackIfNeeded(agentPath)
+                tryAttachSelf().fold(onSuccess = { vm ->
+                    val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
+                    try {
+                        vm.loadAgent(agentPath.absolutePathString(), "${agentPath.toUri()}\n$args")
+                    } finally {
+                        vm.detach()
+                    }
+                    true
+                }, onFailure = { false })
             }
-            true
-        }, onFailure = { false })
+        }
     }
 }
