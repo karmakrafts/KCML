@@ -23,7 +23,8 @@ import java.net.URL;
 import java.net.URLClassLoader;
 
 public final class KCMLAgentBootstrap {
-    private KCMLAgentBootstrap() {}
+    private KCMLAgentBootstrap() {
+    }
 
     public static void agentmain(final String options, final Instrumentation instrumentation) throws Throwable {
         final int separator = options == null ? -1 : options.indexOf('\n');
@@ -35,13 +36,15 @@ public final class KCMLAgentBootstrap {
         // Keep this entrypoint JDK-only and resolve the implementation from the requested JAR.
         final URLClassLoader loader = new URLClassLoader(new URL[]{jar}, ClassLoader.getPlatformClassLoader());
         try {
-            loader.loadClass("dev.karmakrafts.kcml.agent.KCMLAgent")
-                .getMethod("agentmain", String.class, Instrumentation.class)
-                .invoke(null, options.substring(separator + 1), instrumentation);
-        } catch (final InvocationTargetException error) {
+            loader.loadClass("dev.karmakrafts.kcml.agent.KCMLAgent").getMethod("agentmain",
+                String.class,
+                Instrumentation.class).invoke(null, options.substring(separator + 1), instrumentation);
+        }
+        catch (final InvocationTargetException error) {
             loader.close();
             throw error.getCause();
-        } catch (final Throwable error) {
+        }
+        catch (final Throwable error) {
             loader.close();
             throw error;
         }

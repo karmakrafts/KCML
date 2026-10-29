@@ -28,6 +28,7 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
+import java.io.IOException
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
@@ -39,6 +40,7 @@ import java.util.concurrent.TimeoutException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -76,14 +78,10 @@ class AgentCommClientTest {
         ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
             server.soTimeout = TIMEOUT_MILLIS
             val client = AgentCommClient(server.localPort)
-            server.accept().use { socket ->
-                socket.soTimeout = TIMEOUT_MILLIS
-                try {
+            client.use {
+                server.accept().use { socket ->
+                    socket.soTimeout = TIMEOUT_MILLIS
                     test(client, TestConnection(socket))
-                }
-                finally {
-                    runCatching { socket.shutdownOutput() }
-                    client.close()
                 }
             }
         }
@@ -129,12 +127,7 @@ class AgentCommClientTest {
             val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
             val request = connection.receive<A2SHandshake>()
             val expected = S2AHandshake(
-                request.signature,
-                "loader-$index",
-                "bridge-$index",
-                listOf("plugin-$index"),
-                true,
-                "dump-$index"
+                request.signature, "loader-$index", "bridge-$index", listOf("plugin-$index"), true, "dump-$index"
             )
             connection.send(expected.copy(signature = "another-client"))
             connection.send(expected)
@@ -152,16 +145,55 @@ class AgentCommClientTest {
         val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
         connection.receive<A2SHandshake>()
         connection.shutdownOutput()
-        assertFailsWith<ExecutionException> { response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS) }
+        val error = assertFailsWith<ExecutionException> {
+            response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS)
+        }
+        val handshakeError = assertIs<ExecutionException>(error.cause)
+        assertIs<IOException>(handshakeError.cause)
+        assertEquals("KCML agent connection closed during handshake", handshakeError.cause?.message)
     }
 
     @Test
-    fun `handshake rejects missing runtime paths`() = withClient { client, connection ->
-        val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
-        val request = connection.receive<A2SHandshake>()
-        connection.send(S2AHandshake(request.signature, "", "bridge", emptyList()))
-        val error = assertFailsWith<ExecutionException> { response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS) }
-        assertTrue(error.cause is IllegalArgumentException)
+    fun `handshake rejects invalid runtime paths`() {
+        val invalid = listOf(
+            S2AHandshake("", "", "bridge", emptyList()) to "Handshake loader path must not be blank",
+            S2AHandshake("", "loader", " \t", emptyList()) to "Handshake bridge path must not be blank",
+            S2AHandshake("", "loader", "bridge", listOf("plugin", " ")) to "Handshake plugin paths must not be blank"
+        )
+        for ((message, expectedError) in invalid) withClient { client, connection ->
+            val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+            val request = connection.receive<A2SHandshake>()
+            connection.send(message.copy(signature = request.signature))
+            val error = assertFailsWith<ExecutionException> {
+                response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS)
+            }
+            assertTrue(error.cause is IllegalArgumentException, "Unexpected failure: ${error.cause}")
+            assertEquals(expectedError, error.cause?.message)
+        }
+    }
+
+    @Test
+    fun `handshake rejects nonpositive timeouts without sending a request`() = withClient { client, connection ->
+        for (timeout in listOf(0L, -1L, Long.MIN_VALUE)) {
+            val error = assertFailsWith<IllegalArgumentException> { client.handshake(timeout) }
+            assertEquals("Handshake timeout must be positive", error.message)
+        }
+        client.send(A2SLog("still connected"))
+        assertEquals(A2SLog("still connected"), connection.receive<A2SLog>())
+    }
+
+    @Test
+    fun `notifies every handler registered for the same message type`() = withClient { client, connection ->
+        val first = CompletableFuture<A2SLog>()
+        val second = CompletableFuture<A2SLog>()
+        client.receive<A2SLog> { first.complete(it) }
+        client.receive<A2SLog> { second.complete(it) }
+        val message = A2SLog("both handlers")
+
+        connection.send(message)
+
+        assertEquals(message, first.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+        assertEquals(message, second.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
     }
 
     @Test

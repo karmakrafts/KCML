@@ -247,8 +247,7 @@ class InjectComponentTest {
             instruction is MethodInsnNode && instruction.name == "tryToGenerateIntrinsicCall"
         }
         assertTrue(
-            hookIndex > ownerIndices[1],
-            "Hook must follow the ordinary-call owner lookup, not the call-ref branch"
+            hookIndex > ownerIndices[1], "Hook must follow the ordinary-call owner lookup, not the call-ref branch"
         )
         assertTrue(hookIndex < intrinsicIndex, "Hook must run before built-in intrinsic handling")
 

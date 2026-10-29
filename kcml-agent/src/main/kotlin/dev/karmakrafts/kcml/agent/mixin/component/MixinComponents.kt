@@ -68,7 +68,7 @@ internal class MixinComponents(private val logger: Logger) {
     }
 
     fun registerInterfaceComponent(type: Type, factory: ComponentFactory) {
-        require(type !in methodComponentFactories) {
+        require(type !in interfaceComponentFactories) {
             "Mixin interface component for type $type is already registered"
         }
         interfaceComponentFactories[type] = factory

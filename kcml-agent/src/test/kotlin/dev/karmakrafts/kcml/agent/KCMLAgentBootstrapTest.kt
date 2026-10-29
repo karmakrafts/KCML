@@ -34,7 +34,9 @@ import kotlin.test.assertFailsWith
 class KCMLAgentBootstrapTest {
     private fun createAgent(path: Path, version: String, property: String) {
         val writer = ClassWriter(0)
-        writer.visit(Opcodes.V17, Opcodes.ACC_PUBLIC, "dev/karmakrafts/kcml/agent/KCMLAgent", null, "java/lang/Object", null)
+        writer.visit(
+            Opcodes.V17, Opcodes.ACC_PUBLIC, "dev/karmakrafts/kcml/agent/KCMLAgent", null, "java/lang/Object", null
+        )
         writer.visitMethod(
             Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
             "agentmain",
@@ -45,11 +47,23 @@ class KCMLAgentBootstrapTest {
             visitCode()
             visitLdcInsn(property)
             visitLdcInsn(version)
-            visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false)
+            visitMethodInsn(
+                Opcodes.INVOKESTATIC,
+                "java/lang/System",
+                "setProperty",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                false
+            )
             visitInsn(Opcodes.POP)
             visitLdcInsn("$property.options")
             visitVarInsn(Opcodes.ALOAD, 0)
-            visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/System", "setProperty", "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", false)
+            visitMethodInsn(
+                Opcodes.INVOKESTATIC,
+                "java/lang/System",
+                "setProperty",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;",
+                false
+            )
             visitInsn(Opcodes.POP)
             visitInsn(Opcodes.RETURN)
             visitMaxs(2, 2)
@@ -90,8 +104,8 @@ class KCMLAgentBootstrapTest {
                 assertEquals("old", System.getProperty(property))
                 URLClassLoader(arrayOf(currentAgent.toUri().toURL()), parent).use { loader ->
                     val entrypoint = ZipFile(currentAgent.toFile()).use { archive ->
-                        archive.getInputStream(archive.getEntry("META-INF/MANIFEST.MF")).use(::Manifest)
-                            .mainAttributes.getValue("Agent-Class")
+                        archive.getInputStream(archive.getEntry("META-INF/MANIFEST.MF"))
+                            .use(::Manifest).mainAttributes.getValue("Agent-Class")
                     }
                     val main = loader.loadClass(entrypoint)
                         .getMethod("agentmain", String::class.java, Instrumentation::class.java)
@@ -102,7 +116,8 @@ class KCMLAgentBootstrapTest {
                     assertEquals("next", System.getProperty(property))
                 }
             }
-        } finally {
+        }
+        finally {
             System.clearProperty(property)
             System.clearProperty("$property.options")
             directory.toFile().deleteRecursively()

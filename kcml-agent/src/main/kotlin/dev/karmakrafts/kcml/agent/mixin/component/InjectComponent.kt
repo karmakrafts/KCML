@@ -141,7 +141,7 @@ internal data class InjectComponent( // @formatter:off
         relocated: HashSet<VarInsnNode>,
         capturedIndices: HashSet<Int>
     ): InsnList { // @formatter:on
-        val (_, _, logger) = context
+        val [_, _, logger] = context
         val captures = buildMap {
             val parameters = mixinMethod.parameters // We know this is non-null from restoring earlier
             var stackIndex = if (mixinMethod.access and Opcodes.ACC_STATIC == 0) 1 else 0
@@ -201,7 +201,7 @@ internal data class InjectComponent( // @formatter:off
     }
 
     private fun InsnList.processReturnFrame(context: ComponentContext): InsnList {
-        val (_, _, logger) = context
+        val [_, _, logger] = context
         logger.info { "Inserting return frame and replacing returns" }
         val returnFrame = LabelNode()
         for (instruction in this) {
@@ -302,7 +302,7 @@ internal data class InjectComponent( // @formatter:off
     private fun InsnList.processReturnContext(context: ComponentContext): InsnList {
         // If the mixin function doesn't have a ReturnContext parameter, we return early
         if (!hasReturnContext()) return this
-        val (_, _, logger) = context
+        val [_, _, logger] = context
         logger.info { "Inject component has return context, processing references to returnFromTarget()" }
         val returnContextIndices = getReturnContextStackIndices()
         removeReturnContextParameterChecks(returnContextIndices)

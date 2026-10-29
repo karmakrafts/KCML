@@ -71,6 +71,9 @@ class MixinTest {
         }
 
         val componentTypes = mixin.components.map { component -> component::class }
+        assertEquals(1, componentTypes.count { it == PrerequisiteComponent::class })
+        assertEquals(1, componentTypes.count { it == IntermediateComponent::class })
+        assertEquals(1, componentTypes.count { it == DependentComponent::class })
         assertTrue(
             componentTypes.indexOf(PrerequisiteComponent::class) < componentTypes.indexOf(IntermediateComponent::class),
             componentTypes.toString()
@@ -93,6 +96,7 @@ class MixinTest {
         val prerequisiteIndices = mixin.components.mapIndexedNotNull { index, component ->
             index.takeIf { component is RepeatedPrerequisiteComponent }
         }
+        assertEquals(1, mixin.components.count { it is RepeatedDependentComponent })
         assertEquals(2, prerequisiteIndices.size)
         assertTrue(prerequisiteIndices.all { index -> index < dependentIndex }, mixin.components.toString())
     }

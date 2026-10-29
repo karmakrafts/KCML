@@ -65,8 +65,8 @@ tasks {
     jar {
         val agentShadowJarTask = project(":kcml-agent").tasks.named<Jar>("shadowJar")
         val agentJarTask = project(":kcml-agent").tasks.named<Jar>("jar")
-        val loaderShadowJarTask = project(":kcml-loader").tasks.named<Jar>("shadowJar")
-        val loaderJarTask = project(":kcml-loader").tasks.named<Jar>("jar")
+        val loaderShadowJarTask = project(":kcml-plugin-loader").tasks.named<Jar>("shadowJar")
+        val loaderJarTask = project(":kcml-plugin-loader").tasks.named<Jar>("jar")
         val bridgeJarTask = project(":kcml-mixin-bridge").tasks.named<Jar>("jar")
         dependsOn(agentShadowJarTask, agentJarTask, loaderJarTask, loaderJarTask, bridgeJarTask)
         from(agentShadowJarTask) { rename { "kcml-agent.jar" } }

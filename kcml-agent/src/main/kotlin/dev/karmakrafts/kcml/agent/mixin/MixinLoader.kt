@@ -55,6 +55,7 @@ internal class MixinLoader(
                 }
             }
         }
+        mixins.sort() // Sort priorities across all plugin JARs
         val time = Clock.System.now() - startTime
         logger.info { "Loaded ${mixins.size} mixins in ${time.inWholeMilliseconds}ms" }
     }
@@ -79,7 +80,9 @@ internal class MixinLoader(
 
             classNode.hasInvisibleAnnotation(Types.Mixin.indirectMixin) -> {
                 val annotation = classNode.getInvisibleAnnotation(Types.Mixin.indirectMixin)
-                Type.getObjectType(annotation.getValue<String>("target")?.replace('.', '/'))?.let { type ->
+                annotation.getValue<String>("target")?.let { target ->
+                    Type.getObjectType(target.replace('.', '/'))
+                }?.let { type ->
                     type to (annotation.getValue<Int>("priority") ?: 0)
                 } ?: return Result.failure(Throwable("Mixin ${classNode.dottedName} is missing a target"))
             }
@@ -125,7 +128,6 @@ internal class MixinLoader(
                 }
                 .toList()
                 .filterNotNull()
-                .sorted() // Sort mixins by priority
             // @formatter:on
         }
     }
