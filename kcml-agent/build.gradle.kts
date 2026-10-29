@@ -81,7 +81,7 @@ tasks {
         }
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
         manifest {
-            attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgent"
+            attributes["Agent-Class"] = "${rootProject.group}.agent.KCMLAgentBootstrap"
             attributes["Can-Redefine-Classes"] = true
             attributes["Can-Retransform-Classes"] = true
             attributes["Permissions"] = "all-permissions"

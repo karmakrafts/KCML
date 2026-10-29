@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.util
 
 import java.lang.AutoCloseable
 import java.nio.channels.FileChannel
+import java.nio.channels.OverlappingFileLockException
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.nio.channels.FileLock as NioFileLock
@@ -26,10 +27,21 @@ internal class FileLock(path: Path) : AutoCloseable {
     private val channel: FileChannel = FileChannel.open(path, StandardOpenOption.CREATE, StandardOpenOption.WRITE)
     private var lock: NioFileLock? = null
 
+    private fun acquireLock(): NioFileLock {
+        while (true) {
+            try {
+                return channel.lock()
+            } catch (_: OverlappingFileLockException) {
+                // FileChannel only waits for locks held by other JVMs, not other compiler classloaders.
+                Thread.sleep(10)
+            }
+        }
+    }
+
     @Synchronized
     fun <R> withLock(block: () -> R): R {
         return try {
-            lock = channel.lock()
+            lock = acquireLock()
             block()
         }
         finally {

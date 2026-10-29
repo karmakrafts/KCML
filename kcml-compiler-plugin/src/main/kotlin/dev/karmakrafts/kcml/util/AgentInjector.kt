@@ -26,7 +26,8 @@ class AgentInjector( // @formatter:off
     logger: (String) -> Unit = {}
 ) { // @formatter:on
     private val agentJar: EmbeddedJar = EmbeddedJar("/kcml-agent.jar", logger)
-    private val agentPath: Path = directory / "agent.jar"
+    private val agentPath: Path = directory / "agent-${FileChecksum.forResource(agentJar.path)}.jar"
+    private val lockPath: Path = directory / "agent.lock"
 
     @Suppress("DEPRECATION")
     private fun tryOverwriteAttachPermissions() {
@@ -52,11 +53,14 @@ class AgentInjector( // @formatter:off
     }
 
     fun inject(options: Map<String, Any> = emptyMap()): Boolean {
-        agentJar.unpackIfNeeded(agentPath)
+        FileLock(lockPath).use { lock -> lock.withLock { agentJar.unpackIfNeeded(agentPath) } }
         return tryAttachSelf().fold(onSuccess = { vm ->
             val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
-            vm.loadAgent(agentPath.absolutePathString(), args)
-            vm.detach()
+            try {
+                vm.loadAgent(agentPath.absolutePathString(), "${agentPath.toUri()}\n$args")
+            } finally {
+                vm.detach()
+            }
             true
         }, onFailure = { false })
     }
