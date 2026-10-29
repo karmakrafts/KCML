@@ -8,8 +8,8 @@ workflow:
 
 stages:
   - check_changelog
-  - build
   - security
+  - build
   - publish
   - release
   - update_changelog
@@ -113,11 +113,9 @@ build:
     - *if-merge-request
     - *if-main
   script:
-    - ./gradlew --stop
-    - ./gradlew :kcml-compiler-plugin:publishToMavenLocal --stacktrace # Ensure we can bootstrap
     - ./gradlew clean --stacktrace
-    - ./gradlew :kcml-agent:build :kcml-loader:build :kcml-example-plugin:build --stacktrace
-    - ./gradlew :kcml-example-project:build --stacktrace
+    - ./gradlew --stop
+    - ./gradlew check --stacktrace # Ensure we can bootstrap
   tags:
     - macos
 
