@@ -25,8 +25,8 @@ plugins {
 
 configureJava(libs.versions.java)
 
-evaluationDependsOn(":kcml-loader")
-val loaderJar = project(":kcml-loader").tasks.named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
+evaluationDependsOn(":kcml-plugin-loader")
+val loaderJar = project(":kcml-plugin-loader").tasks.named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
 
 dependencies {
     compileOnly(projects.kcmlMixinBridge)
