@@ -20,8 +20,10 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.provider.Property
 import org.gradle.api.services.ServiceReference
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 
 // A little hack for Kotlin/Native to keep the KCMLBuildService alive until after linking
+@DisableCachingByDefault(because = "Keeps a live build service referenced during compilation and linking")
 internal abstract class KCMLPreBuildTask : DefaultTask() {
     @get:ServiceReference
     internal abstract val buildService: Property<KCMLBuildService>

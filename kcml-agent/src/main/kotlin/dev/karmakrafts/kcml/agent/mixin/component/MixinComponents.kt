@@ -76,7 +76,7 @@ internal class MixinComponents(private val logger: Logger) {
 
     init {
         logger.info { "Registering mixin component factories" }
-        registerComponent(::ConstantTableComponent)
+        registerComponent { ConstantTableComponent() }
         registerInterfaceComponent(Types.Mixin.thisAware, ::ThisAwareComponent)
         registerMethodComponent(Types.Mixin.inject, InjectComponent::fromAnnotation)
     }

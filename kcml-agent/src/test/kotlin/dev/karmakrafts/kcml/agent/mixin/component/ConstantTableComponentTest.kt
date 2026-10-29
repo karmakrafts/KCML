@@ -46,8 +46,8 @@ class ConstantTableComponentTest {
         constantTable.clear()
     }
 
-    private fun createContext(): ComponentContext = ComponentContext(
-        targetClass = ClassNode(), loader = MixinLoader(NoopLogger), logger = NoopLogger, otherComponents = emptyList()
+    private fun createContext(targetClass: ClassNode): ComponentContext = ComponentContext(
+        targetClass = targetClass, loader = MixinLoader(NoopLogger), logger = NoopLogger, otherComponents = emptyList()
     )
 
     private fun MethodNode.addConstantCall(name: String, getterName: String, returnType: Type) {
@@ -88,7 +88,7 @@ class ConstantTableComponentTest {
         }
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
-        assertTrue(ConstantTableComponent(mixinClass).apply(createContext()))
+        assertTrue(ConstantTableComponent().apply(createContext(mixinClass)))
 
         assertEquals(
             listOf("value", 3, 4L, 5.5F, 6.5, 1),
@@ -123,7 +123,7 @@ class ConstantTableComponentTest {
         }
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
-        assertFalse(ConstantTableComponent(mixinClass).apply(createContext()))
+        assertFalse(ConstantTableComponent().apply(createContext(mixinClass)))
         assertEquals(3, method.instructions.size())
     }
 
@@ -144,7 +144,7 @@ class ConstantTableComponentTest {
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
         val error = assertFailsWith<IllegalStateException> {
-            ConstantTableComponent(mixinClass).apply(createContext())
+            ConstantTableComponent().apply(createContext(mixinClass))
         }
 
         assertTrue(error.message.orEmpty().contains("literal string"))
@@ -156,7 +156,7 @@ class ConstantTableComponentTest {
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
         val error = assertFailsWith<IllegalStateException> {
-            ConstantTableComponent(mixinClass).apply(createContext())
+            ConstantTableComponent().apply(createContext(mixinClass))
         }
 
         assertTrue(error.message.orEmpty().contains("missing"))
@@ -169,7 +169,7 @@ class ConstantTableComponentTest {
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
         val error = assertFailsWith<IllegalStateException> {
-            ConstantTableComponent(mixinClass).apply(createContext())
+            ConstantTableComponent().apply(createContext(mixinClass))
         }
 
         assertTrue(error.message.orEmpty().contains("getInt"))

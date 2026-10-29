@@ -275,6 +275,21 @@ class InjectComponentTest {
         val previousLoaderPath = constantTable.put("loader_path", loaderJar.toString())
         try {
             mixin.apply(parsedTargetClass)
+            assertTrue(mixin.mixinClass.methods.any { method ->
+                method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+                    instruction.owner == Types.Mixin.constantTable.internalName
+                }
+            })
+            val repeatedTarget = ClassNode()
+            ClassReader(targetBytecode).accept(repeatedTarget, 0)
+            val nextLoaderPath = loaderJar.resolveSibling("another-loader.jar").toString()
+            constantTable["loader_path"] = nextLoaderPath
+            assertTrue(mixin.apply(repeatedTarget))
+            assertTrue(repeatedTarget.methods.any { method ->
+                method.instructions.filterIsInstance<LdcInsnNode>().any { instruction ->
+                    instruction.cst == nextLoaderPath
+                }
+            })
         }
         finally {
             if (previousLoaderPath == null) constantTable.remove("loader_path")
@@ -287,6 +302,12 @@ class InjectComponentTest {
             instruction.opcode == Opcodes.INVOKESTATIC && instruction.owner == "dev/karmakrafts/kcml/hooks/CommonHooks" && instruction.name == "onExecImpl"
         }
         assertEquals(1, hookCalls.size)
+        assertFalse(targetMethod.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+            instruction.owner == Types.Mixin.constantTable.internalName
+        })
+        assertTrue(targetMethod.instructions.filterIsInstance<LdcInsnNode>().any { instruction ->
+            instruction.cst == loaderJar.toString()
+        })
         val transformedClass = loadClass(parsedTargetClass)
         assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
     }

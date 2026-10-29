@@ -20,16 +20,13 @@ import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
-import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
 @DependsOn(InjectComponent::class)
-internal class ConstantTableComponent(
-    private val mixinClass: ClassNode
-) : AbstractMixinComponent() {
+internal class ConstantTableComponent : AbstractMixinComponent() {
     companion object {
         private val getterDescriptors: Map<String, String> = mapOf(
             "getString" to Type.getMethodDescriptor(Types.string, Types.string),
@@ -91,9 +88,9 @@ internal class ConstantTableComponent(
     }
 
     override fun apply(context: ComponentContext): Boolean {
-        val (_, _, logger) = context
+        val (targetClass, _, logger) = context
         logger.info { "Processing references to ConstantTable" }
-        val referenceCount = mixinClass.methods.sumOf { method -> method.instructions.processConstantTable() }
+        val referenceCount = targetClass.methods.sumOf { method -> method.instructions.processConstantTable() }
         if (referenceCount == 0) return false
         logger.info { "Replaced $referenceCount ConstantTable references" }
         return true

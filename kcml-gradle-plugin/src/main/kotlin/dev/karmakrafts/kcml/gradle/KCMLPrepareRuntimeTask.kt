@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.gradle
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.ConfigurableFileCollection
 import org.gradle.api.file.DirectoryProperty
+import org.gradle.api.tasks.CacheableTask
 import org.gradle.api.tasks.Classpath
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -26,6 +27,7 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.zip.ZipFile
 
+@CacheableTask
 internal abstract class KCMLPrepareRuntimeTask : DefaultTask() {
     @get:Classpath
     abstract val compilerClasspath: ConfigurableFileCollection
