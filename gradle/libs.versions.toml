@@ -2,18 +2,18 @@
 
 java = "21"
 
-kotlinBootstrap = "2.4.0" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
-kotlin = "2.4.10" # https://github.com/JetBrains/kotlin/releases
-androidGradle = "9.3.1" # https://developer.android.com/reference/tools/gradle-api
+kotlinBootstrap = "2.4.21" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
+kotlin = "2.5.0-Beta2" # https://github.com/JetBrains/kotlin/releases
+androidGradle = "9.4.1" # https://developer.android.com/reference/tools/gradle-api
 
 kcml = "1.6.0"
-iridium = "1.14.0" # https://github.com/karmakrafts/Iridium/tags
-kotlinx-serialization = "1.11.0" # https://github.com/Kotlin/kotlinx.serialization/releases
-dokka = "2.2.0" # https://github.com/Kotlin/dokka/releases"
-karmaConventions = "1.20.0" # https://github.com/karmakrafts/karma-conventions/tags
+iridium = "1.15.0.107-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
+kotlinx-serialization = "1.12.0" # https://github.com/Kotlin/kotlinx.serialization/releases
+dokka = "2.3.0-Beta" # https://github.com/Kotlin/dokka/releases"
+karmaConventions = "1.23.0.316-SNAPSHOT" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
 semver = "3.1.0" # https://github.com/z4kn4fein/kotlin-semver/releases
-ow2asm = "9.10.1" # https://gitlab.ow2.org/asm/asm/-/tags
+ow2asm = "9.11.1" # https://gitlab.ow2.org/asm/asm/-/tags
 shadow = "9.6.1" # https://github.com/GradleUp/shadow
 kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
 annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
