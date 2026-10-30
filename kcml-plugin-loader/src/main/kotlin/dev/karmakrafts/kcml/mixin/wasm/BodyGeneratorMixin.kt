@@ -19,35 +19,32 @@ package dev.karmakrafts.kcml.mixin.wasm
 import dev.karmakrafts.kcml.api.mixin.Capture
 import dev.karmakrafts.kcml.api.mixin.DirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
-import dev.karmakrafts.kcml.api.mixin.Inject.Order
-import dev.karmakrafts.kcml.api.mixin.Inject.Slice
-import dev.karmakrafts.kcml.api.mixin.Inject.Target
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
 import dev.karmakrafts.kcml.api.mixin.ThisAware
 import dev.karmakrafts.kcml.api.mixin.returnFromTarget
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.wasm.WASMHooks
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
-import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
-import org.objectweb.asm.Opcodes
+import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.expressions.IrBlockBody
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 
 @OptIn(KCMLHookApi::class)
 @Suppress("UNUSED")
 @DirectMixin(BodyGenerator::class, -999)
 internal class BodyGeneratorMixin : ThisAware<BodyGenerator> {
-    @Inject( // @formatter:off
-        name = "generateCall",
-        slice = Slice(
-            start = Target(opcode = Opcodes.INVOKEINTERFACE, name = "getOwner", ordinal = 1),
-            end = Target(opcode = Opcodes.INVOKEVIRTUAL, name = "getReturnType")
-        ),
-        target = Target(opcode = Opcodes.ALOAD, index = 0),
-        order = Order.BEFORE
-    )
-    fun generateCall(
-        @Capture call: IrFunctionAccessExpression,
-        returnContext: ReturnContext<Unit>
-    ) { // @formatter:on
-        if (WASMHooks.onGenerateCall(call, getThis())) returnContext.returnFromTarget()
+    @Inject(name = $$"generateExpression$org_jetbrains_kotlin_backend_wasm", order = Inject.Order.BEFORE)
+    fun generateExpression(@Capture expression: IrExpression, returnContext: ReturnContext<Unit>) {
+        if (WASMHooks.onGenerateElement(expression, getThis())) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitVariable", order = Inject.Order.BEFORE)
+    fun visitVariable(@Capture declaration: IrVariable, returnContext: ReturnContext<Unit>) {
+        if (WASMHooks.onGenerateElement(declaration, getThis())) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitBlockBody", order = Inject.Order.BEFORE)
+    fun visitBlockBody(@Capture body: IrBlockBody, returnContext: ReturnContext<Unit>) {
+        if (WASMHooks.onGenerateElement(body, getThis())) returnContext.returnFromTarget()
     }
 }

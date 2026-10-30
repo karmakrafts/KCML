@@ -57,18 +57,33 @@ object PluginLoaderImpl : PluginLoader {
     private lateinit var loggerFactory: MessageCollectorLoggerFactory
     private val plugins: HashMap<String, CompilerPlugin> = HashMap()
     private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
-    private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> by lazy { sortPlugins() }
+    private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
     private var arePluginsLoaded: Boolean = false
+    private var pluginClassLoader: URLClassLoader? = null
 
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
-    internal val extensionDispatcher: ExtensionDispatcher by lazy {
-        ExtensionDispatcher(this, extensionRegistries)
-    }
+    private var dispatcher: ExtensionDispatcher? = null
+    internal val extensionDispatcher: ExtensionDispatcher
+        get() = checkNotNull(dispatcher) { "KCML plugins have not been loaded" }
 
     private val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
 
     override lateinit var logger: Logger
     override var loadingPluginId: String? = null
+
+    @Synchronized
+    internal fun reset() {
+        pluginClassLoader?.close()
+        pluginClassLoader = null
+        plugins.clear()
+        metadata.clear()
+        sortedPlugins.clear()
+        extensionRegistries.clear()
+        ipms.clear()
+        dispatcher = null
+        loadingPluginId = null
+        arePluginsLoaded = false
+    }
 
     private fun getOrCreateIpm(pluginId: String): IPM = ipms.getOrPut(pluginId) {
         IPMImpl(pluginId, this@PluginLoaderImpl)
@@ -134,6 +149,7 @@ object PluginLoaderImpl : PluginLoader {
         logger.info("Loading plugins")
         val parentClassLoader = this::class.java.classLoader
         val classLoader = URLClassLoader(urls.toTypedArray(), parentClassLoader)
+        pluginClassLoader = classLoader
         return ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
     }
 
@@ -208,6 +224,7 @@ object PluginLoaderImpl : PluginLoader {
         logger.info("Found ${candidates.size} plugin candidates")
         // Try to load metadata for all plugins
         loadMetadata(candidates)
+        sortedPlugins.putAll(sortPlugins())
         // Log plugin load order for debugging purposes
         val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
         logger.info("Sorted plugins into load order: $sortedNames")
@@ -217,6 +234,7 @@ object PluginLoaderImpl : PluginLoader {
         processIpms()
         logger.info("Initialized ${plugins.size} plugins")
         extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
+        dispatcher = ExtensionDispatcher(this, extensionRegistries)
         arePluginsLoaded = true
     }
 
@@ -224,13 +242,13 @@ object PluginLoaderImpl : PluginLoader {
     @Synchronized
     fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) {
         setupLogging(config)
-        loadAllPlugins(config, loadCandidates(arguments))
+        if (!arePluginsLoaded) loadAllPlugins(config, loadCandidates(arguments))
     }
 
     @Synchronized
     fun loadAndInvokeStandalone(config: CompilerConfiguration, pluginPaths: List<URL>) {
         setupLogging(config)
-        loadAllPlugins(config, loadCandidates(pluginPaths))
+        if (!arePluginsLoaded) loadAllPlugins(config, loadCandidates(pluginPaths))
     }
 
     // Invoked through a delegate IR plugin

@@ -16,4 +16,32 @@
 
 package dev.karmakrafts.kcml.api.extension.wasm
 
-interface WasmCodeGenerationExtension : LateWasmExtension
+import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
+import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import org.jetbrains.kotlin.ir.IrElement
+
+/**
+ * Intercepts Kotlin IR immediately before WebAssembly code generation.
+ *
+ * Extensions are consulted in dispatch order for files, declarations, local variables, bodies,
+ * and expressions, including nested expressions. Children are intercepted as they are generated,
+ * not in a separate traversal before their parent is generated.
+ */
+interface WasmCodeGenerationExtension : LateWasmExtension {
+    /** Selects elements to transform or replace using [process]. */
+    fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean = true
+
+    /**
+     * Transforms [element] in place or replaces its code generation.
+     *
+     * Return `false` to continue with subsequent extensions and normal generation using any
+     * changes made to [element]. Return `true` to stop dispatch and suppress normal generation.
+     * Expression replacements must emit their result through [WasmCodeGenerator.expressionBuilder]
+     * and preserve argument evaluation, stack types, and other WebAssembly invariants.
+     *
+     * Instruction emission is available inside bodies and constant field initializers. Function
+     * context and expression generation require an active function body. Generating the same
+     * element recursively will intercept it again.
+     */
+    fun WasmCodeGenerator.process(element: IrElement): Boolean
+}

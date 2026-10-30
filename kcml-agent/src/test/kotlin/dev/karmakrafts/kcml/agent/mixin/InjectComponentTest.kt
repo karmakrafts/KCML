@@ -224,7 +224,7 @@ class InjectComponentTest {
         }
         ClassReader(targetBytecode).accept(parsedTargetClass, 0)
         val targetMethod = parsedTargetClass.methods.single { method ->
-            method.name == "generateCall" && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrFunctionAccessExpression;)V"
+            method.name == $$"generateExpression$org_jetbrains_kotlin_backend_wasm"
         }
         val initialMaxLocals = targetMethod.maxLocals
         val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
@@ -238,18 +238,13 @@ class InjectComponentTest {
         assertEquals(initialMaxLocals + 1, targetMethod.maxLocals)
 
         val hookIndex = targetMethod.instructions.indexOfFirst { instruction ->
-            instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/hooks/wasm/WASMHooks" && instruction.name == "onGenerateCall"
+            instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/hooks/wasm/WASMHooks" && instruction.name == "onGenerateElement"
         }
-        val ownerIndices = targetMethod.instructions.withIndex().filter { (_, instruction) ->
-            instruction is MethodInsnNode && instruction.name == "getOwner"
-        }.map { it.index }
-        val intrinsicIndex = targetMethod.instructions.indexOfFirst { instruction ->
-            instruction is MethodInsnNode && instruction.name == "tryToGenerateIntrinsicCall"
+        val visitorIndex = targetMethod.instructions.indexOfFirst { instruction ->
+            instruction is MethodInsnNode && instruction.name == "acceptVoid"
         }
-        assertTrue(
-            hookIndex > ownerIndices[1], "Hook must follow the ordinary-call owner lookup, not the call-ref branch"
-        )
-        assertTrue(hookIndex < intrinsicIndex, "Hook must run before built-in intrinsic handling")
+        assertTrue(hookIndex >= 0, "Hook must intercept every expression")
+        assertTrue(hookIndex < visitorIndex, "Hook must run before expression generation")
 
         val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
         parsedTargetClass.accept(writer)
@@ -454,6 +449,51 @@ class InjectComponentTest {
         val transformedClass = loadClass(secondPass)
 
         assertEquals(targetResource.removeSuffix(".class").replace('/', '.'), transformedClass.name)
+    }
+
+    @Test
+    fun `produces verifiable wasm generation hooks`() {
+        val targets = mapOf(
+            "BodyGenerator" to setOf(
+                $$"generateExpression$org_jetbrains_kotlin_backend_wasm", "visitVariable", "visitBlockBody"
+            ),
+            "IrFileToWasmIrGenerator" to setOf(
+                "visitClass", "visitFunction", "visitField", "visitProperty", "visitTypeAlias"
+            ),
+            "WasmModuleFragmentGeneratorKt" to setOf("compileIrFile"),
+            "DeclarationGeneratorKt" to setOf("generateConstExpression")
+        )
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val loader = MixinLoader(NoopLogger)
+        loader.load(listOf(loaderJar))
+        for ((target, methods) in targets) {
+            val parsedTargetClass = ClassNode()
+            val resource = "org/jetbrains/kotlin/backend/wasm/ir2wasm/$target.class"
+            checkNotNull(javaClass.classLoader.getResourceAsStream(resource)).use { stream ->
+                ClassReader(stream.readBytes()).accept(parsedTargetClass, 0)
+            }
+            val mixin = loader.mixins.single { candidate ->
+                candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/wasm/${target}Mixin"
+            }
+            assertTrue(mixin.apply(parsedTargetClass))
+            val interceptedMethods = parsedTargetClass.methods.filter { method ->
+                method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+                    instruction.owner == "dev/karmakrafts/kcml/hooks/wasm/WASMHooks"
+                }
+            }
+            assertEquals(methods, interceptedMethods.map { it.name }.toSet())
+            for (method in interceptedMethods) {
+                assertEquals(1, method.instructions.filterIsInstance<MethodInsnNode>().count { instruction ->
+                    instruction.owner == "dev/karmakrafts/kcml/hooks/wasm/WASMHooks"
+                })
+                assertTrue(method.instructions.none { instruction ->
+                    instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/api/mixin/ReturnContext"
+                })
+            }
+            val transformedClass = loadClass(parsedTargetClass)
+            assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
+            assertTrue(transformedClass.declaredMethods.isNotEmpty())
+        }
     }
 
     @Test

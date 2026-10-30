@@ -55,6 +55,12 @@ kotlin {
                 implementation(libs.kotlin.test)
             }
         }
+        named("wasmJsTest") {
+            kotlin.srcDir("src/wasmTest/kotlin")
+        }
+        named("wasmWasiTest") {
+            kotlin.srcDir("src/wasmTest/kotlin")
+        }
     }
 }
 

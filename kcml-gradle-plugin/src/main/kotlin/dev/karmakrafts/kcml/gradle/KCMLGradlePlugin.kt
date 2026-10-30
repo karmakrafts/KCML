@@ -20,6 +20,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.ResolvedArtifact
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.TaskProvider
 import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompilerOptions
@@ -115,6 +116,31 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         .map(ResolvedArtifact::getFile)
                         .toTypedArray())
                     // @formatter:on
+                }
+                val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+                val nativeCacheTasks = HashMap<String, TaskProvider<KCMLPrepareNativeCacheTask>>()
+                kmpExtension.targets.filterIsInstance<KotlinNativeTarget>().forEach { target ->
+                    target.binaries.forEach { binary ->
+                        val plugins = project.configurations.getByName(CONFIGURATION_NAME)
+                        val runtime = project.configurations.getByName("kcmlRuntime")
+                        // Kotlin shares this cache root across targets with the same binary name.
+                        val prepareCache = nativeCacheTasks.getOrPut(binary.name) {
+                            project.tasks.register(
+                                "kcmlPrepareNativeCache${binary.name.capitalized()}",
+                                KCMLPrepareNativeCacheTask::class.java
+                            ) { task ->
+                                task.pluginClasspath.from(plugins, runtime)
+                                task.cacheDirectory.set(project.layout.buildDirectory.dir("kotlin-native-ic-cache/${binary.name}"))
+                                task.markerFile.set(project.layout.buildDirectory.file("kcml_native_cache/${binary.name}.marker"))
+                            }
+                        }
+                        binary.linkTaskProvider.configure { task ->
+                            task.dependsOn(prepareCache)
+                            task.inputs.files(plugins, runtime)
+                                .withPropertyName("kcmlPluginClasspath")
+                                .withNormalizer(ClasspathNormalizer::class.java)
+                        }
+                    }
                 }
             }
         }

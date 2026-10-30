@@ -61,6 +61,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
 
+    testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
 }
 

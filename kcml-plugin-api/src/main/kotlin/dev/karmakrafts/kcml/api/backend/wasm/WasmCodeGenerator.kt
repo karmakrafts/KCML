@@ -30,14 +30,16 @@ interface WasmCodeGenerator {
     /** Late WebAssembly backend context for the current compilation. */
     val backend: LateWasmBackend
 
-    /** Code-generation context for the function currently being generated. */
+    /** Code-generation context for the current function; unavailable outside a body. */
     val context: WasmFunctionCodegenContext
 
-    /** Builder that receives instructions for the current WebAssembly expression. */
+    /** Instruction builder for the current expression, inside a body or constant field initializer. */
     val expressionBuilder: WasmExpressionBuilder
 
     /**
      * Generates WebAssembly instructions for a Kotlin IR [expression].
+     * Nested expressions pass through code-generation extensions as usual. Only available
+     * inside a body; generating the element currently being intercepted recurses.
      *
      * @param expression Kotlin IR expression to generate.
      */

@@ -25,9 +25,9 @@ import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
 internal class WasmCodeGeneratorImpl( // @formatter:off
     override val backend: LateWasmBackend,
-    override val context: WasmFunctionCodegenContext,
-    override val expressionBuilder: WasmExpressionBuilder,
-    private val generateExpressionCallback: (IrExpression) -> Unit
+    private val functionContext: WasmFunctionCodegenContext? = null,
+    private val body: WasmExpressionBuilder? = null,
+    private val generateExpressionCallback: ((IrExpression) -> Unit)? = null
 ) : WasmCodeGenerator {
     // @formatter:on
     companion object {
@@ -36,13 +36,19 @@ internal class WasmCodeGeneratorImpl( // @formatter:off
             view: BodyGeneratorView
         ): WasmCodeGeneratorImpl = WasmCodeGeneratorImpl( // @formatter:on
             backend = backend,
-            context = view.functionContext,
-            expressionBuilder = view.body,
+            functionContext = view.functionContext,
+            body = view.body,
             generateExpressionCallback = view.generateExpressionCallback
         )
     }
 
+    override val context: WasmFunctionCodegenContext
+        get() = checkNotNull(functionContext) { "No active WebAssembly function body" }
+
+    override val expressionBuilder: WasmExpressionBuilder
+        get() = checkNotNull(body) { "No active WebAssembly function body" }
+
     override fun generateExpression(expression: IrExpression) {
-        generateExpressionCallback(expression)
+        checkNotNull(generateExpressionCallback) { "No active WebAssembly function body" }(expression)
     }
 }

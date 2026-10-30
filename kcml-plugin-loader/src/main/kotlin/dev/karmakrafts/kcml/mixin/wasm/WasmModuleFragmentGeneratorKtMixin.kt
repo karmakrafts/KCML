@@ -21,6 +21,8 @@ import dev.karmakrafts.kcml.api.mixin.IndirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Order
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
+import dev.karmakrafts.kcml.api.mixin.ReturnContext
+import dev.karmakrafts.kcml.api.mixin.returnFromTarget
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.wasm.WASMHooks
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
@@ -43,8 +45,11 @@ internal object WasmModuleFragmentGeneratorKtMixin {
         @Capture irFile: IrFile,
         @Capture backendContext: WasmBackendContext,
         @Capture typeContext: WasmTypeCodegenContext,
-        @Capture declarationContext: WasmDeclarationCodegenContext?
+        @Capture declarationContext: WasmDeclarationCodegenContext?,
+        returnContext: ReturnContext<Unit>
     ) {
-        WASMHooks.onCompileIrFiles(irFile, backendContext, typeContext, declarationContext)
+        if (WASMHooks.onCompileIrFiles(irFile, backendContext, typeContext, declarationContext)) {
+            returnContext.returnFromTarget()
+        }
     }
 }

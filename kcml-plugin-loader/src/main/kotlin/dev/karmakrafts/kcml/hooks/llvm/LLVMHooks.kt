@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
 import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -24,7 +25,9 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
+import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.ir.IrElement
+import kotlin.io.path.Path
 
 @Suppress("UNUSED")
 @KCMLHookApi
@@ -73,6 +76,12 @@ object LLVMHooks {
 
     @JvmStatic
     fun onRunAfterLowerings(@ActualType("NativeGenerationState") state: Any) {
+        val config = (state as NativePhaseContext).config.configuration
+        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.constantTable["plugin_paths"] as? List<*>) {
+            "KCML agent handshake has not supplied plugin paths"
+        }
+        PluginLoaderImpl.loadAndInvokeStandalone(
+            config, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
         NativeGenerationStateView.fromImpl(state, PluginLoaderImpl).fold(onSuccess = { stateView ->
             val logger = stateView.loggerFactory("KCML")
             logger.info("Post lowering stage")

@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.ir.util.hasAnnotation
 import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
+import org.jetbrains.kotlin.wasm.ir.source.location.SourceLocation
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 @ExtensionId("example_wasm_intrinsics_extension")
@@ -39,10 +40,18 @@ internal class ExampleWasmIntrinsicsExtension : AbstractExtension(), WasmIntrins
 
     override fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean {
         val function = call.symbol.owner
-        return function.hasAnnotation(annotationId)
+        return function.hasAnnotation(annotationId) || function.name.asString() == "wasmTransformedIntrinsic"
     }
 
     override fun WasmCodeGenerator.process(call: IrFunctionAccessExpression) {
+        if (call.symbol.owner.name.asString() == "wasmTransformedIntrinsic") {
+            val arguments = call.arguments.filterNotNull()
+            arguments.forEachIndexed { index, argument ->
+                generateExpression(argument)
+                if (index != arguments.lastIndex) expressionBuilder.buildDrop(SourceLocation.NoLocation("Unused argument"))
+            }
+            return
+        }
         const(44)
     }
 }

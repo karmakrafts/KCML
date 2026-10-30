@@ -18,11 +18,24 @@ package dev.karmakrafts.kcml.api.extension.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
-// TODO: document this
-interface WasmIntrinsicsExtension : LateWasmExtension {
+/** Replaces selected function calls with custom WebAssembly instructions. */
+interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
+    override fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean {
+        return element is IrFunctionAccessExpression && shouldProcess(element, backend)
+    }
+
+    override fun WasmCodeGenerator.process(element: IrElement): Boolean {
+        if (element !is IrFunctionAccessExpression) return false
+        process(element)
+        return true
+    }
+
+    /** Selects calls whose generation will be replaced by this extension. */
     fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean
 
+    /** Emits the replacement, including any required argument evaluation. */
     fun WasmCodeGenerator.process(call: IrFunctionAccessExpression)
 }

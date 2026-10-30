@@ -32,6 +32,11 @@ class NativeCodeGenerationTest {
     }
 
     @Test
+    fun `Repeated expressions are processed independently`() {
+        assertEquals(90, replacement() + replacement())
+    }
+
+    @Test
     fun `Expression transforms continue normal LLVM generation`() {
         assertEquals(46, transformed())
     }

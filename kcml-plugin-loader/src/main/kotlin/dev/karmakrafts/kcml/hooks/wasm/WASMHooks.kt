@@ -16,20 +16,26 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
-import dev.karmakrafts.kcml.api.extension.wasm.WasmIntrinsicsExtension
+import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
+import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.util.ReflectionUtils
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
+import org.jetbrains.kotlin.backend.wasm.ir2wasm.IrFileToWasmIrGenerator
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrFile
-import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
-import org.jetbrains.kotlin.ir.util.render
+import org.jetbrains.kotlin.ir.expressions.IrConst
+import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
+import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.io.path.Path
 
@@ -38,6 +44,11 @@ import kotlin.io.path.Path
 object WASMHooks {
     private val initializedInstances: MutableSet<CompilerConfiguration> = Collections.newSetFromMap(IdentityHashMap())
     private val initializationLock: Any = Any()
+    private val typeContexts: MutableMap<WasmDeclarationCodegenContext, WeakReference<WasmTypeCodegenContext>> =
+        Collections.synchronizedMap(WeakHashMap())
+
+    // Function constants already pass through onGenerateElement before generateConstExpression.
+    private val functionBodies: MutableMap<WasmExpressionBuilder, Boolean> = Collections.synchronizedMap(WeakHashMap())
 
     private fun initIfNeeded(config: CompilerConfiguration) = synchronized(initializationLock) {
         if (config in initializedInstances) return@synchronized
@@ -57,10 +68,11 @@ object WASMHooks {
         backendContext: WasmBackendContext,
         typeContext: WasmTypeCodegenContext,
         declarationContext: WasmDeclarationCodegenContext?
-    ) { // @formatter:on
+    ): Boolean { // @formatter:on
         initIfNeeded(backendContext.configuration)
+        if (declarationContext != null) typeContexts[declarationContext] = WeakReference(typeContext)
         val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
-        for ((pluginId, extension) in extensions) {
+        for ([pluginId, extension] in extensions) {
             val backend = LateWasmBackendImpl(
                 pluginId = pluginId,
                 context = backendContext,
@@ -70,43 +82,85 @@ object WASMHooks {
             )
             extension.init(backend)
         }
+        return dispatch(file, backendContext, typeContext, declarationContext)
     }
 
     // BodyGenerator
 
     @JvmStatic
-    fun onGenerateCall(call: IrFunctionAccessExpression, generator: BodyGenerator): Boolean {
-        return BodyGeneratorView.fromImpl(generator).fold(onSuccess = onSuccess@{ generatorView ->
-            // @formatter:off
-            val extensions = PluginLoaderImpl.extensionDispatcher.lateWasmExtensions
-                .filter { (_, extension) -> extension is WasmIntrinsicsExtension }
-                .map { (pluginId, extension) -> pluginId to extension as WasmIntrinsicsExtension }
-            // @formatter:on
-            for ((pluginId, extension) in extensions) {
-                val backend = LateWasmBackendImpl(
-                    pluginId = pluginId,
-                    context = generatorView.backendContext,
-                    typeContext = generatorView.typeCodegenContext,
-                    declarationContext = generatorView.declarationCodegenContext,
-                    loader = PluginLoaderImpl
-                )
-                try {
-                    if (!extension.shouldProcess(call, backend)) continue
-                    backend.loggerFactory.getForPlugin(pluginId).info("Processing WASM intrinsic call ${call.render()}")
-                    with(extension) {
-                        with(WasmCodeGeneratorImpl.fromView(backend, generatorView)) {
-                            process(call)
-                        }
-                    }
-                    return@onSuccess true
-                } catch (error: Throwable) {
-                    PluginLoaderImpl.logger.error("A WASM intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
-                    return@onSuccess false
-                }
+    fun onGenerateElement(element: IrElement, generator: BodyGenerator): Boolean {
+        return hasCodeGenerationExtensions() && BodyGeneratorView.fromImpl(generator)
+            .fold(onSuccess = { generatorView ->
+                functionBodies[generatorView.body] = true
+                dispatch(
+                    element,
+                    generatorView.backendContext,
+                    generatorView.typeCodegenContext,
+                    generatorView.declarationCodegenContext
+                ) { backend -> WasmCodeGeneratorImpl.fromView(backend, generatorView) }
+            }, onFailure = { error ->
+                error("Could not reflect BodyGenerator in onGenerateElement: ${error.stackTraceToString()}")
+            })
+    }
+
+    @JvmStatic
+    fun onGenerateDeclaration(element: IrElement, generator: IrFileToWasmIrGenerator): Boolean {
+        if (!hasCodeGenerationExtensions()) return false
+        val typeContext = ReflectionUtils.getField<Any, WasmTypeCodegenContext>(
+            "typeCodegenContext", generator.typeGenerator
+        )
+        val declarationContext = generator.declarationGenerator?.let { declarations ->
+            ReflectionUtils.getField<Any, WasmDeclarationCodegenContext>("declarationCodegenContext", declarations)
+        }
+        return dispatch(element, generator.backendContext, typeContext, declarationContext)
+    }
+
+    @JvmStatic
+    fun onGenerateConstant(
+        expression: IrConst,
+        body: WasmExpressionBuilder,
+        backendContext: WasmBackendContext,
+        declarationContext: WasmDeclarationCodegenContext
+    ): Boolean {
+        if (!hasCodeGenerationExtensions() || functionBodies.containsKey(body)) return false
+        val typeContext = checkNotNull(typeContexts[declarationContext]?.get()) {
+            "No WebAssembly type context for constant initializer"
+        }
+        return dispatch(expression, backendContext, typeContext, declarationContext) { backend ->
+            WasmCodeGeneratorImpl(backend = backend, body = body)
+        }
+    }
+
+    private fun hasCodeGenerationExtensions(): Boolean {
+        return PluginLoaderImpl.extensionDispatcher.lateWasmExtensions.any { [_, extension] ->
+            extension is WasmCodeGenerationExtension
+        }
+    }
+
+    private fun dispatch(
+        element: IrElement,
+        backendContext: WasmBackendContext,
+        typeContext: WasmTypeCodegenContext,
+        declarationContext: WasmDeclarationCodegenContext?,
+        generatorFactory: (LateWasmBackend) -> WasmCodeGenerator = { backend -> WasmCodeGeneratorImpl(backend) }
+    ): Boolean {
+        for ([pluginId, extension] in PluginLoaderImpl.extensionDispatcher.lateWasmExtensions) {
+            if (extension !is WasmCodeGenerationExtension) continue
+            val backend = LateWasmBackendImpl(
+                pluginId = pluginId,
+                context = backendContext,
+                typeContext = typeContext,
+                declarationContext = declarationContext,
+                loader = PluginLoaderImpl
+            )
+            try {
+                if (!extension.shouldProcess(element, backend)) continue
+                val handled = with(extension) { generatorFactory(backend).process(element) }
+                if (handled) return true
+            } catch (error: Throwable) {
+                PluginLoaderImpl.logger.error("A WASM code generation extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
             }
-            false
-        }, onFailure = { error ->
-            error("Could not reflect BodyGenerator in onGenerateCall: ${error.stackTraceToString()}")
-        })
+        }
+        return false
     }
 }
