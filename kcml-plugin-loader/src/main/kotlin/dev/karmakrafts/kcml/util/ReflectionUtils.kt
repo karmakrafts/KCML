@@ -42,7 +42,9 @@ internal object ReflectionUtils {
         return clazz.interfaces.first { iface -> name in iface.name }
     }
 
-    inline fun <reified C, reified T> getSuperField(superClassName: String, name: String, instance: Any? = null): T {
+    inline fun <reified C : Any, reified T> getSuperField(
+        superClassName: String, name: String, instance: Any? = null
+    ): T {
         val type = instance?.javaClass ?: C::class.java
         val superType = findSuperClass(type, superClassName) ?: findSuperInterface(type, superClassName)
         ?: error("Could not find super class '$superClassName' in hierarchy of $type")
@@ -54,7 +56,7 @@ internal object ReflectionUtils {
         return value
     }
 
-    inline fun <reified C, reified T> getProperty(name: String, instance: Any? = null): T {
+    inline fun <reified C : Any, reified T> getProperty(name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
         val method = type.declaredMethods.first { method -> method.name == "get${name.capitalize()}" }
         val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
@@ -64,7 +66,7 @@ internal object ReflectionUtils {
         return value
     }
 
-    inline fun <reified C, reified T> getSuperProperty(
+    inline fun <reified C : Any, reified T> getSuperProperty(
         superClassName: String, name: String, instance: Any? = null
     ): T {
         val type = instance?.javaClass ?: C::class.java

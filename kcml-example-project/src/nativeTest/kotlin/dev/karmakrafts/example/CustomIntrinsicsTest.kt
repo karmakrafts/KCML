@@ -19,9 +19,23 @@ package dev.karmakrafts.example
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@CustomIntrinsic
+private fun intrinsicWithArguments(first: Int, second: Int): Int = error("Intrinsic not lowered")
+
 class CustomIntrinsicsTest {
     @Test
     fun `Custom intrinsic is lowered to constant value`() {
         assertEquals(44, customIntrinsic())
+    }
+
+    @Test
+    fun `Intrinsic arguments are evaluated once in order`() {
+        val events = ArrayList<Int>()
+        val result = intrinsicWithArguments(
+            run { events += 1; 0x4B434D4C },
+            run { events += 2; 2 }
+        )
+        assertEquals(44, result)
+        assertEquals(listOf(1, 2), events)
     }
 }

@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
+import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrCall
 
 /**
@@ -29,7 +30,16 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
  * recognized call with its own LLVM value.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface NativeIntrinsicsExtension : LateNativeExtension {
+interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
+    override fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean {
+        return element is IrCall && shouldProcess(element, backend)
+    }
+
+    override fun NativeCodeGenerator.process(element: IrElement): LLVMValueRef? {
+        if (element !is IrCall) return null
+        return process(element, evaluateExplicitArgs(element))
+    }
+
     /**
      * Determines whether an IR call should be lowered as an intrinsic by this extension.
      *

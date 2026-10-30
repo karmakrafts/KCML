@@ -24,6 +24,7 @@ import llvm.LLVMTypeRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.backend.konan.llvm.LlvmCallable
 import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.types.IrType
 
 /**
@@ -46,6 +47,13 @@ interface NativeCodeGenerator {
      * LLVM primitive and pointer types associated with the current code-generation context.
      */
     val types: NativeTypes
+
+    /**
+     * Evaluates the explicit arguments of [expression] in Kotlin/Native's normal evaluation order.
+     * Nested expressions pass through [dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension]
+     * as usual. Call this only when replacing the call, to avoid evaluating arguments twice.
+     */
+    fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef>
 
     /**
      * Returns the LLVM callable corresponding to an IR function, if one is available.

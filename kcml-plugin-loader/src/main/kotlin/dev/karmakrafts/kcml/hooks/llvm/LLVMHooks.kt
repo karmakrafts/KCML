@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
-import dev.karmakrafts.kcml.api.extension.llvm.NativeIntrinsicsExtension
+import dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension
 import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
 import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -24,8 +24,7 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
-import org.jetbrains.kotlin.ir.expressions.IrCall
-import org.jetbrains.kotlin.ir.util.render
+import org.jetbrains.kotlin.ir.IrElement
 
 @Suppress("UNUSED")
 @KCMLHookApi
@@ -34,39 +33,39 @@ object LLVMHooks {
     // CodeGeneratorVisitor
 
     @JvmStatic
-    fun onEvaluateFunctionCall( // @formatter:off
+    fun onGenerateElement( // @formatter:off
         @ActualType("CodeGeneratorVisitor") codeGeneratorVisitor: Any,
-        call: IrCall,
-        args: List<LLVMValueRef>
+        element: IrElement
     ): LLVMValueRef? { // @formatter:on
+        val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.filter { [_, extension] ->
+            extension is NativeCodeGenerationExtension
+        }
+        if (extensions.isEmpty()) return null
         return CodeGeneratorVisitorView.fromImpl(codeGeneratorVisitor, PluginLoaderImpl)
             .fold(onSuccess = onSuccess@{ codeGeneratorVisitorView ->
-                // Invoke all native intrinsic extensions
+                // Invoke all native code generation extensions
                 val loggerFactory = codeGeneratorVisitorView.generationState.loggerFactory
                 val logger = loggerFactory("KCML")
-                logger.info("Code generation stage")
-                val extensions =
-                    PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.filter { (_, extension) -> extension is NativeIntrinsicsExtension }
-                for ((pluginId, extension) in extensions) {
-                    require(extension is NativeIntrinsicsExtension)
+                for ([pluginId, extension] in extensions) {
+                    require(extension is NativeCodeGenerationExtension)
                     val backend = LateNativeBackendImpl.fromView(
                         codeGeneratorVisitorView.generationState, pluginId, PluginLoaderImpl
                     )
                     try {
-                        if (!extension.shouldProcess(call, backend)) continue
-                        loggerFactory.getForPlugin(pluginId).info("Processing LLVM intrinsic call ${call.render()}")
-                        return@onSuccess with(extension) {
+                        if (!extension.shouldProcess(element, backend)) continue
+                        val result = with(extension) {
                             with(NativeCodeGeneratorImpl.fromView(codeGeneratorVisitorView, backend)) {
-                                process(call, args)
+                                process(element)
                             }
                         }
+                        if (result != null) return@onSuccess result
                     } catch (error: Throwable) {
-                        logger.error("A native intrinsic extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
+                        logger.error("A native code generation extension from plugin '$pluginId' has caused an exception: ${error.stackTraceToString()}")
                     }
                 }
-                null // No extension has requested to process the call
+                null // No extension has requested to process the element
             }, onFailure = { error ->
-                error("Could not reflect CodeGeneratorVisitor in onEvaluateFunctionCall: ${error.stackTraceToString()}")
+                error("Could not reflect CodeGeneratorVisitor in onGenerateElement: ${error.stackTraceToString()}")
             })
     }
 
@@ -79,7 +78,7 @@ object LLVMHooks {
             logger.info("Post lowering stage")
             // Invoke all late native extensions' init functions
             val extensions = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions
-            for ((pluginId, extension) in extensions) {
+            for ([pluginId, extension] in extensions) {
                 val backend = LateNativeBackendImpl.fromView(stateView, pluginId, PluginLoaderImpl)
                 try {
                     extension.init(backend)

@@ -256,7 +256,7 @@ object PluginLoaderImpl : PluginLoader {
             for (pluginId in loadedPlugins) {
                 val pluginVertex = vertices[pluginId]!!
                 val pluginMetadata = metadata[pluginId] ?: continue
-                for ((dependencyId, required, order, requiredVersion) in pluginMetadata.dependencies) {
+                for ([dependencyId, required, order, requiredVersion] in pluginMetadata.dependencies) {
                     // Handle required dependencies
                     if (dependencyId !in loadedPlugins) {
                         if (required) {
@@ -283,7 +283,7 @@ object PluginLoaderImpl : PluginLoader {
     }
 
     private fun sortPlugins(): LinkedHashMap<String, CompilerPlugin> {
-        val (graph, vertices) = buildPluginGraph()
+        val [graph, vertices] = buildPluginGraph()
         // Apply topological sort to bring plugins into dependency order
         val sorted = LinkedHashMap<String, CompilerPlugin>()
         try {

@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.util
 import sun.misc.Unsafe
 
 object UnsafeUtils {
+    @Suppress("DiscouragedPrivateApi")
     val unsafe: Unsafe = try {
         val clazz = Unsafe::class.java
         val field = clazz.getDeclaredField("theUnsafe")

@@ -47,6 +47,12 @@ dependencies {
     api(libs.semver)
     api(libs.ow2.asm.core)
     api(projects.kcmlMixinBridge)
+
+    testImplementation(libs.kotlin.test)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 publishing {

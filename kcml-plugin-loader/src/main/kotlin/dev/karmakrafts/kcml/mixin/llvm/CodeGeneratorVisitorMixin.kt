@@ -22,11 +22,21 @@ import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.Inject.Target
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
 import dev.karmakrafts.kcml.api.mixin.ThisAware
+import dev.karmakrafts.kcml.api.mixin.returnFromTarget
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.llvm.LLVMHooks
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
-import org.jetbrains.kotlin.ir.expressions.IrCall
+import org.jetbrains.kotlin.ir.declarations.IrAnonymousInitializer
+import org.jetbrains.kotlin.ir.declarations.IrClass
+import org.jetbrains.kotlin.ir.declarations.IrConstructor
+import org.jetbrains.kotlin.ir.declarations.IrField
+import org.jetbrains.kotlin.ir.declarations.IrFile
+import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.ir.declarations.IrProperty
+import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
+import org.jetbrains.kotlin.ir.declarations.IrVariable
+import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.objectweb.asm.Opcodes
 
 @OptIn(ExperimentalForeignApi::class, KCMLHookApi::class)
@@ -34,16 +44,60 @@ import org.objectweb.asm.Opcodes
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.llvm.CodeGeneratorVisitor", -999)
 internal class CodeGeneratorVisitorMixin : ThisAware<Any> {
     @Inject( // @formatter:off
-        name = "evaluateFunctionCall",
-        target = Target(opcode = Opcodes.NOP)
+        name = "evaluateExpression",
+        target = Target(name = "updateBuilderDebugLocation", opcode = Opcodes.INVOKESPECIAL)
     )
-    fun evaluateFunctionCall(
-        @Capture callee: IrCall,
-        @Capture args: List<LLVMValueRef>,
+    fun evaluateExpression(
+        @Capture value: IrExpression,
         returnContext: ReturnContext<LLVMValueRef>
     ) { // @formatter:on
-        LLVMHooks.onEvaluateFunctionCall(getThis(), callee, args)?.let { result ->
+        LLVMHooks.onGenerateElement(getThis(), value)?.let { result ->
             returnContext.returnFromTarget(result)
         }
+    }
+
+    @Inject(name = "visitModuleFragment", order = Inject.Order.BEFORE)
+    fun visitModuleFragment(@Capture declaration: IrModuleFragment, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitFile", order = Inject.Order.BEFORE)
+    fun visitFile(@Capture declaration: IrFile, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitClass", order = Inject.Order.BEFORE)
+    fun visitClass(@Capture declaration: IrClass, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitSimpleFunction", order = Inject.Order.BEFORE)
+    fun visitSimpleFunction(@Capture declaration: IrSimpleFunction, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitConstructor", order = Inject.Order.BEFORE)
+    fun visitConstructor(@Capture declaration: IrConstructor, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitAnonymousInitializer", order = Inject.Order.BEFORE)
+    fun visitAnonymousInitializer(@Capture declaration: IrAnonymousInitializer, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitProperty", order = Inject.Order.BEFORE)
+    fun visitProperty(@Capture declaration: IrProperty, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "visitField", order = Inject.Order.BEFORE)
+    fun visitField(@Capture declaration: IrField, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), declaration) != null) returnContext.returnFromTarget()
+    }
+
+    @Inject(name = "generateVariable", order = Inject.Order.BEFORE)
+    fun generateVariable(@Capture variable: IrVariable, returnContext: ReturnContext<Unit>) {
+        if (LLVMHooks.onGenerateElement(getThis(), variable) != null) returnContext.returnFromTarget()
     }
 }

@@ -45,8 +45,7 @@ object WASMHooks {
             "KCML agent handshake has not supplied plugin paths"
         }
         PluginLoaderImpl.loadAndInvokeStandalone(
-            config,
-            pluginPaths.map { path -> Path(path as String).toUri().toURL() })
+            config, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
         initializedInstances += config
     }
 

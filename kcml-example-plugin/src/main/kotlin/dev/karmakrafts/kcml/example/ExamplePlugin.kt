@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
 import dev.karmakrafts.kcml.example.llvm.ExampleLateNativeExtension
+import dev.karmakrafts.kcml.example.llvm.ExampleNativeCodeGenerationExtension
 import dev.karmakrafts.kcml.example.llvm.ExampleNativeIntrinsicsExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleLateWasmExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
@@ -37,6 +38,7 @@ class ExamplePlugin : CompilerPlugin {
             register(ExampleIrIntrinsicsExtension())
             // LLVM
             register(ExampleLateNativeExtension())
+            register(ExampleNativeCodeGenerationExtension())
             register(ExampleNativeIntrinsicsExtension())
             // WASM
             register(ExampleLateWasmExtension())

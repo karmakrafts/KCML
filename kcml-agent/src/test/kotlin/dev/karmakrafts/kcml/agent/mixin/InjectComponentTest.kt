@@ -348,7 +348,25 @@ class InjectComponentTest {
         assertTrue(mixin.apply(parsedTargetClass))
         val transformedClass = loadClass(parsedTargetClass)
         assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
-        assertTrue(transformedClass.declaredMethods.any { method -> method.name == "evaluateFunctionCall" })
+        val generationMethods = setOf(
+            "evaluateExpression", "visitModuleFragment", "visitFile", "visitClass", "visitSimpleFunction",
+            "visitConstructor", "visitAnonymousInitializer", "visitProperty", "visitField", "generateVariable"
+        )
+        val interceptedMethods = parsedTargetClass.methods.filter { method ->
+            method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+                instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks" && instruction.name == "onGenerateElement"
+            }
+        }
+        assertEquals(generationMethods, interceptedMethods.map { it.name }.toSet())
+        for (method in interceptedMethods) {
+            assertEquals(1, method.instructions.filterIsInstance<MethodInsnNode>().count { instruction ->
+                instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks" && instruction.name == "onGenerateElement"
+            })
+            assertTrue(method.instructions.none { instruction ->
+                instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/api/mixin/ReturnContext"
+            })
+        }
+        assertTrue(transformedClass.declaredMethods.any { method -> method.name == "evaluateExpression" })
     }
 
     @Test
@@ -365,7 +383,9 @@ class InjectComponentTest {
         val mixin = loader.mixins.single { candidate ->
             candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/llvm/CodeGeneratorVisitorMixin"
         }
-        val inject = mixin.components.single { component -> component is InjectComponent }
+        val inject = mixin.components.filterIsInstance<InjectComponent>().single { component ->
+            component.mixinMethod.name == "evaluateExpression"
+        }
         val context = ComponentContext(
             parsedTargetClass, loader, NoopLogger, mixin.components - inject
         )
@@ -373,7 +393,7 @@ class InjectComponentTest {
         assertTrue(inject.apply(context))
         val transformedClass = loadClass(parsedTargetClass)
         assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
-        assertTrue(transformedClass.declaredMethods.any { method -> method.name == "evaluateFunctionCall" })
+        assertTrue(transformedClass.declaredMethods.any { method -> method.name == "evaluateExpression" })
     }
 
     @Test
@@ -396,20 +416,20 @@ class InjectComponentTest {
 
         assertTrue(mixin.apply(secondPass))
         val targetMethod = secondPass.methods.single { method ->
-            method.name == "evaluateFunctionCall" && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrCall;Ljava/util/List;Lorg/jetbrains/kotlin/backend/konan/llvm/Lifetime;Lkotlinx/cinterop/CPointer;)Lkotlinx/cinterop/CPointer;"
+            method.name == "evaluateExpression" && method.desc == "(Lorg/jetbrains/kotlin/ir/expressions/IrExpression;Lkotlinx/cinterop/CPointer;)Lkotlinx/cinterop/CPointer;"
         }
         val hookCalls = targetMethod.instructions.filterIsInstance<MethodInsnNode>().filter { instruction ->
-            instruction.opcode == Opcodes.INVOKESTATIC && instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks" && instruction.name == "onEvaluateFunctionCall"
+            instruction.opcode == Opcodes.INVOKESTATIC && instruction.owner == "dev/karmakrafts/kcml/hooks/llvm/LLVMHooks" && instruction.name == "onGenerateElement"
         }
         assertEquals(2, hookCalls.size)
         for (call in hookCalls) {
             val arguments =
                 generateSequence(call.previous) { instruction -> instruction.previous }.filterIsInstance<VarInsnNode>()
-                    .take(3)
+                    .take(2)
                     .toList()
                     .reversed()
-            assertEquals(listOf(Opcodes.ALOAD, Opcodes.ALOAD, Opcodes.ALOAD), arguments.map { it.opcode })
-            assertEquals(listOf(0, 1, 2), arguments.map { it.`var` })
+            assertEquals(listOf(Opcodes.ALOAD, Opcodes.ALOAD), arguments.map { it.opcode })
+            assertEquals(listOf(0, 1), arguments.map { it.`var` })
         }
         val transformedClass = loadClass(secondPass)
         assertEquals(secondPass.name.replace('/', '.'), transformedClass.name)
