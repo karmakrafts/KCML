@@ -66,8 +66,8 @@ object KCMLAgent {
             putConstant("plugin_paths", handshake.pluginPaths)
         }
         val loader = MixinLoader(logger)
-        logger.info { "Loading builtin loader mixins" }
-        loader.load(listOf(Path(handshake.loaderPath))) // Load builtin mixins from loader JAR
+        logger.info { "Loading builtin loader and plugin mixins" }
+        loader.load((listOf(handshake.loaderPath) + handshake.pluginPaths).map(::Path))
         val dumpPath = if (handshake.dumpClasses) handshake.dumpPath?.let(::Path) else null
         instrumentation.addTransformer(MixinClassTransformer(logger, loader, dumpPath))
     }
