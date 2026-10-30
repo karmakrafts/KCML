@@ -40,10 +40,12 @@ internal class ConstantTableComponent : AbstractMixinComponent() {
         )
     }
 
+    private val mixinSource = MixinBridge.INSTANCE.mixinSource
+
     private fun MethodInsnNode.isConstantTableCall(): Boolean =
         opcode == Opcodes.INVOKESTATIC && owner == Types.Mixin.constantTable.internalName && getterDescriptors[name] == desc
 
-    private fun MethodInsnNode.findConstantName(): LdcInsnNode {
+    private fun MethodInsnNode.findConstantArgument(): LdcInsnNode {
         var instruction = previous
         while (instruction != null && instruction.opcode == -1) instruction = instruction.previous
         return checkNotNull(instruction as? LdcInsnNode) {
@@ -54,8 +56,10 @@ internal class ConstantTableComponent : AbstractMixinComponent() {
     }
 
     private fun MethodInsnNode.resolveConstant(name: String): Any {
-        val value = checkNotNull(MixinBridge.INSTANCE.constantTable[name]) {
-            "Mixin constant $name is not defined"
+        val source =
+            checkNotNull(mixinSource) { "No mixin source was loading when the constant table component was created" }
+        val value = checkNotNull(MixinBridge.INSTANCE.constantTable[source]?.get(name)) {
+            "Mixin constant ${source.sourceName}:$name is not defined"
         }
         return when (this.name) {
             "getString" -> value as? String
@@ -67,13 +71,13 @@ internal class ConstantTableComponent : AbstractMixinComponent() {
             "getDouble" -> value as? Double
             "getBoolean" -> (value as? Boolean)?.let { constant -> if (constant) 1 else 0 }
             else -> null
-        } ?: error("Mixin constant $name is incompatible with ConstantTable.${this.name}()")
+        } ?: error("Mixin constant ${source.sourceName}:$name is incompatible with ConstantTable.${this.name}()")
     }
 
     private fun InsnList.processConstantTable(): Int {
         val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isConstantTableCall() }
         for (call in calls) {
-            val constantName = call.findConstantName()
+            val constantName = call.findConstantArgument()
             val value = call.resolveConstant(constantName.cst as String)
             remove(constantName)
             set(
@@ -88,7 +92,7 @@ internal class ConstantTableComponent : AbstractMixinComponent() {
     }
 
     override fun apply(context: ComponentContext): Boolean {
-        val (targetClass, _, logger) = context
+        val [targetClass, _, logger] = context
         logger.info { "Processing references to ConstantTable" }
         val referenceCount = targetClass.methods.sumOf { method -> method.instructions.processConstantTable() }
         if (referenceCount == 0) return false

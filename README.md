@@ -40,3 +40,15 @@ This can be enabled by adding the following to your `gradle.properties`:
 ```properties
 kotlin.compiler.execution.strategy=in-process
 ```
+
+### Troubleshooting
+
+#### Mixin Bridge ABI
+
+After changing or upgrading the mixin bridge, stop existing Gradle daemons with
+`./gradlew --stop` before running `./gradlew check` again. With in-process compilation,
+the bridge is loaded into the Gradle JVM's bootstrap class loader and remains there
+for the lifetime of that JVM. Replacing the bridge JAR or reattaching the agent cannot
+replace already loaded bridge classes, and the JVM may retain the old JAR's class index.
+This can cause missing-class errors such as `NoClassDefFoundError` for `MixinSource`.
+Restart the compiler JVM instead if using another compiler execution mode.

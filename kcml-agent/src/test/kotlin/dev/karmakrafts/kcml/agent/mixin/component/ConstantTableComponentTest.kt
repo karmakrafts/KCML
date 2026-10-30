@@ -19,16 +19,22 @@ package dev.karmakrafts.kcml.agent.mixin.component
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
+import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
+import dev.karmakrafts.kcml.agent.mixin.source.PluginMixinSource
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.mixin.MixinSource
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.IntInsnNode
+import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.LdcInsnNode
+import org.objectweb.asm.tree.LineNumberNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.VarInsnNode
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -38,12 +44,19 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class ConstantTableComponentTest {
-    private val constantTable: MutableMap<String, Any> = MixinBridge.INSTANCE.constantTable
+    private val constantTable: ConcurrentHashMap<MixinSource, ConcurrentHashMap<String, Any>> =
+        MixinBridge.INSTANCE.constantTable
 
     @BeforeTest
+    fun prepareSource() {
+        clearConstantTable()
+        MixinBridge.INSTANCE.mixinSource = BuiltinMixinSource
+    }
+
     @AfterTest
     fun clearConstantTable() {
         constantTable.clear()
+        MixinBridge.INSTANCE.setMixinSource(null)
     }
 
     private fun createContext(targetClass: ClassNode): ComponentContext = ComponentContext(
@@ -64,16 +77,72 @@ class ConstantTableComponentTest {
     }
 
     @Test
+    fun `isolates constants with the same name by plugin ID`() {
+        constantTable[BuiltinMixinSource] = ConcurrentHashMap(mapOf("value" to "builtin"))
+        constantTable[PluginMixinSource("first")] = ConcurrentHashMap(mapOf("value" to "first value"))
+        constantTable[PluginMixinSource("second")] = ConcurrentHashMap(mapOf("value" to "second value"))
+        val components =
+            listOf(BuiltinMixinSource, PluginMixinSource("first"), PluginMixinSource("second")).map { source ->
+                MixinBridge.INSTANCE.mixinSource = source
+                ConstantTableComponent()
+            }
+        MixinBridge.INSTANCE.setMixinSource(null)
+
+        val values = components.map { component ->
+            val method = MethodNode().apply {
+                addConstantCall("value", "getString", Types.string)
+                instructions.add(InsnNode(Opcodes.RETURN))
+            }
+            val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+
+            assertTrue(component.apply(createContext(mixinClass)))
+            assertEquals(2, method.instructions.size())
+            method.instructions.filterIsInstance<LdcInsnNode>().single().cst
+        }
+
+        assertEquals(listOf("builtin", "first value", "second value"), values)
+    }
+
+    @Test
+    fun `rejects missing plugin namespaces without falling back to builtins`() {
+        constantTable[BuiltinMixinSource] = ConcurrentHashMap(mapOf("value" to "builtin"))
+        MixinBridge.INSTANCE.mixinSource = PluginMixinSource("missing_plugin")
+        val method = MethodNode().apply { addConstantCall("value", "getString", Types.string) }
+        val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+
+        val error = assertFailsWith<IllegalStateException> {
+            ConstantTableComponent().apply(createContext(mixinClass))
+        }
+
+        assertTrue(error.message.orEmpty().contains("missing_plugin"))
+    }
+
+    @Test
+    fun `rejects constant lookup without a loading source`() {
+        MixinBridge.INSTANCE.setMixinSource(null)
+        val method = MethodNode().apply { addConstantCall("value", "getString", Types.string) }
+        val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+
+        val error = assertFailsWith<IllegalStateException> {
+            ConstantTableComponent().apply(createContext(mixinClass))
+        }
+
+        assertTrue(error.message.orEmpty().contains("source"))
+    }
+
+    @Test
     fun `replaces all supported constant table calls with optimized instructions`() {
-        constantTable += mapOf(
-            "string" to "value",
-            "byte" to 1.toByte(),
-            "short" to 2.toShort(),
-            "int" to 3,
-            "long" to 4L,
-            "float" to 5.5F,
-            "double" to 6.5,
-            "boolean" to true
+        constantTable[BuiltinMixinSource] = ConcurrentHashMap(
+            mapOf(
+                "string" to "value",
+                "byte" to 1.toByte(),
+                "short" to 2.toShort(),
+                "int" to 3,
+                "long" to 4L,
+                "float" to 5.5F,
+                "double" to 6.5,
+                "boolean" to true
+            )
         )
         val method = MethodNode().apply {
             addConstantCall("string", "getString", Types.string)
@@ -112,6 +181,7 @@ class ConstantTableComponentTest {
 
     @Test
     fun `reports no change without constant table calls`() {
+        MixinBridge.INSTANCE.setMixinSource(null)
         val method = MethodNode().apply {
             instructions.add(LdcInsnNode("name"))
             instructions.add(
@@ -125,6 +195,40 @@ class ConstantTableComponentTest {
 
         assertFalse(ConstantTableComponent().apply(createContext(mixinClass)))
         assertEquals(3, method.instructions.size())
+    }
+
+    @Test
+    fun `preserves preceding stack values and debug metadata`() {
+        MixinBridge.INSTANCE.putConstant(BuiltinMixinSource, "value", false)
+        val label = LabelNode()
+        val method = MethodNode().apply {
+            instructions.add(LdcInsnNode("unrelated"))
+            addConstantCall("value", "getBoolean", Type.BOOLEAN_TYPE)
+            instructions.insertBefore(instructions.last, label)
+            instructions.insert(label, LineNumberNode(42, label))
+        }
+        val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+
+        assertTrue(ConstantTableComponent().apply(createContext(mixinClass)))
+
+        assertEquals(listOf("unrelated", 0), method.instructions.filterIsInstance<LdcInsnNode>().map { it.cst })
+        assertEquals(4, method.instructions.size())
+        assertEquals(42, method.instructions.filterIsInstance<LineNumberNode>().single().line)
+    }
+
+    @Test
+    fun `rejects non-string constant names`() {
+        val method = MethodNode().apply {
+            addConstantCall("value", "getInt", Type.INT_TYPE)
+            instructions.set(instructions.first, LdcInsnNode(42))
+        }
+        val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+
+        val error = assertFailsWith<IllegalStateException> {
+            ConstantTableComponent().apply(createContext(mixinClass))
+        }
+
+        assertTrue(error.message.orEmpty().contains("literal string"))
     }
 
     @Test
@@ -152,6 +256,8 @@ class ConstantTableComponentTest {
 
     @Test
     fun `rejects missing constants`() {
+        constantTable[BuiltinMixinSource] = ConcurrentHashMap()
+        constantTable[PluginMixinSource("other")] = ConcurrentHashMap(mapOf("missing" to 42))
         val method = MethodNode().apply { addConstantCall("missing", "getInt", Type.INT_TYPE) }
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 
@@ -164,7 +270,7 @@ class ConstantTableComponentTest {
 
     @Test
     fun `rejects constants whose type does not match the getter`() {
-        constantTable["value"] = "not an integer"
+        MixinBridge.INSTANCE.putConstant(BuiltinMixinSource, "value", "not an integer")
         val method = MethodNode().apply { addConstantCall("value", "getInt", Type.INT_TYPE) }
         val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
 

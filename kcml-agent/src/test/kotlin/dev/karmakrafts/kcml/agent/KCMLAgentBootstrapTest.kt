@@ -16,13 +16,23 @@
 
 package dev.karmakrafts.kcml.agent
 
+import dev.karmakrafts.kcml.agent.proto.A2SHandshake
+import dev.karmakrafts.kcml.agent.proto.S2AHandshake
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketHandler
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketReader
+import dev.karmakrafts.kcml.agent.proto.io.AgentPacketWriter
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
+import java.io.File
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Proxy
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import java.util.jar.Manifest
@@ -30,8 +40,118 @@ import java.util.zip.ZipFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class KCMLAgentBootstrapTest {
+    @Test
+    fun `starts isolated agent with bridge injected into bootstrap class loader`() {
+        assertAgentStartup(false)
+    }
+
+    @Test
+    fun `reports incompatible bridge retained by previous build`() {
+        assertAgentStartup(true)
+    }
+
+    @Test
+    fun `reports incompatible bridge even when new bridge has a different path`() {
+        assertAgentStartup(true, false)
+    }
+
+    private fun assertAgentStartup(legacyBridge: Boolean, replaceBridge: Boolean = true) {
+        val directory = Files.createTempDirectory(Path.of("build"), "agent-startup-test-").toAbsolutePath()
+        try {
+            val harness = directory.resolve("harness.jar")
+            val manifest = Manifest().apply {
+                mainAttributes.putValue("Manifest-Version", "1.0")
+                mainAttributes.putValue("Premain-Class", AgentStartupProcess::class.java.name)
+                mainAttributes.putValue("Can-Retransform-Classes", "true")
+            }
+            JarOutputStream(Files.newOutputStream(harness), manifest).use { output ->
+                val entry = AgentStartupProcess::class.java.name.replace('.', '/') + ".class"
+                output.putNextEntry(JarEntry(entry))
+                checkNotNull(javaClass.getResourceAsStream("/$entry")).use { it.copyTo(output) }
+                output.closeEntry()
+            }
+            val loader = directory.resolve("loader.jar")
+            JarOutputStream(Files.newOutputStream(loader)).use { }
+            val currentBridge = checkNotNull(System.getProperty("kcml.bridge.jar"))
+            val bridge = if (legacyBridge) {
+                val writer = ClassWriter(0)
+                writer.visit(
+                    Opcodes.V17,
+                    Opcodes.ACC_PUBLIC,
+                    "dev/karmakrafts/kcml/api/mixin/MixinBridge",
+                    null,
+                    "java/lang/Object",
+                    null
+                )
+                writer.visitField(
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+                    "INSTANCE",
+                    "Ldev/karmakrafts/kcml/api/mixin/MixinBridge;",
+                    null,
+                    null
+                ).visitEnd()
+                writer.visitEnd()
+                directory.resolve("bridge.jar").also { path ->
+                    JarOutputStream(Files.newOutputStream(path)).use { output ->
+                        output.putNextEntry(JarEntry("dev/karmakrafts/kcml/api/mixin/MixinBridge.class"))
+                        output.write(writer.toByteArray())
+                        output.closeEntry()
+                    }
+                }.toString()
+            }
+            else currentBridge
+            ServerSocket(0, 1, InetAddress.getLoopbackAddress()).use { server ->
+                server.soTimeout = 30_000
+                val handshake = CompletableFuture.runAsync {
+                    server.accept().use { socket ->
+                        socket.soTimeout = 30_000
+                        val reader = AgentPacketReader(socket.getInputStream())
+                        val writer = AgentPacketWriter(socket.getOutputStream())
+                        val handler = AgentPacketHandler(A2SHandshake.serializer()) { request ->
+                            writer.write(
+                                S2AHandshake.serializer(), S2AHandshake(
+                                    request.signature,
+                                    loader.toString(),
+                                    if (replaceBridge) bridge else currentBridge,
+                                    emptyList()
+                                )
+                            )
+                        }
+                        reader.read { type -> handler.takeIf { it.type == type } }
+                    }
+                }
+                val agent = Path.of(checkNotNull(System.getProperty("kcml.agent.jar")))
+                val log = directory.resolve("startup.log")
+                val command = mutableListOf(
+                    Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                    "-javaagent:$harness",
+                    "-cp",
+                    "$harness${File.pathSeparator}$agent",
+                    AgentStartupProcess::class.java.name,
+                    agent.toUri().toString(),
+                    server.localPort.toString()
+                )
+                if (legacyBridge) command += listOf(bridge, currentBridge)
+                if (!replaceBridge) command += "separate"
+                val process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start()
+                try {
+                    assertTrue(process.waitFor(30, TimeUnit.SECONDS), "Agent startup timed out")
+                    assertEquals(0, process.exitValue(), Files.readString(log))
+                    handshake.get(10, TimeUnit.SECONDS)
+                }
+                finally {
+                    process.destroyForcibly().waitFor()
+                }
+            }
+        }
+        finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
     private fun createAgent(path: Path, version: String, property: String) {
         val writer = ClassWriter(0)
         writer.visit(

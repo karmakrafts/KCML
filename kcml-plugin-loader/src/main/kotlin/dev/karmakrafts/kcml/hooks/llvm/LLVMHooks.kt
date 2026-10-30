@@ -77,7 +77,7 @@ object LLVMHooks {
     @JvmStatic
     fun onRunAfterLowerings(@ActualType("NativeGenerationState") state: Any) {
         val config = (state as NativePhaseContext).config.configuration
-        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.constantTable["plugin_paths"] as? List<*>) {
+        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.getConstant("kcml", "plugin_paths") as? List<*>) {
             "KCML agent handshake has not supplied plugin paths"
         }
         PluginLoaderImpl.loadAndInvokeStandalone(

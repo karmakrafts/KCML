@@ -26,7 +26,9 @@ plugins {
 configureJava(libs.versions.java)
 
 evaluationDependsOn(":kcml-plugin-loader")
+evaluationDependsOn(":kcml-mixin-bridge")
 val loaderJar = project(":kcml-plugin-loader").tasks.named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
+val bridgeJar = project(":kcml-mixin-bridge").tasks.named<Jar>("jar").flatMap { task -> task.archiveFile }
 
 dependencies {
     compileOnly(projects.kcmlMixinBridge)
@@ -49,11 +51,12 @@ tasks {
     val agentJar = named<Jar>("shadowJar").flatMap { task -> task.archiveFile }
     val plainAgentJar = named<Jar>("jar").flatMap { task -> task.archiveFile }
     test {
-        dependsOn(agentJar, plainAgentJar, loaderJar)
-        inputs.files(agentJar, plainAgentJar, loaderJar)
+        dependsOn(agentJar, plainAgentJar, loaderJar, bridgeJar)
+        inputs.files(agentJar, plainAgentJar, loaderJar, bridgeJar)
         systemProperty("kcml.agent.jar", agentJar.get().asFile.absolutePath)
         systemProperty("kcml.agent.plain.jar", plainAgentJar.get().asFile.absolutePath)
         systemProperty("kcml.loader.jar", loaderJar.get().asFile.absolutePath)
+        systemProperty("kcml.bridge.jar", bridgeJar.get().asFile.absolutePath)
         useJUnitPlatform()
     }
     jar {

@@ -22,6 +22,9 @@ interface BackendType {
     /** Kotlin/JVM IR backend. */
     data object Jvm : BackendType
 
+    /** Late Kotlin/JVM bytecode-generation phase. */
+    data object LateJvm : BackendType
+
     /** Kotlin/JavaScript IR backend. */
     data object Js : BackendType
 

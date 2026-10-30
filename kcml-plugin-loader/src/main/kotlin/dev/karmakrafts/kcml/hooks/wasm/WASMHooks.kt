@@ -52,7 +52,7 @@ object WASMHooks {
 
     private fun initIfNeeded(config: CompilerConfiguration) = synchronized(initializationLock) {
         if (config in initializedInstances) return@synchronized
-        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.constantTable["plugin_paths"] as? List<*>) {
+        val pluginPaths = requireNotNull(MixinBridge.INSTANCE.getConstant("kcml", "plugin_paths") as? List<*>) {
             "KCML agent handshake has not supplied plugin paths"
         }
         PluginLoaderImpl.loadAndInvokeStandalone(

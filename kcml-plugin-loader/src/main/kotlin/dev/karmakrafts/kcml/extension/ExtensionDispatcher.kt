@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
+import dev.karmakrafts.kcml.api.extension.jvm.LateJvmExtension
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
 import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
@@ -49,6 +50,7 @@ internal class ExtensionDispatcher( // @formatter:off
 
     val lateNativeExtensions: List<Pair<String, LateNativeExtension>> by gather()
     val lateWasmExtensions: List<Pair<String, LateWasmExtension>> by gather()
+    val lateJvmExtensions: List<Pair<String, LateJvmExtension>> by gather()
 
     /**
      * Registers all adapters required to wire through existing compiler extension APIs

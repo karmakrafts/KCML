@@ -25,6 +25,10 @@ import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.error
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponents
+import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
+import dev.karmakrafts.kcml.agent.mixin.source.PluginMixinSource
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.mixin.MixinSource
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
@@ -32,6 +36,7 @@ import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
+import kotlin.io.path.nameWithoutExtension
 import kotlin.time.Clock
 
 internal class MixinLoader(
@@ -43,12 +48,15 @@ internal class MixinLoader(
         field: ArrayList<Mixin> = ArrayList()
 
     @Synchronized
-    fun load(paths: List<Path>) {
+    fun load(paths: List<Path>, builtinPath: Path? = null) = synchronized(MixinBridge.INSTANCE) {
         mixins.clear() // Allow re-loading all mixins
         val startTime = Clock.System.now()
         for (path in paths) {
             mixins += when {
-                path.isRegularFile() && path.extension == "jar" -> loadFromJar(path)
+                path.isRegularFile() && path.extension == "jar" -> loadFromJar(
+                    path, path.toAbsolutePath().normalize() == builtinPath?.toAbsolutePath()?.normalize()
+                )
+
                 else -> {
                     logger.warn { "Unsupported path $path for MixinLoader, skipping" }
                     continue
@@ -70,7 +78,7 @@ internal class MixinLoader(
     } // @formatter:on
 
     private fun createMixin(classNode: ClassNode): Result<Mixin> {
-        val (targetClassType, priority) = when {
+        val [targetClassType, priority] = when {
             classNode.hasInvisibleAnnotation(Types.Mixin.directMixin) -> {
                 val annotation = classNode.getInvisibleAnnotation(Types.Mixin.directMixin)
                 annotation.getValue<Type>("target")?.let { type ->
@@ -99,11 +107,26 @@ internal class MixinLoader(
         }
     }
 
-    private fun loadFromJar(jarPath: Path): List<Mixin> {
+    private fun findSource(jarPath: Path, classes: List<ClassNode>, builtin: Boolean): MixinSource {
+        if (builtin) return BuiltinMixinSource
+        val pluginIds = classes.flatMap { classNode ->
+            classNode.visibleAnnotations.orEmpty()
+                .filter { annotation -> annotation.desc == "Ldev/karmakrafts/kcml/api/plugin/Plugin;" }
+                .map { annotation ->
+                    requireNotNull(annotation.getValue<String>("id")) { "Plugin in $jarPath is missing its ID" }
+                }
+        }.distinct()
+        require(pluginIds.size <= 1) { "Multiple plugin IDs in mixin source $jarPath: $pluginIds" }
+        val pluginId = pluginIds.singleOrNull() ?: jarPath.nameWithoutExtension
+        require(pluginId.isNotBlank() && pluginId != "kcml") { "Invalid mixin plugin ID '$pluginId' in $jarPath" }
+        return PluginMixinSource(pluginId)
+    }
+
+    private fun loadFromJar(jarPath: Path, builtin: Boolean): List<Mixin> {
         logger.info { "Loading mixins from JAR at $jarPath" }
         return JarFile(jarPath.toFile()).use { jarFile ->
             // @formatter:off
-            jarFile.stream()
+            val classes = jarFile.stream()
                 .parallel()
                 .filter { entry -> !entry.isDirectory && entry.realName.endsWith(".class") }
                 .map { entry ->
@@ -116,19 +139,22 @@ internal class MixinLoader(
                         classNode
                     }
                 }
-                .filter(::isValidMixin)
-                .map { classNode ->
-                    createMixin(classNode).fold(
-                        onSuccess = { mixin -> mixin },
-                        onFailure = { error ->
+                .toList()
+            // @formatter:on
+            val bridge = MixinBridge.INSTANCE
+            val previousSource = bridge.mixinSource
+            try {
+                bridge.mixinSource = findSource(jarPath, classes, builtin)
+                classes.stream().filter(::isValidMixin).map { classNode ->
+                        createMixin(classNode).fold(onSuccess = { mixin -> mixin }, onFailure = { error ->
                             logger.error(error) { "Could not create complete Mixin from class ${classNode.dottedName}" }
                             null
-                        }
-                    )
-                }
-                .toList()
-                .filterNotNull()
-            // @formatter:on
+                        })
+                    }.toList().filterNotNull()
+            }
+            finally {
+                bridge.mixinSource = previousSource
+            }
         }
     }
 }

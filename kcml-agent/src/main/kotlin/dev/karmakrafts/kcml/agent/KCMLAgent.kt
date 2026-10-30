@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.log.RemoteLogger
 import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
+import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
 import dev.karmakrafts.kcml.agent.util.commPort
@@ -43,6 +44,25 @@ object KCMLAgent {
         instrumentation.appendToBootstrapClassLoaderSearch(file)
     }
 
+    @Suppress("CheckResult")
+    private fun verifyMixinBridge(path: String) {
+        val failure = try {
+            val loader = KCMLAgent::class.java.classLoader
+            val bridge = Class.forName("dev.karmakrafts.kcml.api.mixin.MixinBridge", false, loader)
+            val source = Class.forName("dev.karmakrafts.kcml.api.mixin.MixinSource", false, loader)
+            bridge.getMethod("putConstant", source, String::class.java, Any::class.java)
+            return
+        } catch (error: ReflectiveOperationException) {
+            error
+        } catch (error: LinkageError) {
+            error
+        }
+        throw IllegalStateException(
+            "KCML could not load the required mixin bridge API from $path. This JVM may still be using a bridge from an earlier build. Bootstrap classes cannot be replaced in a running JVM. Run './gradlew --stop' and rerun the build (or restart the compiler JVM if not using in-process compilation).",
+            failure
+        )
+    }
+
     @JvmStatic
     fun agentmain(joinedArgs: String?, instrumentation: Instrumentation) {
         require(joinedArgs != null) { "KCML compiler agent requires initial startup options" }
@@ -57,18 +77,35 @@ object KCMLAgent {
         val logger = if (args.logging) RemoteLogger(commClient) else NoopLogger
         logger.info { "Agent invoked with options: $joinedArgs" }
         logger.info { "Initializing KCML compiler agent.." }
-        injectMixinBridge(handshake.bridgePath, logger, instrumentation)
+        try {
+            injectMixinBridge(handshake.bridgePath, logger, instrumentation)
+            verifyMixinBridge(handshake.bridgePath)
+        } catch (error: Throwable) {
+            commClient.close()
+            throw error
+        }
         // ================== Mixin Bridge boundary ==================
         logger.info { "Initializing default constant table entries" }
         MixinBridge.INSTANCE.apply {
-            putConstant("loader_path", handshake.loaderPath)
-            putConstant("bridge_path", handshake.bridgePath)
-            putConstant("plugin_paths", handshake.pluginPaths)
+            putConstant(BuiltinMixinSource, "loader_path", handshake.loaderPath)
+            putConstant(BuiltinMixinSource, "bridge_path", handshake.bridgePath)
+            putConstant(BuiltinMixinSource, "plugin_paths", handshake.pluginPaths)
         }
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader and plugin mixins" }
-        loader.load((listOf(handshake.loaderPath) + handshake.pluginPaths).map(::Path))
+        loader.load((listOf(handshake.loaderPath) + handshake.pluginPaths).map(::Path), Path(handshake.loaderPath))
         val dumpPath = if (handshake.dumpClasses) handshake.dumpPath?.let(::Path) else null
-        instrumentation.addTransformer(MixinClassTransformer(logger, loader, dumpPath))
+        val canRetransform = instrumentation.isRetransformClassesSupported
+        instrumentation.addTransformer(MixinClassTransformer(logger, loader, dumpPath), canRetransform)
+        if (canRetransform) {
+            val targets = loader.mixins.map { mixin -> mixin.target.className }.toSet()
+            val loadedTargets = instrumentation.allLoadedClasses.filter { type ->
+                type.name in targets && instrumentation.isModifiableClass(type)
+            }
+            for (type in loadedTargets) {
+                logger.info { "Patching mixin target ${type.name} loaded before agent attachment" }
+                instrumentation.retransformClasses(type)
+            }
+        }
     }
 }

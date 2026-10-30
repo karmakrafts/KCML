@@ -94,7 +94,13 @@ class KCMLAgentMixinTest {
         }
     }
 
-    private fun startAgent(loader: Path, bridge: Path, plugins: List<Path>): ClassFileTransformer {
+    private fun startAgent(
+        loader: Path,
+        bridge: Path,
+        plugins: List<Path>,
+        loadedClasses: Array<Class<*>> = emptyArray(),
+        retransformed: MutableList<Class<*>> = ArrayList()
+    ): ClassFileTransformer {
         var transformer: ClassFileTransformer? = null
         val instrumentation = Proxy.newProxyInstance(
             javaClass.classLoader, arrayOf(Instrumentation::class.java)
@@ -102,6 +108,9 @@ class KCMLAgentMixinTest {
             when (method.name) {
                 "appendToBootstrapClassLoaderSearch" -> (args[0] as JarFile).close()
                 "addTransformer" -> transformer = args[0] as ClassFileTransformer
+                "isRetransformClassesSupported", "isModifiableClass" -> return@newProxyInstance true
+                "getAllLoadedClasses" -> return@newProxyInstance loadedClasses
+                "retransformClasses" -> retransformed += (args[0] as Array<*>).filterIsInstance<Class<*>>()
             }
             null
         } as Instrumentation
@@ -169,5 +178,18 @@ class KCMLAgentMixinTest {
         for (plugins in listOf(emptyList(), listOf(directory, directory.resolve("missing.jar"), ordinary))) {
             assertMixinApplied(startAgent(loader, bridge, plugins), "example/LoaderTarget")
         }
+    }
+
+    @Test
+    fun `agent patches mixin targets loaded before attachment`() = withDirectory { directory ->
+        val target = KCMLAgentMixinTest::class.java
+        val loader = directory.createJar(
+            "loader.jar", createMixin("example/LoadedMixin", target.name.replace('.', '/'), true)
+        )
+        val retransformed = ArrayList<Class<*>>()
+        startAgent(
+            loader, directory.createJar("bridge.jar"), emptyList(), arrayOf(String::class.java, target), retransformed
+        )
+        assertEquals(listOf<Class<*>>(target), retransformed)
     }
 }

@@ -18,6 +18,10 @@ package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.log.NoopLogger
+import dev.karmakrafts.kcml.agent.mixin.component.ConstantTableComponent
+import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
+import dev.karmakrafts.kcml.agent.mixin.source.PluginMixinSource
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
@@ -27,12 +31,23 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MixinLoaderTest {
+    @BeforeTest
+    @AfterTest
+    fun clearBridge() {
+        MixinBridge.INSTANCE.setMixinSource(null)
+        MixinBridge.INSTANCE.constantTable.clear()
+    }
+
     private fun createMixin(name: String, annotationType: Type, target: Any?, priority: Int? = null): ClassNode =
         ClassNode().apply {
             version = Opcodes.V17
@@ -146,5 +161,107 @@ class MixinLoaderTest {
         assertFalse(loader.isMixin(Type.getObjectType(first.name)))
         loader.load(emptyList())
         assertTrue(loader.mixins.isEmpty())
+    }
+
+    @Test
+    fun `tracks builtin and annotated plugin sources while creating components`() = withDirectory { directory ->
+        val bridge = MixinBridge.INSTANCE
+        val loader = MixinLoader(NoopLogger)
+        loader.components.registerComponent { mixinClass ->
+            bridge.putConstant(mixinClass.name, mixinClass.name)
+            ConstantTableComponent()
+        }
+        val builtin = directory.createJar(
+            "loader.jar", createMixin("example/Builtin", Types.Mixin.indirectMixin, "example.Target")
+        )
+        val plugin = ClassNode().apply {
+            version = Opcodes.V17
+            access = Opcodes.ACC_PUBLIC
+            name = "example/Plugin"
+            superName = "java/lang/Object"
+            visibleAnnotations = arrayListOf(AnnotationNode("Ldev/karmakrafts/kcml/api/plugin/Plugin;").apply {
+                visit("id", "actual-plugin-id")
+            })
+        }
+        val pluginJar = directory.createJar(
+            "unrelated-filename.jar",
+            plugin,
+            createMixin("example/PluginMixin", Types.Mixin.indirectMixin, "example.Target")
+        )
+
+        val secondPluginJar = directory.createJar(
+            "mixin-only.jar", createMixin("example/SecondMixin", Types.Mixin.indirectMixin, "example.Target")
+        )
+
+        loader.load(listOf(builtin, directory.resolve("missing.jar"), pluginJar, secondPluginJar), builtin)
+
+        assertEquals("example/Builtin", bridge.constantTable[BuiltinMixinSource]?.get("example/Builtin"))
+        assertEquals(
+            "example/PluginMixin",
+            bridge.constantTable[PluginMixinSource("actual-plugin-id")]?.get("example/PluginMixin")
+        )
+        assertEquals(
+            "example/SecondMixin", bridge.constantTable[PluginMixinSource("mixin-only")]?.get("example/SecondMixin")
+        )
+        assertNull(bridge.mixinSource)
+        loader.load(emptyList())
+        assertNull(bridge.mixinSource)
+    }
+
+    @Test
+    fun `clears the active source when loading fails`() = withDirectory { directory ->
+        val bridge = MixinBridge.INSTANCE
+        val loader = MixinLoader(NoopLogger)
+        loader.components.registerComponent {
+            assertEquals(BuiltinMixinSource, bridge.mixinSource)
+            throw IllegalStateException("component failure")
+        }
+        val jar = directory.createJar(
+            "loader.jar", createMixin("example/Broken", Types.Mixin.indirectMixin, "example.Target")
+        )
+
+        assertFailsWith<IllegalStateException> { loader.load(listOf(jar), jar) }
+
+        assertNull(bridge.mixinSource)
+        assertFailsWith<IllegalStateException> { bridge.putConstant("outside-load", 1) }
+    }
+
+    @Test
+    fun `restores an enclosing source after loading`() = withDirectory { directory ->
+        val bridge = MixinBridge.INSTANCE
+        val enclosingSource = PluginMixinSource("enclosing")
+        bridge.mixinSource = enclosingSource
+        val loader = MixinLoader(NoopLogger)
+        loader.components.registerComponent {
+            assertEquals(BuiltinMixinSource, bridge.mixinSource)
+            ConstantTableComponent()
+        }
+        val jar = directory.createJar(
+            "loader.jar", createMixin("example/Builtin", Types.Mixin.indirectMixin, "example.Target")
+        )
+
+        loader.load(listOf(jar), jar)
+
+        assertEquals(enclosingSource, bridge.mixinSource)
+    }
+
+    @Test
+    fun `rejects ambiguous plugin IDs without leaking a source`() = withDirectory { directory ->
+        val plugins = listOf("first", "second").map { id ->
+            ClassNode().apply {
+                version = Opcodes.V17
+                access = Opcodes.ACC_PUBLIC
+                name = "example/$id"
+                superName = "java/lang/Object"
+                visibleAnnotations = arrayListOf(AnnotationNode("Ldev/karmakrafts/kcml/api/plugin/Plugin;").apply {
+                    visit("id", id)
+                })
+            }
+        }
+        val jar = directory.createJar("ambiguous.jar", *plugins.toTypedArray())
+
+        assertFailsWith<IllegalArgumentException> { MixinLoader(NoopLogger).load(listOf(jar)) }
+
+        assertNull(MixinBridge.INSTANCE.mixinSource)
     }
 }

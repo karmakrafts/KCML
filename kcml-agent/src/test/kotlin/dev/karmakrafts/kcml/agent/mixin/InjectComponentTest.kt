@@ -23,6 +23,7 @@ import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
+import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
@@ -40,6 +41,7 @@ import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.ParameterNode
 import org.objectweb.asm.tree.VarInsnNode
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -261,12 +263,13 @@ class InjectComponentTest {
         ClassReader(targetBytecode).accept(parsedTargetClass, 0)
         val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
         val loader = MixinLoader(NoopLogger)
-        loader.load(listOf(loaderJar))
+        loader.load(listOf(loaderJar), loaderJar)
         val mixin = loader.mixins.single { candidate ->
             candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/CLICompilerMixin"
         }
 
-        val constantTable = MixinBridge.INSTANCE.constantTable
+        val constantTable =
+            MixinBridge.INSTANCE.constantTable.computeIfAbsent(BuiltinMixinSource) { ConcurrentHashMap() }
         val previousLoaderPath = constantTable.put("loader_path", loaderJar.toString())
         try {
             mixin.apply(parsedTargetClass)
@@ -344,8 +347,16 @@ class InjectComponentTest {
         val transformedClass = loadClass(parsedTargetClass)
         assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
         val generationMethods = setOf(
-            "evaluateExpression", "visitModuleFragment", "visitFile", "visitClass", "visitSimpleFunction",
-            "visitConstructor", "visitAnonymousInitializer", "visitProperty", "visitField", "generateVariable"
+            "evaluateExpression",
+            "visitModuleFragment",
+            "visitFile",
+            "visitClass",
+            "visitSimpleFunction",
+            "visitConstructor",
+            "visitAnonymousInitializer",
+            "visitProperty",
+            "visitField",
+            "generateVariable"
         )
         val interceptedMethods = parsedTargetClass.methods.filter { method ->
             method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
@@ -495,6 +506,43 @@ class InjectComponentTest {
             assertTrue(transformedClass.declaredMethods.isNotEmpty())
         }
     }
+
+    @Test
+    fun `produces verifiable jvm generation hooks`() {
+        val loaderJar = Path.of(checkNotNull(System.getProperty("kcml.loader.jar")))
+        val loader = MixinLoader(NoopLogger)
+        loader.load(listOf(loaderJar), loaderJar)
+        for (target in listOf("ClassCodegen", "ExpressionCodegen")) {
+            val parsedTargetClass = ClassNode()
+            val resource = "org/jetbrains/kotlin/backend/jvm/codegen/$target.class"
+            checkNotNull(javaClass.classLoader.getResourceAsStream(resource)).use { stream ->
+                ClassReader(stream.readBytes()).accept(parsedTargetClass, 0)
+            }
+            parsedTargetClass.methods.reverse()
+            val mixin = loader.mixins.single { candidate ->
+                candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/jvm/${target}Mixin"
+            }
+            assertTrue(mixin.apply(parsedTargetClass))
+            val interceptedMethods = parsedTargetClass.methods.filter { method ->
+                method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+                    instruction.owner == "dev/karmakrafts/kcml/hooks/jvm/JVMHooks"
+                }
+            }
+            assertEquals(if (target == "ClassCodegen") 1 else 24, interceptedMethods.size)
+            for (method in interceptedMethods) {
+                assertFalse(method.access and Opcodes.ACC_BRIDGE != 0)
+                assertEquals(1, method.instructions.filterIsInstance<MethodInsnNode>().count { instruction ->
+                    instruction.owner == "dev/karmakrafts/kcml/hooks/jvm/JVMHooks"
+                })
+                assertTrue(method.instructions.none { instruction ->
+                    instruction is MethodInsnNode && instruction.owner == "dev/karmakrafts/kcml/api/mixin/ReturnContext"
+                })
+            }
+            val transformedClass = loadClass(parsedTargetClass)
+            assertTrue(transformedClass.declaredMethods.isNotEmpty())
+        }
+    }
+
 
     @Test
     fun `does not allocate captured target locals again`() {

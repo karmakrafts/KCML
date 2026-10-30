@@ -16,8 +16,8 @@
 
 package dev.karmakrafts.kcml.api.mixin;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A dependency-less runtime bridge to pass values into the agent directly.
@@ -25,17 +25,44 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class MixinBridge {
     public static final MixinBridge INSTANCE = new MixinBridge();
-    private final ConcurrentHashMap<String, Object> constantTable = new ConcurrentHashMap<>();
+    private final AtomicReference<MixinSource> mixinSource = new AtomicReference<>(null);
+    private final ConcurrentHashMap<MixinSource, ConcurrentHashMap<String, Object>> constantTable = new ConcurrentHashMap<>();
     // @formatter:on
 
     // @formatter:off
     private MixinBridge() {}
 
-    public Map<String, Object> getConstantTable() {
+    public MixinSource getMixinSource() {
+        return mixinSource.get();
+    }
+
+    public void setMixinSource(final MixinSource mixinSource) {
+        this.mixinSource.set(mixinSource);
+    }
+
+    public ConcurrentHashMap<MixinSource, ConcurrentHashMap<String, Object>> getConstantTable() {
         return constantTable;
     }
 
+    public Object getConstant(final String pluginId, final String name) {
+        for (final var entry : constantTable.entrySet()) {
+            final MixinSource source = entry.getKey();
+            if (pluginId.equals("kcml") ? source.isBuiltin() : !source.isBuiltin() && pluginId.equals(source.getSourceName())) {
+                return entry.getValue().get(name);
+            }
+        }
+        return null;
+    }
+
+    public void putConstant(final MixinSource source, final String name, final Object value) {
+        constantTable.computeIfAbsent(source, id -> new ConcurrentHashMap<>()).put(name, value);
+    }
+
     public void putConstant(final String name, final Object value) {
-        constantTable.put(name, value);
+        final MixinSource source = mixinSource.get();
+        if (source == null) {
+            throw new IllegalStateException("No mixin source is currently loading");
+        }
+        putConstant(source, name, value);
     }
 }
