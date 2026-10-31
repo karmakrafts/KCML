@@ -44,7 +44,8 @@ public fun IrAnnotationContainer.getAnnotation( // @formatter:off
  * @param type fully qualified name of the annotation class.
  * @param name name of a regular constructor parameter of the annotation.
  * @param index zero-based occurrence when the annotation is repeated.
- * @return the argument expression, or `null` when the annotation or parameter is absent.
+ * @return the explicitly supplied argument expression, or `null` when the annotation, parameter,
+ *   or argument is absent. Default parameter expressions are not resolved.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 public fun IrAnnotationContainer.getRawAnnotationValue(
@@ -83,7 +84,8 @@ public inline fun <reified T : Any> IrAnnotationContainer.getAnnotationValue( //
  * @param type fully qualified name of the annotation class.
  * @param name name of a regular constructor parameter of the annotation.
  * @param index zero-based occurrence when the annotation is repeated.
- * @return converted argument values, or an empty list when the argument is unavailable or not an array.
+ * @return converted argument values with `null` for incompatible elements, or an empty list when
+ *   the argument is unavailable or not an array.
  */
 public inline fun <reified T : Any> IrAnnotationContainer.getAnnotationValues( // @formatter:off
     type: FqName,

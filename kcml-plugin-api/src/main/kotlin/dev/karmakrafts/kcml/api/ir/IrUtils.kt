@@ -70,11 +70,13 @@ public fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
 }
 
 /**
- * Finds the first descendant of a requested IR element type that satisfies a predicate.
+ * Finds the first element of a requested IR type in this subtree that satisfies a predicate.
+ *
+ * The receiver itself is considered before its children.
  *
  * @param E concrete IR element type to locate.
- * @param predicate additional condition evaluated for candidate descendants.
- * @return the first matching descendant in visitor traversal order, or `null`.
+ * @param predicate additional condition evaluated for candidate elements.
+ * @return the first matching element in visitor traversal order, or `null`.
  */
 public inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E) -> Boolean = { true }): E? {
     var result: E? = null

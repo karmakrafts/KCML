@@ -37,6 +37,9 @@ public interface CompilerPlugin {
     /**
      * Processes inter-plugin messages after loading.
      *
+     * The default implementation does nothing. Implementations can register receivers or send
+     * messages through the supplied service.
+     *
      * @param ipm this plugin's message service.
      */
     public fun processIpms(ipm: IPM): Unit = Unit

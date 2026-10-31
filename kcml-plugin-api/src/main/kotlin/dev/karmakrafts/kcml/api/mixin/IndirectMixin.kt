@@ -17,8 +17,12 @@
 package dev.karmakrafts.kcml.api.mixin
 
 /**
- * May be used to indicate a mixin whose target class is either internal or synthetic
- * and cannot be identified with a concrete type at compile time.
+ * Declares a mixin whose target class is identified by name rather than a compile-time type.
+ *
+ * Use this for internal or synthetic targets that cannot be referenced with [DirectMixin].
+ *
+ * @property target JVM binary class name, using dots or slashes as package separators and `$` for nested classes.
+ * @property priority application priority; mixins with lower values are applied first.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)

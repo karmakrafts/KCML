@@ -44,7 +44,7 @@ public interface LateNativeBackend : Backend {
     /** Native compilation target processed during LLVM code generation. */
     override val compileTarget: NativeCompileTarget
 
-    /** Built-in IR definitions provided by Kotlin */
+    /** Built-in IR definitions provided by Kotlin. */
     public val irBuiltIns: IrBuiltIns
 
     /** Kotlin/Native backend symbols resolved for the active compilation. */

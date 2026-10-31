@@ -32,7 +32,7 @@ import org.jetbrains.kotlin.fir.FirSession
  * compiler resolves and generates frontend declarations.
  */
 public interface Frontend {
-    /** The ID of the plugin this frontend belongs to **/
+    /** ID of the plugin to which this frontend context belongs. */
     public val pluginId: String
 
     /** FIR session for the current compilation, including symbol providers and type services. */

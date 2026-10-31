@@ -21,8 +21,8 @@ import dev.karmakrafts.kcml.api.InternalKcmlApi
 /**
  * Queued inter-plugin message.
  *
- * @param name message name.
- * @param data message payload.
+ * @property name message name.
+ * @property data message payload.
  */
 @InternalKcmlApi
 public data class IPMMessage( // @formatter:off

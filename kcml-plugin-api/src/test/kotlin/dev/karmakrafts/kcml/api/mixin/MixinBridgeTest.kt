@@ -84,7 +84,7 @@ class MixinBridgeTest {
             bridge.putConstant(second, "value$index", -index)
         }
 
-        assertEquals<Map<String, Any>?>((0 until 256).associate { "value$it" to it }, bridge.constantTable[first])
+        assertEquals<Map<String, Any>?>((0 until 256).associateBy { "value$it" }, bridge.constantTable[first])
         assertEquals<Map<String, Any>?>((0 until 256).associate { "value$it" to -it }, bridge.constantTable[second])
     }
 

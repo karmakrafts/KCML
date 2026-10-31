@@ -24,6 +24,7 @@ import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
 /** Generates JVM bytecode within the currently intercepted function body. */
 public interface JvmCodeGenerator {
+    /** Late JVM backend available during bytecode generation. */
     public val backend: LateJvmBackend
 
     /** Compiler expression generator for the active function. */
@@ -39,6 +40,9 @@ public interface JvmCodeGenerator {
     /**
      * Generates an expression, passing nested expressions through extensions as usual.
      * Generating the element currently being intercepted recurses.
+     *
+     * @param expression the IR expression to generate.
+     * @return the generated value, which may defer emitting bytecode until consumed.
      */
     public fun generateExpression(expression: IrExpression): PromisedValue
 }

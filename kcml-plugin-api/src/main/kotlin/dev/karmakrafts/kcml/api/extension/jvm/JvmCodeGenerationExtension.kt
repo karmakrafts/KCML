@@ -23,13 +23,25 @@ import org.jetbrains.kotlin.ir.IrElement
 
 /** Intercepts JVM IR as it is translated to bytecode, including nested expressions. */
 public interface JvmCodeGenerationExtension : LateJvmExtension {
-    /** Selects elements to transform or replace using [process]. */
+    /**
+     * Selects elements to transform or replace using [process].
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active JVM compilation state.
+     * @return `true` to invoke [process]; the default selects every element.
+     */
     public fun shouldProcess(element: IrElement, backend: LateJvmBackend): Boolean = true
 
     /**
-     * Returns null to continue dispatch and normal generation after any in-place changes.
+     * Transforms [element] in place or replaces its bytecode generation.
+     *
+     * Return `null` to continue dispatch and normal generation after any in-place changes.
      * A non-null value replaces normal generation and stops dispatch. Replacements must
      * preserve argument evaluation, stack types, and control-flow invariants.
+     *
+     * @receiver generator for the active function body.
+     * @param element IR element selected by [shouldProcess].
+     * @return the replacement value, or `null` to continue normal generation.
      */
     public fun JvmCodeGenerator.process(element: IrElement): PromisedValue?
 }

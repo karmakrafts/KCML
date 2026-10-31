@@ -23,19 +23,43 @@ import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
 /** Replaces selected function calls with custom WebAssembly instructions. */
 public interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
+    /**
+     * Delegates function-access expressions to the call-specific predicate.
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active WebAssembly compilation state.
+     * @return `false` for other elements, otherwise the call-specific predicate result.
+     */
     override fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean {
         return element is IrFunctionAccessExpression && shouldProcess(element, backend)
     }
 
+    /**
+     * Delegates function-access expressions to the call-specific processor.
+     *
+     * @param element IR element selected for processing.
+     * @return `true` after processing a function access, or `false` for other elements.
+     */
     override fun WasmCodeGenerator.process(element: IrElement): Boolean {
         if (element !is IrFunctionAccessExpression) return false
         process(element)
         return true
     }
 
-    /** Selects calls whose generation will be replaced by this extension. */
+    /**
+     * Selects calls whose generation is replaced by this extension.
+     *
+     * @param call function access being considered for replacement.
+     * @param backend KCML context exposing the active WebAssembly compilation state.
+     * @return `true` when this extension should generate [call].
+     */
     public fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean
 
-    /** Emits the replacement, including any required argument evaluation. */
+    /**
+     * Emits the replacement, including any required argument evaluation.
+     *
+     * @receiver generator used to emit the replacement instructions and result.
+     * @param call function access selected by [shouldProcess].
+     */
     public fun WasmCodeGenerator.process(call: IrFunctionAccessExpression)
 }

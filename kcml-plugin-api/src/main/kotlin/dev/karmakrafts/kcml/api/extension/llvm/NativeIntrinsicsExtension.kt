@@ -31,10 +31,23 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
  */
 @OptIn(ExperimentalForeignApi::class)
 public interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
+    /**
+     * Delegates IR calls to the call-specific predicate.
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active native compilation and LLVM state.
+     * @return `false` for other elements, otherwise the call-specific predicate result.
+     */
     override fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean {
         return element is IrCall && shouldProcess(element, backend)
     }
 
+    /**
+     * Evaluates a call's explicit arguments once before invoking the call-specific processor.
+     *
+     * @param element IR element selected for processing.
+     * @return the replacement LLVM value, or `null` if [element] is not an IR call.
+     */
     override fun NativeCodeGenerator.process(element: IrElement): LLVMValueRef? {
         if (element !is IrCall) return null
         return process(element, evaluateExplicitArgs(element))
@@ -52,8 +65,9 @@ public interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
     /**
      * Lowers a recognized IR call to an LLVM value.
      *
+     * @receiver generator for the active native function.
      * @param call IR call selected by [shouldProcess].
-     * @param args materialized LLVM values for the call arguments.
+     * @param args already evaluated LLVM values for the call's explicit arguments, in evaluation order.
      * @return LLVM value that replaces [call] in the generated native code.
      */
     public fun NativeCodeGenerator.process(call: IrCall, args: List<LLVMValueRef>): LLVMValueRef

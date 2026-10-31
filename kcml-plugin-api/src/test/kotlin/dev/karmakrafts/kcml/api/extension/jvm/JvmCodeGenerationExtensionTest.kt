@@ -38,7 +38,9 @@ import kotlin.test.assertTrue
 class JvmCodeGenerationExtensionTest {
     private val type = IrSimpleTypeImpl(IrClassSymbolImpl(), false, emptyList(), emptyList())
     private val expression = IrErrorExpressionImpl(0, 0, type, "before")
-    private val call = IrCallImplWithShape(0, 0, type, IrSimpleFunctionSymbolImpl(), 0, 0, 0, false, false)
+    private val call = IrCallImplWithShape(
+        0, 0, type, IrSimpleFunctionSymbolImpl(), 0, 0, 0, hasDispatchReceiver = false, hasExtensionReceiver = false
+    )
     private val backend = Proxy.newProxyInstance(
         javaClass.classLoader, arrayOf(LateJvmBackend::class.java)
     ) { _, method, _ -> error("Unexpected backend access: ${method.name}") } as LateJvmBackend

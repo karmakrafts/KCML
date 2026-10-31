@@ -36,7 +36,8 @@ import org.jetbrains.kotlin.ir.util.target
  * Unwraps an IR representation of a Kotlin compile-time constant into its runtime value.
  *
  * This supports annotation argument forms emitted by Kotlin IR, including fields, enum entries,
- * class literals, arrays, varargs, and conversion calls around primitive constants.
+ * class literals, arrays, varargs, and conversion calls around primitive constants. Enum entries
+ * become name strings, class literals become IR types, and arrays and varargs become lists.
  *
  * @return the raw value, or `null` when this element is not a supported constant representation.
  * @throws IllegalStateException if an error expression or a non-expression annotation vararg element is encountered.
@@ -97,7 +98,8 @@ public inline fun <reified T : Any> IrElement?.unwrapConstValue(): T? {
  * Enum constants are resolved from their IR entry names.
  *
  * @param T expected Kotlin value type for each array element.
- * @return converted values, or an empty list when this element does not represent a constant array.
+ * @return converted values with `null` for incompatible elements, or an empty list when this
+ *   element does not represent a constant array.
  */
 @Suppress("UNCHECKED_CAST")
 public inline fun <reified T : Any> IrElement?.unwrapConstValues(): List<T?> {

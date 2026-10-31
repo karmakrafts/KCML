@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
+/** Marks an annotation class as identifying a mixin component, such as [Inject]. */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 public annotation class ComponentMarker

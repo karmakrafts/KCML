@@ -16,7 +16,18 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
+/**
+ * Gives a mixin access to the target object's dispatch receiver through an intrinsic call.
+ *
+ * @param T type of the target object.
+ */
 @IntrinsicInterface
 public interface ThisAware<T> {
+    /**
+     * Reads the target function's `this` reference after mixin rewriting.
+     *
+     * @return the target object's dispatch receiver.
+     * @throws NotImplementedError if invoked directly without mixin rewriting.
+     */
     public fun getThis(): T = throw NotImplementedError("This should not be called directly")
 }

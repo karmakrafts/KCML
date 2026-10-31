@@ -28,7 +28,13 @@ import org.jetbrains.kotlin.ir.IrElement
  * not in a separate traversal before their parent is generated.
  */
 public interface WasmCodeGenerationExtension : LateWasmExtension {
-    /** Selects elements to transform or replace using [process]. */
+    /**
+     * Selects elements to transform or replace using [process].
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active WebAssembly compilation state.
+     * @return `true` to invoke [process]; the default selects every element.
+     */
     public fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean = true
 
     /**
@@ -42,6 +48,10 @@ public interface WasmCodeGenerationExtension : LateWasmExtension {
      * Instruction emission is available inside bodies and constant field initializers. Function
      * context and expression generation require an active function body. Generating the same
      * element recursively will intercept it again.
+     *
+     * @receiver generator for the current WebAssembly code-generation context.
+     * @param element IR element selected by [shouldProcess].
+     * @return `true` if normal generation is replaced, or `false` to continue dispatch.
      */
     public fun WasmCodeGenerator.process(element: IrElement): Boolean
 }

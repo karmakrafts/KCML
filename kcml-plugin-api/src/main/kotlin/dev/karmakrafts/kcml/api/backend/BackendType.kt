@@ -31,7 +31,7 @@ public interface BackendType {
     /** Kotlin/Wasm IR backend. */
     public data object Wasm : BackendType
 
-    /** Late Kotlin/WASM code-generation phase. */
+    /** Late Kotlin/Wasm code-generation phase. */
     public data object LateWasm : BackendType
 
     /** Kotlin/Native IR backend. */

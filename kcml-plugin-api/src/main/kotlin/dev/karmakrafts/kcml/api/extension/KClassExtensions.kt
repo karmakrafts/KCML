@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.api.extension
 
 import kotlin.reflect.KClass
 
+/** Returns the identifier from this class's runtime [ExtensionId] annotation, or `null` if absent. */
 @PublishedApi
 internal fun KClass<out Extension>.getExtensionId(): String? {
     val type = java

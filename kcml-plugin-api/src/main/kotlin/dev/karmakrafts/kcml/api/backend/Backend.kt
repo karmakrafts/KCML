@@ -25,14 +25,14 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 /**
  * Provides the compiler services available while KCML integrates with a Kotlin backend.
  *
- * A backend implementation exposes the target-independent IR services used by KCML extensions
- * after FIR analysis has completed.
+ * Backend implementations expose configuration, logging, plugin services, and target information
+ * used by KCML extensions after FIR analysis has completed. [IrBackend] adds IR-specific services.
  */
 public interface Backend {
     /** Namespace for utilities shared by all backend contexts. */
     public companion object; // Semicolon needed because of parser bug..
 
-    /** The ID of the plugin this backend belongs to **/
+    /** ID of the plugin to which this backend context belongs. */
     public val pluginId: String
 
     /** Kind of Kotlin backend represented by this context. */

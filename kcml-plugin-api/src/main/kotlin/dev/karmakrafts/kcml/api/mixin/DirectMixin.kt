@@ -19,8 +19,12 @@ package dev.karmakrafts.kcml.api.mixin
 import kotlin.reflect.KClass
 
 /**
- * May be used to indicate a mixin whose target class is publicly visible
- * and may be identified by concrete type at compile time.
+ * Declares a mixin whose target class is accessible as a concrete type at compile time.
+ *
+ * Use [IndirectMixin] when the target cannot be referenced directly.
+ *
+ * @property target class to which the mixin is applied.
+ * @property priority application priority; mixins with lower values are applied first.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)

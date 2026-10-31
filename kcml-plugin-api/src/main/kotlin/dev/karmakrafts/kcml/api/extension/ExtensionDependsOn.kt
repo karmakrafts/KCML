@@ -24,9 +24,9 @@ import dev.karmakrafts.kcml.api.util.Order
  * [AbstractExtension] converts each runtime instance of this repeatable annotation into an
  * [ExtensionDependency] used by KCML to resolve extension availability and dispatch order.
  *
- * @param id identifier of the extension on which the annotated extension depends.
- * @param isRequired whether the annotated extension is invalid when the dependency is unavailable.
- * @param order relative order in which the dependency runs with respect to the annotated extension.
+ * @property id identifier of the extension on which the annotated extension depends.
+ * @property isRequired whether the annotated extension is invalid when the dependency is unavailable.
+ * @property order execution order of the annotated extension relative to the dependency.
  */
 @Repeatable
 @Retention(AnnotationRetention.RUNTIME)

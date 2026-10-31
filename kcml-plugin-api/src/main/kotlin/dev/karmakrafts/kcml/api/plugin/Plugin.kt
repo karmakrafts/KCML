@@ -22,7 +22,7 @@ package dev.karmakrafts.kcml.api.plugin
  * KCML reads this runtime annotation while discovering plugins and uses [id] to resolve the
  * plugin from a [PluginLoader].
  *
- * @param id stable identifier that uniquely names the annotated plugin.
+ * @property id stable identifier that uniquely names the annotated plugin.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)

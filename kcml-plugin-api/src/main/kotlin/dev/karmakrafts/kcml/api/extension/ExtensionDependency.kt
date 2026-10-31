@@ -31,6 +31,6 @@ public interface ExtensionDependency {
     /** Whether KCML must reject the declaring extension when this dependency is unavailable. */
     public val required: Boolean
 
-    /** Relative order in which the dependency must run with respect to the declaring extension. */
+    /** Execution order of the declaring extension relative to this dependency. */
     public val order: Order
 }

@@ -34,7 +34,7 @@ import org.jetbrains.kotlin.ir.types.IrType
  * the materialization functions to obtain LLVM representations of Kotlin IR declarations and types.
  */
 public interface NativeCodeGenerator {
-    /** The late native backend available during code generation */
+    /** The late native backend available during code generation. */
     public val backend: LateNativeBackend
 
     /** The LLVM instruction builder for the function currently being generated. */
@@ -52,6 +52,9 @@ public interface NativeCodeGenerator {
      * Evaluates the explicit arguments of [expression] in Kotlin/Native's normal evaluation order.
      * Nested expressions pass through [dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension]
      * as usual. Call this only when replacing the call, to avoid evaluating arguments twice.
+     *
+     * @param expression the function access whose explicit arguments should be evaluated.
+     * @return LLVM values for the evaluated explicit arguments in evaluation order.
      */
     public fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef>
 

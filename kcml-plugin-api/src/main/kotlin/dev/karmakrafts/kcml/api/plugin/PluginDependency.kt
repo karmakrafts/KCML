@@ -29,10 +29,10 @@ public interface PluginDependency {
     /** Identifier of the plugin on which the declaring plugin depends. */
     public val id: String
 
-    /** Whether the declaring plugin may load when this dependency is unavailable. */
+    /** Whether the declaring plugin must be rejected when this dependency is unavailable. */
     public val required: Boolean
 
-    /** Relative order in which the dependency must load with respect to the declaring plugin. */
+    /** Load order of the declaring plugin relative to this dependency. */
     public val order: Order
 
     /** Optional version requirement used to validate the resolved dependency. */

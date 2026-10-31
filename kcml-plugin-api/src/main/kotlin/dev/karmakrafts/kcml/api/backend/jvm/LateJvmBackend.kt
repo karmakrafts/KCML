@@ -27,9 +27,11 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 
 /** Exposes the JVM compiler state during bytecode generation. */
 public interface LateJvmBackend : Backend {
+    /** Identifies this context as the late JVM backend. */
     override val type: BackendType
         get() = BackendType.LateJvm
 
+    /** JVM compilation target processed during bytecode generation. */
     override val compileTarget: JvmCompileTarget
 
     /** Compiler context for the active JVM compilation. */
@@ -47,6 +49,7 @@ public interface LateJvmBackend : Backend {
     public val symbols: JvmSymbols
         get() = context.symbols
 
+    /** Kotlin compiler configuration obtained from [context]. */
     override val config: CompilerConfiguration
         get() = context.configuration
 }

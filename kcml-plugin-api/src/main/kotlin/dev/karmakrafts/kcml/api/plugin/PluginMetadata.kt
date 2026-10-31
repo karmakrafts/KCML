@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.api.plugin
 
 import io.github.z4kn4fein.semver.Version
 
+/** Fallback semantic version used when plugin metadata omits a version. */
 @PublishedApi
 internal val defaultPluginVersion: Version = Version()
 
@@ -40,12 +41,12 @@ public interface PluginMetadata {
     /** Optional URL where users can report problems with this plugin. */
     public val issueTrackerUrl: String?
 
-    /** Plugins that must be available before this plugin is loaded. */
+    /** Plugin availability, version, and load-order requirements, including optional dependencies. */
     public val dependencies: List<PluginDependency>
 }
 
 /** Human-readable [PluginMetadata.name], or the stable [PluginMetadata.id] when no name is declared. */
 public inline val PluginMetadata.nameOrId: String get() = name ?: id
 
-/** Declared [PluginMetadata.version], or an empty semantic version when no version is available. */
+/** Declared [PluginMetadata.version], or `0.0.0` when no version is available. */
 public inline val PluginMetadata.versionOrDefault: Version get() = version ?: defaultPluginVersion

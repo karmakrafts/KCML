@@ -31,7 +31,13 @@ import org.jetbrains.kotlin.ir.IrElement
  */
 @OptIn(ExperimentalForeignApi::class)
 public interface NativeCodeGenerationExtension : LateNativeExtension {
-    /** Selects elements to transform or replace using [process]. */
+    /**
+     * Selects elements to transform or replace using [process].
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active native compilation and LLVM state.
+     * @return `true` to invoke [process]; the default selects every element.
+     */
     public fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean = true
 
     /**
@@ -44,6 +50,10 @@ public interface NativeCodeGenerationExtension : LateNativeExtension {
      *
      * The function builder is only available inside an active function. Replacements are
      * responsible for preserving argument evaluation, result types, and other LLVM invariants.
+     *
+     * @receiver generator for the current native code-generation context.
+     * @param element IR element selected by [shouldProcess].
+     * @return the replacement LLVM value, or `null` to continue normal generation.
      */
     public fun NativeCodeGenerator.process(element: IrElement): LLVMValueRef?
 }

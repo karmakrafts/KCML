@@ -21,7 +21,7 @@ package dev.karmakrafts.kcml.api.extension
  *
  * [AbstractExtension] reads this runtime annotation to provide its default [Extension.id].
  *
- * @param id identifier used by KCML dependency resolution and extension lookup.
+ * @property id identifier used by KCML dependency resolution and extension lookup.
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)

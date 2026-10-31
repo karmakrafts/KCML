@@ -223,7 +223,9 @@ public inline fun WasmCodeGenerator.block(
 
 /**
  * Starts a [`block`](https://developer.mozilla.org/en-US/docs/WebAssembly/Reference/Control_flow/block) and returns its absolute block level.
+ *
  * @param resultType Optional value type produced by the block.
+ * @return Absolute block level used by branch instructions targeting this block.
  */
 public inline fun WasmCodeGenerator.block(resultType: WasmType? = null): Int = expressionBuilder.buildBlock(resultType)
 
@@ -1585,9 +1587,7 @@ public inline fun WasmCodeGenerator.memoryInstr(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Load(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_LOAD, align, offset, location)
 
 /**
@@ -1597,9 +1597,7 @@ public inline fun WasmCodeGenerator.i32Load(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD, align, offset, location)
 
 /**
@@ -1609,9 +1607,7 @@ public inline fun WasmCodeGenerator.i64Load(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.f32Load(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.F32_LOAD, align, offset, location)
 
 /**
@@ -1621,9 +1617,7 @@ public inline fun WasmCodeGenerator.f32Load(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.f64Load(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.F64_LOAD, align, offset, location)
 
 /**
@@ -1633,9 +1627,7 @@ public inline fun WasmCodeGenerator.f64Load(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Load8S(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_LOAD8_S, align, offset, location)
 
 /**
@@ -1645,9 +1637,7 @@ public inline fun WasmCodeGenerator.i32Load8S(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Load8U(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_LOAD8_U, align, offset, location)
 
 /**
@@ -1657,9 +1647,7 @@ public inline fun WasmCodeGenerator.i32Load8U(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Load16S(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_LOAD16_S, align, offset, location)
 
 /**
@@ -1669,9 +1657,7 @@ public inline fun WasmCodeGenerator.i32Load16S(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Load16U(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_LOAD16_U, align, offset, location)
 
 /**
@@ -1681,9 +1667,7 @@ public inline fun WasmCodeGenerator.i32Load16U(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load8S(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD8_S, align, offset, location)
 
 /**
@@ -1693,9 +1677,7 @@ public inline fun WasmCodeGenerator.i64Load8S(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load8U(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD8_U, align, offset, location)
 
 /**
@@ -1705,9 +1687,7 @@ public inline fun WasmCodeGenerator.i64Load8U(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load16S(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD16_S, align, offset, location)
 
 /**
@@ -1717,9 +1697,7 @@ public inline fun WasmCodeGenerator.i64Load16S(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load16U(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD16_U, align, offset, location)
 
 /**
@@ -1729,9 +1707,7 @@ public inline fun WasmCodeGenerator.i64Load16U(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load32S(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD32_S, align, offset, location)
 
 /**
@@ -1741,9 +1717,7 @@ public inline fun WasmCodeGenerator.i64Load32S(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Load32U(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_LOAD32_U, align, offset, location)
 
 /**
@@ -1753,9 +1727,7 @@ public inline fun WasmCodeGenerator.i64Load32U(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Store(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_STORE, align, offset, location)
 
 /**
@@ -1765,9 +1737,7 @@ public inline fun WasmCodeGenerator.i32Store(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Store(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_STORE, align, offset, location)
 
 /**
@@ -1777,9 +1747,7 @@ public inline fun WasmCodeGenerator.i64Store(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.f32Store(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.F32_STORE, align, offset, location)
 
 /**
@@ -1789,9 +1757,7 @@ public inline fun WasmCodeGenerator.f32Store(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.f64Store(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.F64_STORE, align, offset, location)
 
 /**
@@ -1801,9 +1767,7 @@ public inline fun WasmCodeGenerator.f64Store(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Store8(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_STORE8, align, offset, location)
 
 /**
@@ -1813,9 +1777,7 @@ public inline fun WasmCodeGenerator.i32Store8(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i32Store16(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I32_STORE16, align, offset, location)
 
 /**
@@ -1825,9 +1787,7 @@ public inline fun WasmCodeGenerator.i32Store16(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Store8(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_STORE8, align, offset, location)
 
 /**
@@ -1837,9 +1797,7 @@ public inline fun WasmCodeGenerator.i64Store8(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Store16(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_STORE16, align, offset, location)
 
 /**
@@ -1849,9 +1807,7 @@ public inline fun WasmCodeGenerator.i64Store16(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.i64Store32(
-    align: UInt,
-    offset: UInt = 0U,
-    location: SourceLocation = NoLocation
+    align: UInt, offset: UInt = 0U, location: SourceLocation = NoLocation
 ): Unit = memoryInstr(WasmOp.I64_STORE32, align, offset, location)
 
 /**
@@ -2058,8 +2014,7 @@ public inline fun WasmCodeGenerator.refFunc(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.callRef(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.CALL_REF, typeIndex, location)
 
 /**
@@ -2129,8 +2084,7 @@ public inline fun WasmCodeGenerator.structGetU(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.arrayNew(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.ARRAY_NEW, typeIndex, location)
 
 /**
@@ -2148,8 +2102,7 @@ public inline fun WasmCodeGenerator.arrayNewDefault(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.arrayGet(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.ARRAY_GET, typeIndex, location)
 
 /**
@@ -2158,8 +2111,7 @@ public inline fun WasmCodeGenerator.arrayGet(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.arrayGetS(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.ARRAY_GET_S, typeIndex, location)
 
 /**
@@ -2168,8 +2120,7 @@ public inline fun WasmCodeGenerator.arrayGetS(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.arrayGetU(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.ARRAY_GET_U, typeIndex, location)
 
 /**
@@ -2178,8 +2129,7 @@ public inline fun WasmCodeGenerator.arrayGetU(
  * @param location Source location associated with the instruction.
  */
 public inline fun WasmCodeGenerator.arraySet(
-    typeIndex: WasmImmediate.TypeIdx,
-    location: SourceLocation = NoLocation
+    typeIndex: WasmImmediate.TypeIdx, location: SourceLocation = NoLocation
 ): Unit = instr(WasmOp.ARRAY_SET, typeIndex, location)
 
 /**

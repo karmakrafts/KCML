@@ -17,16 +17,30 @@
 package dev.karmakrafts.kcml.api.mixin
 
 /**
- * This interface may be passed into a mixin function at any point in the parameter list
- * to allow intercepting the control flow of the target function.
+ * Allows a mixin function to return early from its target function.
+ *
+ * A return context may appear at any point in the mixin function's parameter list.
  * The runtime compiler will turn calls to [returnFromTarget] into actual return instructions
  * in the targeted function when the mixin is applied.
+ *
+ * @param T return type of the target function.
  */
 public interface ReturnContext<T> {
+    /**
+     * Returns from the target function with [value] after mixin rewriting.
+     *
+     * @param value result to return from the target function.
+     * @throws NotImplementedError if invoked directly without mixin rewriting.
+     */
     public fun returnFromTarget(value: T) {
         throw NotImplementedError("This should not be called directly")
     }
 }
 
+/**
+ * Returns from a `Unit`-returning target function after mixin rewriting.
+ *
+ * @throws NotImplementedError if invoked directly without mixin rewriting.
+ */
 @Suppress("NOTHING_TO_INLINE")
 public inline fun ReturnContext<Unit>.returnFromTarget(): Unit = returnFromTarget(Unit)

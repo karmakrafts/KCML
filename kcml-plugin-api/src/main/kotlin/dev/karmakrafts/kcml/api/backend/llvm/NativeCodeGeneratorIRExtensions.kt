@@ -141,6 +141,14 @@ import llvm.LLVMTypeRef
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.types.IrType
 
+/**
+ * Checks the result of an LLVM builder operation.
+ *
+ * @param instruction operation name included in the failure diagnostic.
+ * @param value LLVM builder result to validate.
+ * @return the non-null builder result.
+ * @throws IllegalArgumentException if the builder returned `null`.
+ */
 @PublishedApi
 internal inline fun NativeCodeGenerator.requireInstruction(
     instruction: String, value: LLVMValueRef?
@@ -383,9 +391,7 @@ public inline fun NativeCodeGenerator.arrayMalloc(
 
 /** Builds a [`malloc`](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga9c21366bc30028f7080eb61e3c04e435) call for an array of the materialized IR type. */
 public inline fun NativeCodeGenerator.arrayMalloc(
-    type: IrType,
-    count: LLVMValueRef,
-    name: String? = null
+    type: IrType, count: LLVMValueRef, name: String? = null
 ): LLVMValueRef = arrayMalloc(materializeType(type), count, name)
 
 /** Builds an [`llvm.memset`](https://llvm.org/docs/LangRef.html#llvm-memset-intrinsics) intrinsic call. */
@@ -412,9 +418,7 @@ public inline fun NativeCodeGenerator.arrayAlloca(
 
 /** Builds an [`alloca`](https://llvm.org/docs/LangRef.html#alloca-instruction) for an array of the materialized IR type. */
 public inline fun NativeCodeGenerator.arrayAlloca(
-    type: IrType,
-    count: LLVMValueRef,
-    name: String? = null
+    type: IrType, count: LLVMValueRef, name: String? = null
 ): LLVMValueRef = arrayAlloca(materializeType(type), count, name)
 
 /** Builds a [`free`](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga919d6fd695c14e5ddc917f5792462283) call for the pointer. */
@@ -659,9 +663,7 @@ public inline fun NativeCodeGenerator.addrSpaceCast(
 
 /** Builds an [`addrspacecast`](https://llvm.org/docs/LangRef.html#addrspacecast-to-instruction) to the materialized IR type. */
 public inline fun NativeCodeGenerator.addrSpaceCast(
-    value: LLVMValueRef,
-    type: IrType,
-    name: String? = null
+    value: LLVMValueRef, type: IrType, name: String? = null
 ): LLVMValueRef = addrSpaceCast(value, materializeType(type), name)
 
 /** Builds the appropriate zero-extension or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga70fa4a5ac3fdf1c5954b7c2cedc69492). */
@@ -671,9 +673,7 @@ public inline fun NativeCodeGenerator.zExtOrBitCast(
 
 /** Builds the appropriate zero-extension or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga70fa4a5ac3fdf1c5954b7c2cedc69492) to the materialized IR type. */
 public inline fun NativeCodeGenerator.zExtOrBitCast(
-    value: LLVMValueRef,
-    type: IrType,
-    name: String? = null
+    value: LLVMValueRef, type: IrType, name: String? = null
 ): LLVMValueRef = zExtOrBitCast(value, materializeType(type), name)
 
 /** Builds the appropriate sign-extension or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga4063e1e9444a46d1c03f29b4e63076b1). */
@@ -683,9 +683,7 @@ public inline fun NativeCodeGenerator.sExtOrBitCast(
 
 /** Builds the appropriate sign-extension or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga4063e1e9444a46d1c03f29b4e63076b1) to the materialized IR type. */
 public inline fun NativeCodeGenerator.sExtOrBitCast(
-    value: LLVMValueRef,
-    type: IrType,
-    name: String? = null
+    value: LLVMValueRef, type: IrType, name: String? = null
 ): LLVMValueRef = sExtOrBitCast(value, materializeType(type), name)
 
 /** Builds the appropriate truncation or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga7a1de55766a0d468c52ca85f1230d84f). */
@@ -695,9 +693,7 @@ public inline fun NativeCodeGenerator.truncOrBitCast(
 
 /** Builds the appropriate truncation or bitcast [conversion](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga7a1de55766a0d468c52ca85f1230d84f) to the materialized IR type. */
 public inline fun NativeCodeGenerator.truncOrBitCast(
-    value: LLVMValueRef,
-    type: IrType,
-    name: String? = null
+    value: LLVMValueRef, type: IrType, name: String? = null
 ): LLVMValueRef = truncOrBitCast(value, materializeType(type), name)
 
 /** Builds the [conversion instruction](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga06564129a78e33346547ec2c86db39cb) selected by the opcode. */
@@ -717,9 +713,7 @@ public inline fun NativeCodeGenerator.pointerCast(
 
 /** Builds the appropriate pointer [cast](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#gacc18ee2f7c2d1edfefe2c0e90e6012fb) to the materialized IR type. */
 public inline fun NativeCodeGenerator.pointerCast(
-    value: LLVMValueRef,
-    type: IrType,
-    name: String? = null
+    value: LLVMValueRef, type: IrType, name: String? = null
 ): LLVMValueRef = pointerCast(value, materializeType(type), name)
 
 /** Builds a signed or unsigned integer [cast](https://llvm.org/doxygen/group__LLVMCCoreInstructionBuilder.html#ga67f7caf733730df8de9ba10f9f136abc) to the LLVM type. */

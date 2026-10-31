@@ -17,19 +17,16 @@
 package dev.karmakrafts.kcml.api.mixin
 
 /**
- * May be used to capture locals as parameters to a mixin function.
+ * Captures a target function parameter or local variable as a mixin function parameter.
  * Usually used in conjunction with [Inject].
- * This may be used to pass through function parameters of the target
- * functions or locals within its scope.
  *
  * By default, the annotation indicates that the value should be
  * matched by its literal name in the mixin code, however this behavior
  * can be overridden using the [name] and [index] parameters of this annotation.
  *
- * @param name The name of the local to match.
- *  Empty means match the literal name of the local as it appears in the mixin code.
- * @param index If set overrides the name matching and allows capturing any local
- *  by its stack index. -1 means fall back to name matching.
+ * @property name name of the target local to match; [AUTOMATIC_NAME] uses the mixin parameter's name.
+ * @property index JVM local-variable slot to capture, overriding name matching;
+ *   [AUTOMATIC_INDEX] falls back to name matching.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.VALUE_PARAMETER)
@@ -37,8 +34,12 @@ public annotation class Capture( // @formatter:off
     public val name: String = AUTOMATIC_NAME,
     public val index: Int = AUTOMATIC_INDEX
 ) { // @formatter:on
+    /** Sentinel values that enable name-based capture. */
     public companion object {
+        /** Uses the mixin parameter's name to find the target local. */
         public const val AUTOMATIC_NAME: String = ""
+
+        /** Resolves the target local by name instead of an explicit JVM local-variable slot. */
         public const val AUTOMATIC_INDEX: Int = -1
     }
 }

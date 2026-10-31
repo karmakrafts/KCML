@@ -49,6 +49,12 @@ public interface IrIntrinsicsExtension : IrExtension {
      */
     public fun process(call: IrCall, backend: IrBackend): IrExpression
 
+    /**
+     * Visits module calls, processing their children before replacing calls selected by [shouldProcess].
+     *
+     * @param module Kotlin IR module to transform in place.
+     * @param backend KCML context exposing the active target backend.
+     */
     override fun process(module: IrModuleFragment, backend: IrBackend) {
         module.transformChildrenVoid(object : IrElementTransformerVoid() {
             override fun visitCall(expression: IrCall): IrExpression {

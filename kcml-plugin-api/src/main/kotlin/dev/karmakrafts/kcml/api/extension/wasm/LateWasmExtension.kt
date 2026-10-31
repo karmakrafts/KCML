@@ -19,7 +19,14 @@ package dev.karmakrafts.kcml.api.extension.wasm
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.extension.Extension
 
-// TODO: document this
+/** Participates in Kotlin/Wasm's late WebAssembly code-generation phase through KCML. */
 public interface LateWasmExtension : Extension {
+    /**
+     * Initializes this extension for a WebAssembly backend invocation.
+     *
+     * The default implementation performs no initialization.
+     *
+     * @param backend KCML context exposing the active WebAssembly compilation state.
+     */
     public fun init(backend: LateWasmBackend): Unit = Unit
 }

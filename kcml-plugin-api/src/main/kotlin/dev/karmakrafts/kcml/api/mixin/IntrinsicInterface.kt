@@ -16,6 +16,11 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
+/**
+ * Marks a mixin interface whose calls are interpreted by the runtime mixin compiler.
+ *
+ * Implementations such as [ThisAware] expose placeholders that must be rewritten rather than invoked directly.
+ */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 public annotation class IntrinsicInterface

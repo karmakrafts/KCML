@@ -21,24 +21,30 @@ import llvm.LLVMTypeRef
 
 /**
  * Provides LLVM types used during native code generation.
- *
- * @property int1 The one-bit integer type.
- * @property int8 The eight-bit integer type.
- * @property int16 The sixteen-bit integer type.
- * @property int32 The thirty-two-bit integer type.
- * @property int64 The sixty-four-bit integer type.
- * @property float32 The single-precision floating-point type.
- * @property float64 The double-precision floating-point type.
- * @property ptr The opaque pointer type in address space zero.
  */
 @OptIn(ExperimentalForeignApi::class)
 public interface NativeTypes {
+    /** One-bit integer type. */
     public val int1: LLVMTypeRef
+
+    /** Eight-bit integer type. */
     public val int8: LLVMTypeRef
+
+    /** Sixteen-bit integer type. */
     public val int16: LLVMTypeRef
+
+    /** Thirty-two-bit integer type. */
     public val int32: LLVMTypeRef
+
+    /** Sixty-four-bit integer type. */
     public val int64: LLVMTypeRef
+
+    /** Single-precision floating-point type. */
     public val float32: LLVMTypeRef
+
+    /** Double-precision floating-point type. */
     public val float64: LLVMTypeRef
+
+    /** Opaque pointer type in address space zero. */
     public val ptr: LLVMTypeRef
 }
