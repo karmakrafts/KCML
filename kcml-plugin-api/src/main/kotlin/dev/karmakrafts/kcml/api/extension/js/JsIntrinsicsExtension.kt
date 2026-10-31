@@ -1,0 +1,67 @@
+/*
+ * Copyright 2026 Karma Krafts
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package dev.karmakrafts.kcml.api.extension.js
+
+import dev.karmakrafts.kcml.api.backend.js.JsCodeGenerator
+import dev.karmakrafts.kcml.api.backend.js.LateJsBackend
+import org.jetbrains.kotlin.ir.IrElement
+import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
+import org.jetbrains.kotlin.js.backend.ast.JsExpression
+import org.jetbrains.kotlin.js.backend.ast.JsNode
+
+/** Replaces selected function calls with custom JavaScript expressions. */
+public interface JsIntrinsicsExtension : JsCodeGenerationExtension {
+    /**
+     * Delegates function-access expressions to the call-specific predicate.
+     *
+     * @param element IR element about to be generated.
+     * @param backend KCML context exposing the active JavaScript compilation state.
+     * @return `false` for other elements, otherwise the call-specific predicate result.
+     */
+    override fun shouldProcess(element: IrElement, backend: LateJsBackend): Boolean {
+        return element is IrFunctionAccessExpression && shouldProcess(element, backend)
+    }
+
+    /**
+     * Delegates function-access expressions to the call-specific processor.
+     *
+     * @param element IR element selected for processing.
+     * @return the replacement expression, or `null` if [element] is not a function access.
+     */
+    override fun JsCodeGenerator.process(element: IrElement): JsNode? {
+        if (element !is IrFunctionAccessExpression) return null
+        return process(element)
+    }
+
+    /**
+     * Selects calls whose generation is replaced by this extension.
+     *
+     * @param call function access being considered for replacement.
+     * @param backend KCML context exposing the active JavaScript compilation state.
+     * @return `true` when this extension should generate [call].
+     */
+    public fun shouldProcess(call: IrFunctionAccessExpression, backend: LateJsBackend): Boolean
+
+    /**
+     * Creates a replacement, including any required argument evaluation.
+     *
+     * @receiver generator for the active JavaScript translation context.
+     * @param call function access selected by [shouldProcess].
+     * @return the JavaScript expression replacing normal generation of [call].
+     */
+    public fun JsCodeGenerator.process(call: IrFunctionAccessExpression): JsExpression
+}

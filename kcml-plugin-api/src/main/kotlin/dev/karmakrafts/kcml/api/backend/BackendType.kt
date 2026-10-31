@@ -28,6 +28,9 @@ public interface BackendType {
     /** Kotlin/JavaScript IR backend. */
     public data object Js : BackendType
 
+    /** Late Kotlin/JavaScript AST-generation phase. */
+    public data object LateJs : BackendType
+
     /** Kotlin/Wasm IR backend. */
     public data object Wasm : BackendType
 
