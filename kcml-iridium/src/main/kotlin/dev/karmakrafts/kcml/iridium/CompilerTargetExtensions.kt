@@ -26,6 +26,16 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
+/**
+ * Creates the KCML target descriptor corresponding to this Iridium compiler target.
+ *
+ * JVM targets are always non-Android, and WebAssembly targets describe WASM/JS. Native targets
+ * resolve their Konan target lazily from [config] when the target or its name is first accessed.
+ * Accessing an unrecognized Native target throws [IllegalArgumentException].
+ *
+ * @param config compiler configuration used to select the Native target.
+ * @return a KCML descriptor for this compiler target.
+ */
 public fun CompilerTarget.createCompileTarget(config: CompilerConfiguration): CompileTarget = when (this) {
     CompilerTarget.JVM -> object : JvmCompileTarget {
         override val isAndroid: Boolean = false // Iridium doesn't care about Android
