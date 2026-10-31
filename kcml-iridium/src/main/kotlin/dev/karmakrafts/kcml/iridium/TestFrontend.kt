@@ -23,7 +23,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 
-internal class TestFrontend( // @formatter:off
+public class TestFrontend( // @formatter:off
     override val session: FirSession,
     override val config: CompilerConfiguration
 ) : Frontend { // @formatter:on

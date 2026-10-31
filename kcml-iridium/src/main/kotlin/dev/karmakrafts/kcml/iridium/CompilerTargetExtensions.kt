@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
-internal fun CompilerTarget.createCompileTarget(config: CompilerConfiguration): CompileTarget = when (this) {
+public fun CompilerTarget.createCompileTarget(config: CompilerConfiguration): CompileTarget = when (this) {
     CompilerTarget.JVM -> object : JvmCompileTarget {
         override val isAndroid: Boolean = false // Iridium doesn't care about Android
         override val name: String = "JVM"

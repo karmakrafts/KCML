@@ -18,7 +18,7 @@ package dev.karmakrafts.kcml.iridium
 
 import dev.karmakrafts.kcml.api.log.Logger
 
-internal class TestLogger( // @formatter:off
+public class TestLogger( // @formatter:off
     override val name: String
 ) : Logger { // @formatter:on
     override fun debug(message: String) {

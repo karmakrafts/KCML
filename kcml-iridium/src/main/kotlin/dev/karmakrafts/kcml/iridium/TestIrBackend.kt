@@ -30,13 +30,13 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 
-internal class TestIrBackend( // @formatter:off
+public class TestIrBackend( // @formatter:off
     private val pluginContext: IrPluginContext,
     private val moduleFragment: IrModuleFragment,
     private val compilerTarget: CompilerTarget,
     override val config: CompilerConfiguration
 ) : IrBackend { // @formatter:on
-    companion object Type : BackendType
+    public companion object Type : BackendType
 
     override val type: BackendType get() = Type
 

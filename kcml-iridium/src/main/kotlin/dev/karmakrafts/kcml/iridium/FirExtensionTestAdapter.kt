@@ -32,10 +32,10 @@ import org.jetbrains.kotlin.name.ClassId
 import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.name.Name
 
-internal class FirExtensionTestAdapter( // @formatter:off
+public class FirExtensionTestAdapter( // @formatter:off
     session: FirSession,
-    val frontend: TestFrontend,
-    val extension: FirExtension
+    public val frontend: TestFrontend,
+    public val extension: FirExtension
 ) : FirDeclarationGenerationExtension(session) { // @formatter:on
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
         return extension.generateConstructors(frontend, context)

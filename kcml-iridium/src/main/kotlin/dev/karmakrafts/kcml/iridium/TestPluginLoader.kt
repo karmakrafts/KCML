@@ -24,7 +24,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 
-internal class TestPluginLoader( // @formatter:off
+public class TestPluginLoader( // @formatter:off
     override val logger: Logger
 ) : PluginLoader { // @formatter:on
     override val loadingPluginId: String? = null

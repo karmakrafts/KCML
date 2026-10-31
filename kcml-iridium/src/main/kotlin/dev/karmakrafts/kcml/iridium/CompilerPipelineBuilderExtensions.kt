@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
  *
  * @param extension extension to invoke for Kotlin IR processing.
  */
-fun CompilerPipelineBuilder.kcmlIrExtension(extension: IrExtension) {
+public fun CompilerPipelineBuilder.kcmlIrExtension(extension: IrExtension) {
     config { // Hack to get the current compiler configuration instance
         val config = this
         irExtension { moduleFragment, pluginContext ->
@@ -48,7 +48,7 @@ fun CompilerPipelineBuilder.kcmlIrExtension(extension: IrExtension) {
  *
  * @param extension extension that supplies declarations to Kotlin FIR.
  */
-fun CompilerPipelineBuilder.kcmlFirExtension(extension: FirExtension) {
+public fun CompilerPipelineBuilder.kcmlFirExtension(extension: FirExtension) {
     config { // Hack to get the current compiler configuration instance
         val config = this
         firExtensionRegistrar {

@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.iridium
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 
-internal class TestLoggerFactory : LoggerFactory {
+public class TestLoggerFactory : LoggerFactory {
     private val loggers: HashMap<String, Logger> = HashMap()
 
     override fun invoke(name: String): Logger {
