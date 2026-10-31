@@ -20,7 +20,7 @@ import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
 import dev.karmakrafts.kcml.api.extension.Extension
 
 /** Runs after JVM lowerings, before bytecode generation. */
-interface LateJvmExtension : Extension {
+public interface LateJvmExtension : Extension {
     /** Initializes this extension for the active JVM backend. */
-    fun init(backend: LateJvmBackend) = Unit
+    public fun init(backend: LateJvmBackend): Unit = Unit
 }

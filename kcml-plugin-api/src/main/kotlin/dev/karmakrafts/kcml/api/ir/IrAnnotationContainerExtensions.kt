@@ -31,7 +31,7 @@ import org.jetbrains.kotlin.name.FqName
  * @param index zero-based occurrence when the annotation is repeated.
  * @return the matching annotation call, or `null` when that occurrence is absent.
  */
-fun IrAnnotationContainer.getAnnotation( // @formatter:off
+public fun IrAnnotationContainer.getAnnotation( // @formatter:off
     type: FqName,
     index: Int = 0
 ): IrConstructorCall? { // @formatter:on
@@ -47,7 +47,7 @@ fun IrAnnotationContainer.getAnnotation( // @formatter:off
  * @return the argument expression, or `null` when the annotation or parameter is absent.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrAnnotationContainer.getRawAnnotationValue(
+public fun IrAnnotationContainer.getRawAnnotationValue(
     type: FqName, name: String, index: Int = 0
 ): IrExpression? {
     val annotation = getAnnotation(type, index) ?: return null
@@ -70,7 +70,7 @@ fun IrAnnotationContainer.getRawAnnotationValue(
  * @param index zero-based occurrence when the annotation is repeated.
  * @return the converted argument value, or `null` when it is unavailable or incompatible.
  */
-inline fun <reified T> IrAnnotationContainer.getAnnotationValue( // @formatter:off
+public inline fun <reified T : Any> IrAnnotationContainer.getAnnotationValue( // @formatter:off
     type: FqName,
     name: String,
     index: Int = 0
@@ -85,7 +85,7 @@ inline fun <reified T> IrAnnotationContainer.getAnnotationValue( // @formatter:o
  * @param index zero-based occurrence when the annotation is repeated.
  * @return converted argument values, or an empty list when the argument is unavailable or not an array.
  */
-inline fun <reified T> IrAnnotationContainer.getAnnotationValues( // @formatter:off
+public inline fun <reified T : Any> IrAnnotationContainer.getAnnotationValues( // @formatter:off
     type: FqName,
     name: String,
     index: Int = 0

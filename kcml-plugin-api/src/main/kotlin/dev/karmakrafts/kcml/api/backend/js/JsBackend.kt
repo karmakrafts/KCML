@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.target.JsCompileTarget
  * This specialization allows a KCML extension to run only for JavaScript compilations while using
  * the target-independent services inherited from [IrBackend].
  */
-interface JsBackend : IrBackend {
+public interface JsBackend : IrBackend {
     /** Identifies this context as the JavaScript backend. */
     override val type: BackendType
         get() = BackendType.Js

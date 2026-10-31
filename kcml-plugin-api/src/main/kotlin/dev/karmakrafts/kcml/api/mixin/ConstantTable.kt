@@ -16,28 +16,28 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
-object ConstantTable {
+public object ConstantTable {
     @JvmStatic
-    fun getString(name: String): String = throw NotImplementedError("This should not be called directly")
+    public fun getString(name: String): String = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getByte(name: String): Byte = throw NotImplementedError("This should not be called directly")
+    public fun getByte(name: String): Byte = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getShort(name: String): Short = throw NotImplementedError("This should not be called directly")
+    public fun getShort(name: String): Short = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getInt(name: String): Int = throw NotImplementedError("This should not be called directly")
+    public fun getInt(name: String): Int = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getLong(name: String): Long = throw NotImplementedError("This should not be called directly")
+    public fun getLong(name: String): Long = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getFloat(name: String): Float = throw NotImplementedError("This should not be called directly")
+    public fun getFloat(name: String): Float = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getDouble(name: String): Double = throw NotImplementedError("This should not be called directly")
+    public fun getDouble(name: String): Double = throw NotImplementedError("This should not be called directly")
 
     @JvmStatic
-    fun getBoolean(name: String): Boolean = throw NotImplementedError("This should not be called directly")
+    public fun getBoolean(name: String): Boolean = throw NotImplementedError("This should not be called directly")
 }

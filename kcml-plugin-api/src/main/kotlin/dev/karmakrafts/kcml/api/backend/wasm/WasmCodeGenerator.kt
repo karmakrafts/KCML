@@ -26,15 +26,15 @@ import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
  * Extensions can use the compiler contexts exposed by this interface together with the instruction
  * helpers in this package to contribute code to the current function body.
  */
-interface WasmCodeGenerator {
+public interface WasmCodeGenerator {
     /** Late WebAssembly backend context for the current compilation. */
-    val backend: LateWasmBackend
+    public val backend: LateWasmBackend
 
     /** Code-generation context for the current function; unavailable outside a body. */
-    val context: WasmFunctionCodegenContext
+    public val context: WasmFunctionCodegenContext
 
     /** Instruction builder for the current expression, inside a body or constant field initializer. */
-    val expressionBuilder: WasmExpressionBuilder
+    public val expressionBuilder: WasmExpressionBuilder
 
     /**
      * Generates WebAssembly instructions for a Kotlin IR [expression].
@@ -43,5 +43,5 @@ interface WasmCodeGenerator {
      *
      * @param expression Kotlin IR expression to generate.
      */
-    fun generateExpression(expression: IrExpression)
+    public fun generateExpression(expression: IrExpression)
 }

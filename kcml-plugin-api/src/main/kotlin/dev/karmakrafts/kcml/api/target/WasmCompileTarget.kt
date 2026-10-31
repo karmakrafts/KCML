@@ -17,4 +17,4 @@
 package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin/WebAssembly compilation target. */
-interface WasmCompileTarget : CompileTarget
+public interface WasmCompileTarget : CompileTarget

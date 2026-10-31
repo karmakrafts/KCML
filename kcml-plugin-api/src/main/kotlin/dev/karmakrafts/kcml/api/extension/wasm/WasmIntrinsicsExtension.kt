@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
 /** Replaces selected function calls with custom WebAssembly instructions. */
-interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
+public interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
     override fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean {
         return element is IrFunctionAccessExpression && shouldProcess(element, backend)
     }
@@ -34,8 +34,8 @@ interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
     }
 
     /** Selects calls whose generation will be replaced by this extension. */
-    fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean
+    public fun shouldProcess(call: IrFunctionAccessExpression, backend: LateWasmBackend): Boolean
 
     /** Emits the replacement, including any required argument evaluation. */
-    fun WasmCodeGenerator.process(call: IrFunctionAccessExpression)
+    public fun WasmCodeGenerator.process(call: IrFunctionAccessExpression)
 }

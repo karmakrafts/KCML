@@ -22,14 +22,14 @@ package dev.karmakrafts.kcml.api.log
  * KCML uses logger names to identify the source of compiler diagnostics. Use [getForPlugin] when
  * logging on behalf of a discovered plugin and [invoke] for a distinct KCML component.
  */
-interface LoggerFactory {
+public interface LoggerFactory {
     /**
      * Creates a logger with a caller-defined diagnostic name.
      *
      * @param name name prepended to the logger's compiler diagnostics.
      * @return a logger named [name].
      */
-    operator fun invoke(name: String): Logger
+    public operator fun invoke(name: String): Logger
 
     /**
      * Creates a logger for a plugin identified by its stable KCML ID.
@@ -37,5 +37,5 @@ interface LoggerFactory {
      * @param pluginId identifier of the plugin whose diagnostics the logger represents.
      * @return a logger named for the plugin.
      */
-    fun getForPlugin(pluginId: String): Logger
+    public fun getForPlugin(pluginId: String): Logger
 }

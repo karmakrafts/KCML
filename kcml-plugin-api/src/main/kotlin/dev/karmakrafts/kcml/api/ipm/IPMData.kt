@@ -18,16 +18,16 @@ package dev.karmakrafts.kcml.api.ipm
 
 /** Key-value payload carried by an inter-plugin message. */
 @ConsistentCopyVisibility
-data class IPMData @PublishedApi internal constructor(private val map: Map<String, Any>) {
+public data class IPMData @PublishedApi internal constructor(private val map: Map<String, Any>) {
     /** Creates immutable inter-plugin message payloads. */
-    companion object {
+    public companion object {
         /**
          * Creates message data from a map.
          *
          * @param map payload values keyed by name.
          * @return message data backed by [map].
          */
-        fun fromMap(map: Map<String, Any>): IPMData = IPMData(map)
+        public fun fromMap(map: Map<String, Any>): IPMData = IPMData(map)
 
         /**
          * Creates message data with a map builder.
@@ -35,7 +35,7 @@ data class IPMData @PublishedApi internal constructor(private val map: Map<Strin
          * @param block adds payload values keyed by name.
          * @return message data containing the values added by [block].
          */
-        inline fun build(block: MutableMap<String, Any>.() -> Unit): IPMData = IPMData(buildMap(block))
+        public inline fun build(block: MutableMap<String, Any>.() -> Unit): IPMData = IPMData(buildMap(block))
     }
 
     /**
@@ -47,5 +47,5 @@ data class IPMData @PublishedApi internal constructor(private val map: Map<Strin
      * @throws ClassCastException if the stored value is not assignable to [T].
      */
     @Suppress("UNCHECKED_CAST")
-    operator fun <T> get(key: String): T = map[key] as T
+    public operator fun <T> get(key: String): T = map[key] as T
 }

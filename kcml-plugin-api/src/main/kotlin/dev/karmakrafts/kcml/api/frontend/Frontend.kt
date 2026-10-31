@@ -31,31 +31,32 @@ import org.jetbrains.kotlin.fir.FirSession
  * FIR extensions receive this context to inspect the session and report diagnostics while the
  * compiler resolves and generates frontend declarations.
  */
-interface Frontend {
+public interface Frontend {
     /** The ID of the plugin this frontend belongs to **/
-    val pluginId: String
+    public val pluginId: String
 
     /** FIR session for the current compilation, including symbol providers and type services. */
-    val session: FirSession
+    public val session: FirSession
 
     /** Compiler configuration for the active Kotlin compilation. */
-    val config: CompilerConfiguration
+    public val config: CompilerConfiguration
 
     /**
      * Creates named KCML loggers that report through the current compiler's diagnostic collector.
      */
-    val loggerFactory: LoggerFactory
+    public val loggerFactory: LoggerFactory
 
     /** Logger for the KCML component dispatching this frontend extension. */
-    val logger: Logger
+    public val logger: Logger
 
     /**
      * Provides the plugins and extension registries discovered for this compiler invocation.
      * Registries have already been populated before FIR extensions are dispatched.
      */
-    val loader: PluginLoader
+    public val loader: PluginLoader
 
     /** Collects compiler diagnostics emitted by KCML extensions. */
-    val messageCollector: MessageCollector
-        @OptIn(MessageCollectorAccess::class) get() = config.messageCollector
+    @OptIn(MessageCollectorAccess::class)
+    public val messageCollector: MessageCollector
+        get() = config.messageCollector
 }

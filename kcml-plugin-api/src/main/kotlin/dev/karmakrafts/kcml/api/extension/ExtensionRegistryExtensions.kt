@@ -22,7 +22,8 @@ package dev.karmakrafts.kcml.api.extension
  * @param E extension subtype annotated with [ExtensionId].
  * @return the matching extension cast to [E], or `null` when its identifier is absent or unregistered.
  */
-inline fun <reified E : Extension> ExtensionRegistry.find(): E? = find(E::class.getExtensionId() ?: return null) as? E
+public inline fun <reified E : Extension> ExtensionRegistry.find(): E? =
+    find(E::class.getExtensionId() ?: return null) as? E
 
 /**
  * Gets a registered extension by its reified extension type.
@@ -31,7 +32,7 @@ inline fun <reified E : Extension> ExtensionRegistry.find(): E? = find(E::class.
  * @return the matching registered extension.
  * @throws IllegalStateException if [E] has no [ExtensionId] or no matching extension is registered.
  */
-inline fun <reified E : Extension> ExtensionRegistry.get(): E {
+public inline fun <reified E : Extension> ExtensionRegistry.get(): E {
     val id =
         E::class.getExtensionId() ?: error("Cannot get extension of type ${E::class} without @ExtensionId annotation")
     return find(id) as? E ?: error("No extension with ID '$id'")

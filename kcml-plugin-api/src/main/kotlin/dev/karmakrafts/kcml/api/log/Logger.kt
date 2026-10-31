@@ -23,37 +23,37 @@ package dev.karmakrafts.kcml.api.log
  * map to the compiler's verbose, informational, warning, and error reporting channels, so plugin
  * authors should use this API instead of writing directly to standard output.
  */
-interface Logger {
+public interface Logger {
     /** Name included with every message produced by this logger. */
-    val name: String
+    public val name: String
 
     /**
      * Reports a verbose diagnostic.
      *
      * @param message diagnostic text.
      */
-    fun debug(message: String)
+    public fun debug(message: String)
 
     /**
      * Reports an informational diagnostic.
      *
      * @param message diagnostic text.
      */
-    fun info(message: String)
+    public fun info(message: String)
 
     /**
      * Reports a warning diagnostic.
      *
      * @param message diagnostic text.
      */
-    fun warn(message: String)
+    public fun warn(message: String)
 
     /**
      * Reports an error diagnostic.
      *
      * @param message diagnostic text.
      */
-    fun error(message: String)
+    public fun error(message: String)
 
     /**
      * Reports a verbose diagnostic with an error description appended to the message.
@@ -61,7 +61,7 @@ interface Logger {
      * @param message diagnostic text.
      * @param error error associated with the diagnostic.
      */
-    fun debug(message: String, error: Throwable) = debug("$message: $error")
+    public fun debug(message: String, error: Throwable): Unit = debug("$message: $error")
 
     /**
      * Reports an informational diagnostic with an error description appended to the message.
@@ -69,7 +69,7 @@ interface Logger {
      * @param message diagnostic text.
      * @param error error associated with the diagnostic.
      */
-    fun info(message: String, error: Throwable) = info("$message: $error")
+    public fun info(message: String, error: Throwable): Unit = info("$message: $error")
 
     /**
      * Reports a warning diagnostic with an error description appended to the message.
@@ -77,7 +77,7 @@ interface Logger {
      * @param message diagnostic text.
      * @param error error associated with the diagnostic.
      */
-    fun warn(message: String, error: Throwable) = warn("$message: $error")
+    public fun warn(message: String, error: Throwable): Unit = warn("$message: $error")
 
     /**
      * Reports an error diagnostic with an error description appended to the message.
@@ -85,5 +85,5 @@ interface Logger {
      * @param message diagnostic text.
      * @param error error associated with the diagnostic.
      */
-    fun error(message: String, error: Throwable) = error("$message: $error")
+    public fun error(message: String, error: Throwable): Unit = error("$message: $error")
 }

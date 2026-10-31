@@ -17,7 +17,7 @@
 package dev.karmakrafts.kcml.api.util
 
 /** Specifies an extension's execution order relative to a dependency. */
-enum class Order {
+public enum class Order {
     // @formatter:off
     /** No ordering constraint. */
     NONE,

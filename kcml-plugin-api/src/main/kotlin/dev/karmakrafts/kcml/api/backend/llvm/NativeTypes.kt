@@ -32,13 +32,13 @@ import llvm.LLVMTypeRef
  * @property ptr The opaque pointer type in address space zero.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface NativeTypes {
-    val int1: LLVMTypeRef
-    val int8: LLVMTypeRef
-    val int16: LLVMTypeRef
-    val int32: LLVMTypeRef
-    val int64: LLVMTypeRef
-    val float32: LLVMTypeRef
-    val float64: LLVMTypeRef
-    val ptr: LLVMTypeRef
+public interface NativeTypes {
+    public val int1: LLVMTypeRef
+    public val int8: LLVMTypeRef
+    public val int16: LLVMTypeRef
+    public val int32: LLVMTypeRef
+    public val int64: LLVMTypeRef
+    public val float32: LLVMTypeRef
+    public val float64: LLVMTypeRef
+    public val ptr: LLVMTypeRef
 }

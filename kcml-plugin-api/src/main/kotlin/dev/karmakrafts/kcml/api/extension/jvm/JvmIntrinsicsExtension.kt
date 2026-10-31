@@ -23,7 +23,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
 /** Replaces selected calls with custom JVM bytecode. */
-interface JvmIntrinsicsExtension : JvmCodeGenerationExtension {
+public interface JvmIntrinsicsExtension : JvmCodeGenerationExtension {
     override fun shouldProcess(element: IrElement, backend: LateJvmBackend): Boolean {
         return element is IrFunctionAccessExpression && shouldProcess(element, backend)
     }
@@ -34,8 +34,8 @@ interface JvmIntrinsicsExtension : JvmCodeGenerationExtension {
     }
 
     /** Selects calls whose generation is replaced by this extension. */
-    fun shouldProcess(call: IrFunctionAccessExpression, backend: LateJvmBackend): Boolean
+    public fun shouldProcess(call: IrFunctionAccessExpression, backend: LateJvmBackend): Boolean
 
     /** Emits a replacement, including any required argument evaluation. */
-    fun JvmCodeGenerator.process(call: IrFunctionAccessExpression): PromisedValue
+    public fun JvmCodeGenerator.process(call: IrFunctionAccessExpression): PromisedValue
 }

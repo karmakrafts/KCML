@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.ir.types.typeWith
  * @param irBuiltIns IR built-ins that provide the appropriate `FunctionN` class.
  * @return the corresponding non-reflective Kotlin function type.
  */
-fun IrFunction.getFunctionType(irBuiltIns: IrBuiltIns): IrType {
+public fun IrFunction.getFunctionType(irBuiltIns: IrBuiltIns): IrType {
     val paramTypes = parameters.filter { it.kind == IrParameterKind.Regular }.map { it.type }
     return irBuiltIns.functionN(paramTypes.size).typeWith(paramTypes + returnType)
 }
@@ -39,7 +39,7 @@ fun IrFunction.getFunctionType(irBuiltIns: IrBuiltIns): IrType {
  * @param irBuiltIns IR built-ins that provide the appropriate `KFunctionN` class.
  * @return the corresponding reflective Kotlin function type.
  */
-fun IrFunction.getKFunctionType(irBuiltIns: IrBuiltIns): IrType {
+public fun IrFunction.getKFunctionType(irBuiltIns: IrBuiltIns): IrType {
     val paramTypes = parameters.filter { it.kind == IrParameterKind.Regular }.map { it.type }
     return irBuiltIns.kFunctionN(paramTypes.size).typeWith(paramTypes + returnType)
 }

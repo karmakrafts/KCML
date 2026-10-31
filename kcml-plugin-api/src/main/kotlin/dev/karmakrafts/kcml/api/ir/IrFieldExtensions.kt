@@ -33,7 +33,7 @@ import org.jetbrains.kotlin.ir.util.SYNTHETIC_OFFSET
  * @return a synthetic-offset field-read expression.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrFieldSymbol.load(receiver: IrExpression? = null): IrGetField = IrGetFieldImpl( // @formatter:off
+public fun IrFieldSymbol.load(receiver: IrExpression? = null): IrGetField = IrGetFieldImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
     symbol = this,
@@ -47,7 +47,7 @@ fun IrFieldSymbol.load(receiver: IrExpression? = null): IrGetField = IrGetFieldI
  * @param receiver dispatch receiver for an instance field, or `null` for a static/top-level field.
  * @return a synthetic-offset field-read expression.
  */
-fun IrField.load(receiver: IrExpression? = null): IrGetField = symbol.load(receiver)
+public fun IrField.load(receiver: IrExpression? = null): IrGetField = symbol.load(receiver)
 
 /**
  * Creates an IR expression that assigns a value to this field symbol.
@@ -57,7 +57,7 @@ fun IrField.load(receiver: IrExpression? = null): IrGetField = symbol.load(recei
  * @return a synthetic-offset field-write expression.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrFieldSymbol.store(
+public fun IrFieldSymbol.store(
     value: IrExpression, receiver: IrExpression? = null
 ): IrSetField = IrSetFieldImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
@@ -75,6 +75,6 @@ fun IrFieldSymbol.store(
  * @param receiver dispatch receiver for an instance field, or `null` for a static/top-level field.
  * @return a synthetic-offset field-write expression.
  */
-fun IrField.store(
+public fun IrField.store(
     value: IrExpression, receiver: IrExpression? = null
 ): IrSetField = symbol.store(value, receiver)

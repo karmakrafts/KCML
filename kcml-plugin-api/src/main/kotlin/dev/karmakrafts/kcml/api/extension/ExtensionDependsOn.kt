@@ -31,8 +31,8 @@ import dev.karmakrafts.kcml.api.util.Order
 @Repeatable
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class ExtensionDependsOn( // @formatter:off
-    val id: String,
-    val isRequired: Boolean = true,
-    val order: Order = Order.AFTER
+public annotation class ExtensionDependsOn( // @formatter:off
+    public val id: String,
+    public val isRequired: Boolean = true,
+    public val order: Order = Order.AFTER
 ) // @formatter:on

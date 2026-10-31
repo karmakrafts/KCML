@@ -24,28 +24,28 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
  *
  * @param message diagnostic text for the compiler output.
  */
-fun MessageCollector.verbose(message: String) = report(CompilerMessageSeverity.LOGGING, message)
+public fun MessageCollector.verbose(message: String): Unit = report(CompilerMessageSeverity.LOGGING, message)
 
 /**
  * Reports an informational diagnostic through Kotlin's compiler message collector.
  *
  * @param message diagnostic text for the compiler output.
  */
-fun MessageCollector.info(message: String) = report(CompilerMessageSeverity.INFO, message)
+public fun MessageCollector.info(message: String): Unit = report(CompilerMessageSeverity.INFO, message)
 
 /**
  * Reports a warning diagnostic through Kotlin's compiler message collector.
  *
  * @param message diagnostic text for the compiler output.
  */
-fun MessageCollector.warn(message: String) = report(CompilerMessageSeverity.WARNING, message)
+public fun MessageCollector.warn(message: String): Unit = report(CompilerMessageSeverity.WARNING, message)
 
 /**
  * Reports an error diagnostic through Kotlin's compiler message collector.
  *
  * @param message diagnostic text for the compiler output.
  */
-fun MessageCollector.error(message: String) = report(CompilerMessageSeverity.ERROR, message)
+public fun MessageCollector.error(message: String): Unit = report(CompilerMessageSeverity.ERROR, message)
 
 /**
  * Reports an exception diagnostic through Kotlin's compiler message collector.
@@ -53,6 +53,6 @@ fun MessageCollector.error(message: String) = report(CompilerMessageSeverity.ERR
  * @param message context that explains the failure.
  * @param error exception whose stack trace is appended to the diagnostic.
  */
-fun MessageCollector.error(message: String, error: Throwable) {
+public fun MessageCollector.error(message: String, error: Throwable) {
     report(CompilerMessageSeverity.EXCEPTION, "$message: ${error.stackTraceToString()}")
 }

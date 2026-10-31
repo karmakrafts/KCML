@@ -42,7 +42,7 @@ import org.jetbrains.kotlin.ir.util.target
  * @throws IllegalStateException if an error expression or a non-expression annotation vararg element is encountered.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrElement?.unwrapRawConstValue(): Any? {
+public fun IrElement?.unwrapRawConstValue(): Any? {
     return when (this) {
         is IrErrorExpression -> error("Got IrErrorExpression in getConstType: $description")
         is IrExpressionBody -> expression.unwrapRawConstValue()
@@ -84,7 +84,7 @@ fun IrElement?.unwrapRawConstValue(): Any? {
  * @return the converted constant value, or `null` when it is absent or has a different type.
  */
 @Suppress("UNCHECKED_CAST")
-inline fun <reified T> IrElement?.unwrapConstValue(): T? {
+public inline fun <reified T : Any> IrElement?.unwrapConstValue(): T? {
     val value = unwrapRawConstValue()
     val javaType = T::class.java
     return (if (javaType.isEnum) (javaType.enumConstants as Array<Enum<*>>).find { it.name == value as? String }
@@ -100,8 +100,8 @@ inline fun <reified T> IrElement?.unwrapConstValue(): T? {
  * @return converted values, or an empty list when this element does not represent a constant array.
  */
 @Suppress("UNCHECKED_CAST")
-inline fun <reified T> IrElement?.unwrapConstValues(): List<T?> {
-    val values = unwrapRawConstValue() as List<Any?>? ?: return emptyList()
+public inline fun <reified T : Any> IrElement?.unwrapConstValues(): List<T?> {
+    val values = unwrapRawConstValue() as? List<Any?>? ?: return emptyList()
     val javaType = T::class.java
     val isEnum = javaType.isEnum
     return values.map { value ->

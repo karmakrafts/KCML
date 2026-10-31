@@ -25,16 +25,16 @@ import io.github.z4kn4fein.semver.constraints.Constraint
  * Plugin loaders use these constraints to validate availability, version compatibility, and load
  * order before a plugin can register its extensions.
  */
-interface PluginDependency {
+public interface PluginDependency {
     /** Identifier of the plugin on which the declaring plugin depends. */
-    val id: String
+    public val id: String
 
     /** Whether the declaring plugin may load when this dependency is unavailable. */
-    val required: Boolean
+    public val required: Boolean
 
     /** Relative order in which the dependency must load with respect to the declaring plugin. */
-    val order: Order
+    public val order: Order
 
     /** Optional version requirement used to validate the resolved dependency. */
-    val version: Constraint?
+    public val version: Constraint?
 }

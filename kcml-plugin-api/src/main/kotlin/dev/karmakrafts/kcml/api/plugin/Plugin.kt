@@ -26,4 +26,4 @@ package dev.karmakrafts.kcml.api.plugin
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class Plugin(val id: String)
+public annotation class Plugin(public val id: String)

@@ -17,10 +17,10 @@
 package dev.karmakrafts.kcml.api.target
 
 /** Describes the platform target of the active Kotlin compilation. */
-sealed interface CompileTarget {
+public sealed interface CompileTarget {
     /** Namespace for utilities shared by all compilation-target descriptors. */
-    companion object
+    public companion object;
 
     /** Compiler-defined name that uniquely identifies this target. */
-    val name: String
+    public val name: String
 }

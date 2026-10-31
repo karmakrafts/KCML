@@ -25,7 +25,7 @@ import dev.karmakrafts.kcml.api.InternalKcmlApi
  * @param data message payload.
  */
 @InternalKcmlApi
-data class IPMMessage( // @formatter:off
-    val name: String,
-    val data: IPMData
+public data class IPMMessage( // @formatter:off
+    public val name: String,
+    public val data: IPMData
 ) // @formater:on

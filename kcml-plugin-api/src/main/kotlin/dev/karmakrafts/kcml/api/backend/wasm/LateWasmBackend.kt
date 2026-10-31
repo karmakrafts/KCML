@@ -30,25 +30,25 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
  * This backend context is available to extensions that participate in the late WebAssembly
  * compilation phase and need to inspect or generate WebAssembly declarations.
  */
-interface LateWasmBackend : Backend {
+public interface LateWasmBackend : Backend {
     /** Identifies this context as the late WebAssembly backend. */
     override val type: BackendType
         get() = BackendType.LateWasm
 
     /** Compiler backend context for the current WebAssembly compilation. */
-    val context: WasmBackendContext
+    public val context: WasmBackendContext
 
     /** Context used to translate Kotlin IR types to WebAssembly types. */
-    val typeContext: WasmTypeCodegenContext
+    public val typeContext: WasmTypeCodegenContext
 
     /** Context for the declaration currently being generated, or `null` outside a declaration. */
-    val declarationContext: WasmDeclarationCodegenContext?
+    public val declarationContext: WasmDeclarationCodegenContext?
 
     /** Compiler configuration associated with the current WebAssembly compilation. */
     override val config: CompilerConfiguration
         get() = context.configuration
 
     /** Kotlin IR built-ins available to the WebAssembly backend. */
-    val irBuiltIns: IrBuiltIns
+    public val irBuiltIns: IrBuiltIns
         get() = context.irBuiltIns
 }

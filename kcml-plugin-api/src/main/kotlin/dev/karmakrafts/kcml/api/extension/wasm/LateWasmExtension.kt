@@ -20,6 +20,6 @@ import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.extension.Extension
 
 // TODO: document this
-interface LateWasmExtension : Extension {
-    fun init(backend: LateWasmBackend) = Unit
+public interface LateWasmExtension : Extension {
+    public fun init(backend: LateWasmBackend): Unit = Unit
 }

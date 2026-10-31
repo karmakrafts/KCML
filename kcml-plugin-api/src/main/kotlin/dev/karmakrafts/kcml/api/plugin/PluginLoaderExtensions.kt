@@ -22,7 +22,7 @@ package dev.karmakrafts.kcml.api.plugin
  * @param P compiler-plugin subtype annotated with [Plugin].
  * @return the matching loaded plugin, or `null` when [P] is unannotated or unavailable.
  */
-inline fun <reified P : CompilerPlugin> PluginLoader.findPlugin(): P? {
+public inline fun <reified P : CompilerPlugin> PluginLoader.findPlugin(): P? {
     val type = P::class.java
     val annotation = type.getAnnotation(Plugin::class.java) ?: return null
     return findPlugin(annotation.id) as? P
@@ -35,4 +35,4 @@ inline fun <reified P : CompilerPlugin> PluginLoader.findPlugin(): P? {
  * @return the matching loaded plugin.
  * @throws IllegalArgumentException if [P] is unannotated or no matching plugin is loaded.
  */
-inline fun <reified P : CompilerPlugin> PluginLoader.getPlugin(): P = requireNotNull(findPlugin<P>())
+public inline fun <reified P : CompilerPlugin> PluginLoader.getPlugin(): P = requireNotNull(findPlugin<P>())

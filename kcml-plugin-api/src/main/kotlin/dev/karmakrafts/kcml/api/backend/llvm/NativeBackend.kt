@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.target.NativeCompileTarget
  * This specialization allows a KCML extension to run only for native compilations while using the
  * target-independent services inherited from [IrBackend].
  */
-interface NativeBackend : IrBackend {
+public interface NativeBackend : IrBackend {
     /** Identifies this context as the Kotlin/Native IR backend. */
     override val type: BackendType
         get() = BackendType.Native

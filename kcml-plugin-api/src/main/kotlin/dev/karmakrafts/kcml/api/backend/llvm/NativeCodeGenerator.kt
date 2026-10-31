@@ -33,27 +33,27 @@ import org.jetbrains.kotlin.ir.types.IrType
  * Use [functionBuilder] to emit LLVM instructions into the function currently being generated and
  * the materialization functions to obtain LLVM representations of Kotlin IR declarations and types.
  */
-interface NativeCodeGenerator {
+public interface NativeCodeGenerator {
     /** The late native backend available during code generation */
-    val backend: LateNativeBackend
+    public val backend: LateNativeBackend
 
     /** The LLVM instruction builder for the function currently being generated. */
-    val functionBuilder: LLVMBuilderRef
+    public val functionBuilder: LLVMBuilderRef
 
     /** The LLVM value that references the global Kotlin [Unit] instance. */
-    val unitInstance: LLVMValueRef
+    public val unitInstance: LLVMValueRef
 
     /**
      * LLVM primitive and pointer types associated with the current code-generation context.
      */
-    val types: NativeTypes
+    public val types: NativeTypes
 
     /**
      * Evaluates the explicit arguments of [expression] in Kotlin/Native's normal evaluation order.
      * Nested expressions pass through [dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension]
      * as usual. Call this only when replacing the call, to avoid evaluating arguments twice.
      */
-    fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef>
+    public fun evaluateExplicitArgs(expression: IrFunctionAccessExpression): List<LLVMValueRef>
 
     /**
      * Returns the LLVM callable corresponding to an IR function, if one is available.
@@ -61,7 +61,7 @@ interface NativeCodeGenerator {
      * @param function the IR function to materialize.
      * @return the corresponding LLVM callable, or `null` if [function] cannot be materialized.
      */
-    fun tryMaterializeFunction(function: IrSimpleFunction): LlvmCallable?
+    public fun tryMaterializeFunction(function: IrSimpleFunction): LlvmCallable?
 
     /**
      * Returns the LLVM type corresponding to a Kotlin IR type, if one is available.
@@ -69,5 +69,5 @@ interface NativeCodeGenerator {
      * @param type the Kotlin IR type to materialize.
      * @return the corresponding LLVM type, or `null` if [type] cannot be materialized.
      */
-    fun tryMaterializeType(type: IrType): LLVMTypeRef?
+    public fun tryMaterializeType(type: IrType): LLVMTypeRef?
 }

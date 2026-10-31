@@ -24,7 +24,7 @@ import dev.karmakrafts.kcml.api.util.Order
  * Override [id] when no [ExtensionId] annotation is present, and override [dependencies] when
  * dependencies cannot be expressed with repeatable [ExtensionDependsOn] annotations.
  */
-abstract class AbstractExtension : Extension {
+public abstract class AbstractExtension : Extension {
     /** Identifier declared by [ExtensionId], or a value supplied by a subclass. */
     override val id: String by lazy {
         this@AbstractExtension::class.getExtensionId()

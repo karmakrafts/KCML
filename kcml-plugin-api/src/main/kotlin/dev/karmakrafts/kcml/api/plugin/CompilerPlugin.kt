@@ -25,19 +25,19 @@ import dev.karmakrafts.kcml.api.ipm.IPM
  * before it installs the Kotlin FIR and IR extension adapters. Implementations register the
  * extensions that should participate in this compilation through the supplied context.
  */
-interface CompilerPlugin {
+public interface CompilerPlugin {
     /**
      * Configures this plugin for the current Kotlin compiler invocation.
      *
      * @param context services scoped to the active plugin load, including the registry to which
      *   this plugin contributes extensions.
      */
-    fun load(context: PluginLoadContext)
+    public fun load(context: PluginLoadContext)
 
     /**
      * Processes inter-plugin messages after loading.
      *
      * @param ipm this plugin's message service.
      */
-    fun processIpms(ipm: IPM) = Unit
+    public fun processIpms(ipm: IPM): Unit = Unit
 }

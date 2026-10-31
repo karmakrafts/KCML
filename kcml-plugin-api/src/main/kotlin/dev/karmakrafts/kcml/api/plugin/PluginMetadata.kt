@@ -27,25 +27,25 @@ internal val defaultPluginVersion: Version = Version()
  * The loader uses this metadata to expose plugin identity, display information, compatibility, and
  * dependency ordering without requiring consumers to instantiate the plugin.
  */
-interface PluginMetadata {
+public interface PluginMetadata {
     /** Stable plugin identifier used by the loader and dependency declarations. */
-    val id: String
+    public val id: String
 
     /** Optional human-readable plugin name. */
-    val name: String?
+    public val name: String?
 
     /** Optional semantic version of this plugin distribution. */
-    val version: Version?
+    public val version: Version?
 
     /** Optional URL where users can report problems with this plugin. */
-    val issueTrackerUrl: String?
+    public val issueTrackerUrl: String?
 
     /** Plugins that must be available before this plugin is loaded. */
-    val dependencies: List<PluginDependency>
+    public val dependencies: List<PluginDependency>
 }
 
 /** Human-readable [PluginMetadata.name], or the stable [PluginMetadata.id] when no name is declared. */
-inline val PluginMetadata.nameOrId: String get() = name ?: id
+public inline val PluginMetadata.nameOrId: String get() = name ?: id
 
 /** Declared [PluginMetadata.version], or an empty semantic version when no version is available. */
-inline val PluginMetadata.versionOrDefault: Version get() = version ?: defaultPluginVersion
+public inline val PluginMetadata.versionOrDefault: Version get() = version ?: defaultPluginVersion

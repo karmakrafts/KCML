@@ -21,15 +21,15 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.declarations.IrFile
 
 /** Provides IR-specific services for a Kotlin backend integration. */
-interface IrBackend : Backend {
+public interface IrBackend : Backend {
     /** Namespace for utilities shared by IR backend contexts. */
-    companion object
+    public companion object; // Semicolon needed because of parser bug..
 
     /** IR built-ins for the current compilation. */
-    val irBuiltIns: IrBuiltIns
+    public val irBuiltIns: IrBuiltIns
 
     /** Declaration finder for built-ins. */
-    val builtInsFinder: DeclarationFinder
+    public val builtInsFinder: DeclarationFinder
 
     /**
      * Returns the declaration finder for a source file.
@@ -37,5 +37,5 @@ interface IrBackend : Backend {
      * @param source IR source file.
      * @return the source's declaration finder.
      */
-    fun getFinderForSource(source: IrFile): DeclarationFinder
+    public fun getFinderForSource(source: IrFile): DeclarationFinder
 }

@@ -17,6 +17,6 @@
 package dev.karmakrafts.kcml.api.mixin
 
 @IntrinsicInterface
-interface ThisAware<T> {
-    fun getThis(): T = throw NotImplementedError("This should not be called directly")
+public interface ThisAware<T> {
+    public fun getThis(): T = throw NotImplementedError("This should not be called directly")
 }

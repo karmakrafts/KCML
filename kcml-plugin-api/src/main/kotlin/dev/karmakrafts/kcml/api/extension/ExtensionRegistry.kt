@@ -22,9 +22,9 @@ package dev.karmakrafts.kcml.api.extension
  * Registries accept changes while their plugin is loading. KCML freezes each registry before
  * dispatching compiler callbacks, at which point dependency-sorted access becomes available.
  */
-interface ExtensionRegistry {
+public interface ExtensionRegistry {
     /** Stable identifier of the plugin that owns this registry. */
-    val pluginId: String
+    public val pluginId: String
 
     /**
      * Registers an extension under its stable [Extension.id].
@@ -33,7 +33,7 @@ interface ExtensionRegistry {
      * @throws IllegalStateException if this registry is frozen.
      * @throws IllegalArgumentException if an extension with the same ID is already registered.
      */
-    fun register(extension: Extension)
+    public fun register(extension: Extension)
 
     /**
      * Unregisters a previously registered extension.
@@ -41,7 +41,7 @@ interface ExtensionRegistry {
      * @param extension extension to unregister.
      * @throws IllegalStateException if this registry is frozen.
      */
-    fun unregister(extension: Extension)
+    public fun unregister(extension: Extension)
 
     /**
      * Finds a registered extension by its stable ID.
@@ -49,7 +49,7 @@ interface ExtensionRegistry {
      * @param id extension ID.
      * @return the extension, or `null` if absent.
      */
-    fun find(id: String): Extension?
+    public fun find(id: String): Extension?
 
     /**
      * Returns a registered extension by its stable ID.
@@ -58,7 +58,7 @@ interface ExtensionRegistry {
      * @return the extension.
      * @throws IllegalArgumentException if no extension has [id].
      */
-    operator fun get(id: String): Extension
+    public operator fun get(id: String): Extension
 
     /**
      * Checks whether an extension ID is registered.
@@ -66,7 +66,7 @@ interface ExtensionRegistry {
      * @param id extension ID.
      * @return `true` if [id] is registered.
      */
-    operator fun contains(id: String): Boolean
+    public operator fun contains(id: String): Boolean
 
     /**
      * Checks whether an extension is registered.
@@ -74,14 +74,14 @@ interface ExtensionRegistry {
      * @param extension extension to check.
      * @return `true` if [extension] is registered.
      */
-    operator fun contains(extension: Extension): Boolean
+    public operator fun contains(extension: Extension): Boolean
 
     /**
      * Returns all extensions in registration order.
      *
      * @return registered extensions.
      */
-    fun all(): List<Extension>
+    public fun all(): List<Extension>
 
     /**
      * Returns all extensions in resolved dependency order.
@@ -89,5 +89,5 @@ interface ExtensionRegistry {
      * @return registered extensions in dependency order.
      * @throws IllegalStateException if this registry is not frozen.
      */
-    fun allSorted(): List<Extension>
+    public fun allSorted(): List<Extension>
 }

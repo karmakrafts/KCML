@@ -42,7 +42,7 @@ import org.jetbrains.kotlin.ir.util.superClass
  * @return the newly added primary constructor.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrClass.addDefaultObjectConstructor( // @formatter:off
+public fun IrClass.addDefaultObjectConstructor( // @formatter:off
     pluginContext: IrPluginContext,
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET
@@ -82,6 +82,6 @@ fun IrClass.addDefaultObjectConstructor( // @formatter:off
  *
  * @return a synthetic-offset object-value expression.
  */
-fun IrClassSymbol.getObjectInstance(): IrGetObjectValueImpl = IrGetObjectValueImpl(
+public fun IrClassSymbol.getObjectInstance(): IrGetObjectValueImpl = IrGetObjectValueImpl(
     startOffset = SYNTHETIC_OFFSET, endOffset = SYNTHETIC_OFFSET, type = defaultType, symbol = this@getObjectInstance
 )

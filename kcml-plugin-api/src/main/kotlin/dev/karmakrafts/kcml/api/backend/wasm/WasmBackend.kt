@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.target.WasmCompileTarget
  * This specialization allows a KCML extension to run only for WebAssembly compilations while using
  * the target-independent services inherited from [IrBackend].
  */
-interface WasmBackend : IrBackend {
+public interface WasmBackend : IrBackend {
     /** Identifies this context as the WebAssembly backend. */
     override val type: BackendType
         get() = BackendType.Wasm

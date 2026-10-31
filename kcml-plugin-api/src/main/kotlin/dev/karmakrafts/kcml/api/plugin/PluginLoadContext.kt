@@ -39,11 +39,11 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  *   extension registries for this invocation.
  * @property ipm messaging service for exchanging named payloads with other loaded plugins.
  */
-data class PluginLoadContext( // @formatter:off
-    val extensionRegistry: ExtensionRegistry,
-    val config: CompilerConfiguration,
-    val loggerFactory: LoggerFactory,
-    val logger: Logger,
-    val loader: PluginLoader,
-    val ipm: IPM
+public data class PluginLoadContext( // @formatter:off
+    public val extensionRegistry: ExtensionRegistry,
+    public val config: CompilerConfiguration,
+    public val loggerFactory: LoggerFactory,
+    public val logger: Logger,
+    public val loader: PluginLoader,
+    public val ipm: IPM
 ) // @formatter:on

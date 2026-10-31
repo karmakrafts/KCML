@@ -20,21 +20,21 @@ import dev.karmakrafts.kcml.api.InternalKcmlApi
 import java.util.*
 
 /** Handles a received inter-plugin message payload. */
-typealias IPMCallback = IPMData.() -> Unit
+public typealias IPMCallback = IPMData.() -> Unit
 
 /**
  * Exchanges messages between plugins without a direct dependency.
  *
  * Implementations must be thread-safe.
  */
-interface IPM {
+public interface IPM {
     /** Messages awaiting a receiver for their name. */
     @InternalKcmlApi
-    val queue: Deque<IPMMessage>
+    public val queue: Deque<IPMMessage>
 
     /** Receivers keyed by message name. */
     @InternalKcmlApi
-    val callbacks: MutableMap<String, IPMCallback>
+    public val callbacks: MutableMap<String, IPMCallback>
 
     /**
      * Sends a message to a plugin. Messages for an unavailable plugin are ignored; messages with
@@ -44,7 +44,7 @@ interface IPM {
      * @param name message name.
      * @param data message payload.
      */
-    fun send(pluginId: String, name: String, data: IPMData)
+    public fun send(pluginId: String, name: String, data: IPMData)
 
     /**
      * Sends a message to every plugin in dependency order.
@@ -52,7 +52,7 @@ interface IPM {
      * @param name message name.
      * @param data message payload.
      */
-    fun broadcast(name: String, data: IPMData)
+    public fun broadcast(name: String, data: IPMData)
 
     /**
      * Registers a receiver for a message name and delivers queued messages for that name.
@@ -60,7 +60,7 @@ interface IPM {
      * @param name message name.
      * @param callback message receiver.
      */
-    fun receive(name: String, callback: IPMCallback)
+    public fun receive(name: String, callback: IPMCallback)
 }
 
 /**
@@ -70,7 +70,7 @@ interface IPM {
  * @param name message name.
  * @param block adds message payload values.
  */
-inline fun IPM.send(pluginId: String, name: String, block: MutableMap<String, Any>.() -> Unit) =
+public inline fun IPM.send(pluginId: String, name: String, block: MutableMap<String, Any>.() -> Unit): Unit =
     send(pluginId, name, IPMData.build(block))
 
 /**
@@ -79,5 +79,5 @@ inline fun IPM.send(pluginId: String, name: String, block: MutableMap<String, An
  * @param name message name.
  * @param block adds message payload values.
  */
-inline fun IPM.broadcast(name: String, block: MutableMap<String, Any>.() -> Unit) =
+public inline fun IPM.broadcast(name: String, block: MutableMap<String, Any>.() -> Unit): Unit =
     broadcast(name, IPMData.build(block))

@@ -30,9 +30,9 @@ import org.jetbrains.kotlin.ir.IrElement
  * not in a separate traversal before their parent is generated.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface NativeCodeGenerationExtension : LateNativeExtension {
+public interface NativeCodeGenerationExtension : LateNativeExtension {
     /** Selects elements to transform or replace using [process]. */
-    fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean = true
+    public fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean = true
 
     /**
      * Transforms [element] in place or replaces its code generation.
@@ -45,5 +45,5 @@ interface NativeCodeGenerationExtension : LateNativeExtension {
      * The function builder is only available inside an active function. Replacements are
      * responsible for preserving argument evaluation, result types, and other LLVM invariants.
      */
-    fun NativeCodeGenerator.process(element: IrElement): LLVMValueRef?
+    public fun NativeCodeGenerator.process(element: IrElement): LLVMValueRef?
 }

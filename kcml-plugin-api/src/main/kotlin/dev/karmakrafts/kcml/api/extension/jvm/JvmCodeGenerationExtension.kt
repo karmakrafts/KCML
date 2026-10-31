@@ -22,14 +22,14 @@ import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.IrElement
 
 /** Intercepts JVM IR as it is translated to bytecode, including nested expressions. */
-interface JvmCodeGenerationExtension : LateJvmExtension {
+public interface JvmCodeGenerationExtension : LateJvmExtension {
     /** Selects elements to transform or replace using [process]. */
-    fun shouldProcess(element: IrElement, backend: LateJvmBackend): Boolean = true
+    public fun shouldProcess(element: IrElement, backend: LateJvmBackend): Boolean = true
 
     /**
      * Returns null to continue dispatch and normal generation after any in-place changes.
      * A non-null value replaces normal generation and stops dispatch. Replacements must
      * preserve argument evaluation, stack types, and control-flow invariants.
      */
-    fun JvmCodeGenerator.process(element: IrElement): PromisedValue?
+    public fun JvmCodeGenerator.process(element: IrElement): PromisedValue?
 }

@@ -18,4 +18,4 @@ package dev.karmakrafts.kcml.api.mixin
 
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
-annotation class ComponentMarker
+public annotation class ComponentMarker

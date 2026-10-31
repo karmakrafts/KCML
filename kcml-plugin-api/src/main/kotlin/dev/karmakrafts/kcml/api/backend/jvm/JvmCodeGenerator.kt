@@ -23,22 +23,22 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
 /** Generates JVM bytecode within the currently intercepted function body. */
-interface JvmCodeGenerator {
-    val backend: LateJvmBackend
+public interface JvmCodeGenerator {
+    public val backend: LateJvmBackend
 
     /** Compiler expression generator for the active function. */
-    val context: ExpressionCodegen
+    public val context: ExpressionCodegen
 
     /** Lexical block state used for locals and control flow. */
-    val blockInfo: BlockInfo
+    public val blockInfo: BlockInfo
 
     /** The compiler's shaded ASM adapter, not KCML's unshaded ASM API. */
-    val instructionAdapter: InstructionAdapter
+    public val instructionAdapter: InstructionAdapter
         get() = context.mv
 
     /**
      * Generates an expression, passing nested expressions through extensions as usual.
      * Generating the element currently being intercepted recurses.
      */
-    fun generateExpression(expression: IrExpression): PromisedValue
+    public fun generateExpression(expression: IrExpression): PromisedValue
 }

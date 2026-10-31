@@ -24,7 +24,7 @@ import kotlin.reflect.KClass
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
-annotation class DirectMixin( // @formatter:off
-    val target: KClass<*>,
-    val priority: Int = 0
+public annotation class DirectMixin( // @formatter:off
+    public val target: KClass<*>,
+    public val priority: Int = 0
 ) // @formatter:on

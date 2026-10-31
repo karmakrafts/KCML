@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.api.target
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 /** Describes a Kotlin/Native compilation target. */
-interface NativeCompileTarget : CompileTarget {
+public interface NativeCompileTarget : CompileTarget {
     /** Konan platform target selected for native code generation. */
-    val konanTarget: KonanTarget
+    public val konanTarget: KonanTarget
 }

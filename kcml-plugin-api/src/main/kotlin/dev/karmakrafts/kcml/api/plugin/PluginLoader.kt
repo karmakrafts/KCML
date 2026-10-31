@@ -27,12 +27,12 @@ import dev.karmakrafts.kcml.api.log.Logger
  * The loader exposes plugin instances and metadata together with each plugin's extension registry
  * after dependency ordering and plugin initialization have completed.
  */
-interface PluginLoader {
+public interface PluginLoader {
     /** Logger for plugin discovery and loading. */
-    val logger: Logger
+    public val logger: Logger
 
     /** Stable identifier of the plugin currently loading, or `null` outside plugin initialization. */
-    val loadingPluginId: String?
+    public val loadingPluginId: String?
 
     /**
      * Finds a loaded plugin.
@@ -40,7 +40,7 @@ interface PluginLoader {
      * @param id plugin ID.
      * @return the plugin, or `null` if unavailable.
      */
-    fun findPlugin(id: String): CompilerPlugin?
+    public fun findPlugin(id: String): CompilerPlugin?
 
     /**
      * Returns a loaded plugin.
@@ -49,7 +49,7 @@ interface PluginLoader {
      * @return the plugin.
      * @throws IllegalArgumentException if no plugin has [id].
      */
-    fun getPlugin(id: String): CompilerPlugin
+    public fun getPlugin(id: String): CompilerPlugin
 
     /**
      * Finds plugin metadata.
@@ -57,7 +57,7 @@ interface PluginLoader {
      * @param pluginId plugin ID.
      * @return metadata, or `null` if unavailable.
      */
-    fun findMetadata(pluginId: String): PluginMetadata?
+    public fun findMetadata(pluginId: String): PluginMetadata?
 
     /**
      * Returns plugin metadata.
@@ -66,7 +66,7 @@ interface PluginLoader {
      * @return metadata.
      * @throws IllegalArgumentException if no metadata has [pluginId].
      */
-    fun getMetadata(pluginId: String): PluginMetadata
+    public fun getMetadata(pluginId: String): PluginMetadata
 
     /**
      * Finds a plugin's extension registry.
@@ -74,7 +74,7 @@ interface PluginLoader {
      * @param pluginId plugin ID.
      * @return the registry, or `null` if unavailable.
      */
-    fun findExtensionRegistry(pluginId: String): ExtensionRegistry?
+    public fun findExtensionRegistry(pluginId: String): ExtensionRegistry?
 
     /**
      * Returns a plugin's extension registry.
@@ -83,7 +83,7 @@ interface PluginLoader {
      * @return the registry.
      * @throws IllegalArgumentException if no registry exists for [pluginId].
      */
-    fun getExtensionRegistry(pluginId: String): ExtensionRegistry
+    public fun getExtensionRegistry(pluginId: String): ExtensionRegistry
 
     /**
      * Finds a plugin's message service.
@@ -92,7 +92,7 @@ interface PluginLoader {
      * @return the message service, or `null` if unavailable.
      */
     @InternalKcmlApi
-    fun findIpm(pluginId: String): IPM?
+    public fun findIpm(pluginId: String): IPM?
 
     /**
      * Returns a plugin's message service.
@@ -102,19 +102,19 @@ interface PluginLoader {
      * @throws IllegalArgumentException if no message service exists for [pluginId].
      */
     @InternalKcmlApi
-    fun getIpm(pluginId: String): IPM
+    public fun getIpm(pluginId: String): IPM
 
     /**
      * Lists all discovered plugin IDs in loader insertion order.
      *
      * @return plugin IDs in loader order.
      */
-    fun allPlugins(): List<String>
+    public fun allPlugins(): List<String>
 
     /**
      * Lists all discovered plugin IDs in resolved dependency order.
      *
      * @return plugin IDs in dependency order.
      */
-    fun allPluginsSorted(): List<String>
+    public fun allPluginsSorted(): List<String>
 }

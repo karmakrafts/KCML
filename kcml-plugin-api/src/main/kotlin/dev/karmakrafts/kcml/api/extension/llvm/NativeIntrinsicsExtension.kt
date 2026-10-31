@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.ir.expressions.IrCall
  * recognized call with its own LLVM value.
  */
 @OptIn(ExperimentalForeignApi::class)
-interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
+public interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
     override fun shouldProcess(element: IrElement, backend: LateNativeBackend): Boolean {
         return element is IrCall && shouldProcess(element, backend)
     }
@@ -47,7 +47,7 @@ interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
      * @param backend KCML context exposing the active native and LLVM backend state.
      * @return `true` when [process] should lower [call].
      */
-    fun shouldProcess(call: IrCall, backend: LateNativeBackend): Boolean
+    public fun shouldProcess(call: IrCall, backend: LateNativeBackend): Boolean
 
     /**
      * Lowers a recognized IR call to an LLVM value.
@@ -56,5 +56,5 @@ interface NativeIntrinsicsExtension : NativeCodeGenerationExtension {
      * @param args materialized LLVM values for the call arguments.
      * @return LLVM value that replaces [call] in the generated native code.
      */
-    fun NativeCodeGenerator.process(call: IrCall, args: List<LLVMValueRef>): LLVMValueRef
+    public fun NativeCodeGenerator.process(call: IrCall, args: List<LLVMValueRef>): LLVMValueRef
 }

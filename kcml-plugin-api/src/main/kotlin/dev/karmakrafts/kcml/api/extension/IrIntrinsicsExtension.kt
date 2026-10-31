@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.ir.visitors.transformChildrenVoid
  * KCML visits every call in a module and delegates recognized calls to this extension, allowing it
  * to replace the call with a custom IR expression before backend code generation.
  */
-interface IrIntrinsicsExtension : IrExtension {
+public interface IrIntrinsicsExtension : IrExtension {
     /**
      * Determines whether an IR call should be processed as an intrinsic by this extension.
      *
@@ -38,7 +38,7 @@ interface IrIntrinsicsExtension : IrExtension {
      * @param backend KCML context exposing the active target backend.
      * @return `true` when [process] should replace [call].
      */
-    fun shouldProcess(call: IrCall, backend: IrBackend): Boolean
+    public fun shouldProcess(call: IrCall, backend: IrBackend): Boolean
 
     /**
      * Replaces a recognized IR call with a custom expression.
@@ -47,7 +47,7 @@ interface IrIntrinsicsExtension : IrExtension {
      * @param backend KCML context exposing the active target backend.
      * @return expression that replaces [call] in the processed module.
      */
-    fun process(call: IrCall, backend: IrBackend): IrExpression
+    public fun process(call: IrCall, backend: IrBackend): IrExpression
 
     override fun process(module: IrModuleFragment, backend: IrBackend) {
         module.transformChildrenVoid(object : IrElementTransformerVoid() {

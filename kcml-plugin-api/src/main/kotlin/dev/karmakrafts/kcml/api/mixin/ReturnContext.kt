@@ -22,11 +22,11 @@ package dev.karmakrafts.kcml.api.mixin
  * The runtime compiler will turn calls to [returnFromTarget] into actual return instructions
  * in the targeted function when the mixin is applied.
  */
-interface ReturnContext<T> {
-    fun returnFromTarget(value: T) {
+public interface ReturnContext<T> {
+    public fun returnFromTarget(value: T) {
         throw NotImplementedError("This should not be called directly")
     }
 }
 
 @Suppress("NOTHING_TO_INLINE")
-inline fun ReturnContext<Unit>.returnFromTarget() = returnFromTarget(Unit)
+public inline fun ReturnContext<Unit>.returnFromTarget(): Unit = returnFromTarget(Unit)

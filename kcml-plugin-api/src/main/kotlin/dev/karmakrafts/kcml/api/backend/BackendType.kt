@@ -17,27 +17,27 @@
 package dev.karmakrafts.kcml.api.backend
 
 /** Identifies the Kotlin compiler backend phase in which a KCML extension is executing. */
-interface BackendType {
+public interface BackendType {
     // @formatter:off
     /** Kotlin/JVM IR backend. */
-    data object Jvm : BackendType
+    public data object Jvm : BackendType
 
     /** Late Kotlin/JVM bytecode-generation phase. */
-    data object LateJvm : BackendType
+    public data object LateJvm : BackendType
 
     /** Kotlin/JavaScript IR backend. */
-    data object Js : BackendType
+    public data object Js : BackendType
 
     /** Kotlin/Wasm IR backend. */
-    data object Wasm : BackendType
+    public data object Wasm : BackendType
 
     /** Late Kotlin/WASM code-generation phase. */
-    data object LateWasm : BackendType
+    public data object LateWasm : BackendType
 
     /** Kotlin/Native IR backend. */
-    data object Native : BackendType
+    public data object Native : BackendType
 
     /** Late Kotlin/Native LLVM code-generation phase. */
-    data object LateNative : BackendType
+    public data object LateNative : BackendType
     // @formatter:on
 }

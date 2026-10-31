@@ -26,7 +26,7 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
  * This specialization allows a KCML extension to run only for JVM compilations while using the
  * target-independent services inherited from [IrBackend].
  */
-interface JvmBackend : IrBackend {
+public interface JvmBackend : IrBackend {
     /** Identifies this context as the JVM backend. */
     override val type: BackendType
         get() = BackendType.Jvm

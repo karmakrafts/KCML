@@ -26,25 +26,25 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrBuiltIns
 
 /** Exposes the JVM compiler state during bytecode generation. */
-interface LateJvmBackend : Backend {
+public interface LateJvmBackend : Backend {
     override val type: BackendType
         get() = BackendType.LateJvm
 
     override val compileTarget: JvmCompileTarget
 
     /** Compiler context for the active JVM compilation. */
-    val context: JvmBackendContext
+    public val context: JvmBackendContext
 
     /** State receiving generated classes. */
-    val state: GenerationState
+    public val state: GenerationState
         get() = context.state
 
     /** Built-in IR definitions for the active compilation. */
-    val irBuiltIns: IrBuiltIns
+    public val irBuiltIns: IrBuiltIns
         get() = context.irBuiltIns
 
     /** JVM backend symbols resolved by the compiler. */
-    val symbols: JvmSymbols
+    public val symbols: JvmSymbols
         get() = context.symbols
 
     override val config: CompilerConfiguration

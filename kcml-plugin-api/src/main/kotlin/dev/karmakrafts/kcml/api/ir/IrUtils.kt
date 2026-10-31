@@ -61,7 +61,7 @@ import org.jetbrains.kotlin.ir.visitors.acceptVoid
  *
  * @return the containing declaration container, or `null` when none exists.
  */
-fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
+public fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
     return when (val parent = parent) {
         is IrDeclarationContainer -> parent
         is IrDeclaration -> parent.findContainingParent()
@@ -76,7 +76,7 @@ fun IrDeclaration.findContainingParent(): IrDeclarationContainer? {
  * @param predicate additional condition evaluated for candidate descendants.
  * @return the first matching descendant in visitor traversal order, or `null`.
  */
-inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E) -> Boolean = { true }): E? {
+public inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E) -> Boolean = { true }): E? {
     var result: E? = null
     acceptVoid(object : IrVisitorVoid() {
         override fun visitElement(element: IrElement) {
@@ -98,7 +98,7 @@ inline fun <reified E : IrElement> IrElement.findChild(crossinline predicate: (E
  * @param endOffset source offset for subsequently generated IR, or [SYNTHETIC_OFFSET].
  * @return a builder associated with this declaration's symbol.
  */
-fun IrSymbolOwner.declarationBuilder( // @formatter:off
+public fun IrSymbolOwner.declarationBuilder( // @formatter:off
     context: IrGeneratorContext,
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET
@@ -111,7 +111,7 @@ fun IrSymbolOwner.declarationBuilder( // @formatter:off
 
 /** Creates an IR expression that reads the value represented by this symbol. */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrValueSymbol.load(): IrGetValue = IrGetValueImpl( // @formatter:off
+public fun IrValueSymbol.load(): IrGetValue = IrGetValueImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
     type = owner.type,
@@ -119,7 +119,7 @@ fun IrValueSymbol.load(): IrGetValue = IrGetValueImpl( // @formatter:off
 ) // @formatter:on
 
 /** Creates an IR expression that reads this value declaration. */
-fun IrValueDeclaration.load(): IrGetValue = symbol.load()
+public fun IrValueDeclaration.load(): IrGetValue = symbol.load()
 
 /**
  * Creates a composite IR expression that evaluates these statements in order.
@@ -127,7 +127,7 @@ fun IrValueDeclaration.load(): IrGetValue = symbol.load()
  * @param type result type assigned to the composite expression.
  * @return a synthetic-offset IR composite containing these statements.
  */
-fun List<IrStatement>.createComposite(type: IrType): IrComposite = IrCompositeImpl( // @formatter:off
+public fun List<IrStatement>.createComposite(type: IrType): IrComposite = IrCompositeImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
     type = type,
@@ -142,7 +142,7 @@ fun List<IrStatement>.createComposite(type: IrType): IrComposite = IrCompositeIm
  * @param origin optional Kotlin IR origin identifying how the block was produced.
  * @return a synthetic-offset IR block containing these statements.
  */
-fun List<IrStatement>.createBlock(type: IrType, origin: IrStatementOrigin? = null): IrBlock = IrBlockImpl( // @formatter:off
+public fun List<IrStatement>.createBlock(type: IrType, origin: IrStatementOrigin? = null): IrBlock = IrBlockImpl( // @formatter:off
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
     type = type,
@@ -157,7 +157,7 @@ fun List<IrStatement>.createBlock(type: IrType, origin: IrStatementOrigin? = nul
  * @param type element type of the vararg.
  * @return a synthetic-offset vararg whose type is `Array<type>`.
  */
-fun List<IrVarargElement>.createVararg(irBuiltIns: IrBuiltIns, type: IrType): IrVararg = IrVarargImpl(
+public fun List<IrVarargElement>.createVararg(irBuiltIns: IrBuiltIns, type: IrType): IrVararg = IrVarargImpl(
     startOffset = SYNTHETIC_OFFSET,
     endOffset = SYNTHETIC_OFFSET,
     type = irBuiltIns.arrayClass.typeWith(type),
@@ -175,7 +175,7 @@ fun List<IrVarargElement>.createVararg(irBuiltIns: IrBuiltIns, type: IrType): Ir
  * @return a constructor call with the supplied arguments.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrConstructorSymbol.new(
+public fun IrConstructorSymbol.new(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
     typeArguments: Map<String, IrType> = emptyMap(),
@@ -200,7 +200,7 @@ fun IrConstructorSymbol.new(
  * @param valueArguments mappings from constructor value-parameter names to argument expressions.
  * @return a constructor call with the supplied arguments.
  */
-fun IrConstructor.new(
+public fun IrConstructor.new(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
     typeArguments: Map<String, IrType> = emptyMap(),
@@ -213,7 +213,7 @@ fun IrConstructor.new(
  * @return a map from annotation parameter names to their unwrapped IR constant values.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrConstructorCall.getAnnotationValues(): Map<String, Any?> {
+public fun IrConstructorCall.getAnnotationValues(): Map<String, Any?> {
     val constructor = symbol.owner
     val parameters = constructor.parameters.filter { it.kind == IrParameterKind.Regular }
     if (parameters.isEmpty()) return emptyMap()
@@ -238,7 +238,7 @@ fun IrConstructorCall.getAnnotationValues(): Map<String, Any?> {
  * @throws IllegalArgumentException if this class has no entry named [name].
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrClassSymbol.getEnumConstant(name: String): IrEnumEntrySymbol {
+public fun IrClassSymbol.getEnumConstant(name: String): IrEnumEntrySymbol {
     return requireNotNull(
         defaultType.classOrFail.owner.declarations.filterIsInstance<IrEnumEntry>()
             .find { it.name.asString() == name }) { "No entry $name in $this" }.symbol
@@ -252,7 +252,7 @@ fun IrClassSymbol.getEnumConstant(name: String): IrEnumEntrySymbol {
  * @param mapper maps the receiver to the requested enum-entry name.
  * @return a synthetic-offset IR enum-value expression.
  */
-inline fun <T> T.getEnumValue(
+public inline fun <T> T.getEnumValue(
     type: IrClassSymbol, mapper: T.() -> String
 ): IrGetEnumValueImpl = IrGetEnumValueImpl(
     startOffset = SYNTHETIC_OFFSET,

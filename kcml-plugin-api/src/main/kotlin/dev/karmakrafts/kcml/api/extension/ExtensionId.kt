@@ -25,4 +25,4 @@ package dev.karmakrafts.kcml.api.extension
  */
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.CLASS)
-annotation class ExtensionId(val id: String)
+public annotation class ExtensionId(public val id: String)

@@ -33,37 +33,37 @@ package dev.karmakrafts.kcml.api.mixin
 @ComponentMarker
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION)
-annotation class Inject( // @formatter:off
-    val name: String,
-    val descriptor: String = ANY_DESCRIPTOR,
-    val slice: Slice = Slice(),
-    val target: Target = Target(),
-    val order: Order = Order.AFTER
+public annotation class Inject( // @formatter:off
+    public val name: String,
+    public val descriptor: String = ANY_DESCRIPTOR,
+    public val slice: Slice = Slice(),
+    public val target: Target = Target(),
+    public val order: Order = Order.AFTER
 ) { // @formatter:on
-    companion object {
-        const val ANY_DESCRIPTOR: String = ""
-        const val ANY_NAME: String = ""
-        const val ANY_OWNER: String = ""
-        const val ANY_OPCODE: Int = -1
-        const val ANY_INDEX: Int = -1
+    public companion object {
+        public const val ANY_DESCRIPTOR: String = ""
+        public const val ANY_NAME: String = ""
+        public const val ANY_OWNER: String = ""
+        public const val ANY_OPCODE: Int = -1
+        public const val ANY_INDEX: Int = -1
     }
 
-    enum class Order {
+    public enum class Order {
         BEFORE, AFTER
     }
 
-    annotation class Target(
-        val owner: String = ANY_OWNER,
-        val name: String = ANY_NAME,
-        val descriptor: String = ANY_DESCRIPTOR,
-        val index: Int = ANY_INDEX,
-        val opcode: Int = ANY_OPCODE,
-        val ordinal: Int = 0,
-        val offset: Int = 0
+    public annotation class Target(
+        public val owner: String = ANY_OWNER,
+        public val name: String = ANY_NAME,
+        public val descriptor: String = ANY_DESCRIPTOR,
+        public val index: Int = ANY_INDEX,
+        public val opcode: Int = ANY_OPCODE,
+        public val ordinal: Int = 0,
+        public val offset: Int = 0
     )
 
-    annotation class Slice( // @formatter:off
-        val start: Target = Target(),
-        val end: Target = Target()
+    public annotation class Slice( // @formatter:off
+        public val start: Target = Target(),
+        public val end: Target = Target()
     ) // @formatter:on
 }

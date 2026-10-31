@@ -22,10 +22,10 @@ package dev.karmakrafts.kcml.api.extension
  * Implementations are registered by KCML and dispatched to their FIR, IR, or native-intrinsics
  * adapter according to their specialized extension type.
  */
-interface Extension {
+public interface Extension {
     /** Stable identifier used to resolve this extension and its dependencies. */
-    val id: String
+    public val id: String
 
     /** Dependencies that KCML resolves before dispatching this extension. */
-    val dependencies: List<ExtensionDependency>
+    public val dependencies: List<ExtensionDependency>
 }

@@ -44,12 +44,12 @@ import org.jetbrains.kotlin.ir.util.dump
  * @throws IllegalStateException if an argument name does not resolve on the target function or constructor class.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrFunctionAccessExpression.putArguments( // @formatter:off
+public fun IrFunctionAccessExpression.putArguments( // @formatter:off
     typeArguments: Map<String, IrType>,
     valueArguments: Map<String, IrExpression>
 ) { // @formatter:on
     val function = symbol.owner
-    for ((name, type) in typeArguments) {
+    for ([name, type] in typeArguments) {
         var parameter = function.typeParameters.find { it.name.asString() == name }
         // For constructor calls, alternatively attempt to resolve type parameter from class
         if (parameter == null && this is IrConstructorCall) {
@@ -58,7 +58,7 @@ fun IrFunctionAccessExpression.putArguments( // @formatter:off
         check(parameter != null) { "No type parameter named $name found in ${function.dump()}" }
         this.typeArguments[parameter.index] = type
     }
-    for ((name, value) in valueArguments) {
+    for ([name, value] in valueArguments) {
         val parameter = function.parameters.find { it.name.asString() == name }
         check(parameter != null) { "No value parameter named $name found in ${function.dump()}" }
         arguments[parameter] = value
@@ -80,7 +80,7 @@ fun IrFunctionAccessExpression.putArguments( // @formatter:off
  * @return a call expression targeting this function symbol.
  */
 @OptIn(UnsafeDuringIrConstructionAPI::class)
-fun IrSimpleFunctionSymbol.call(
+public fun IrSimpleFunctionSymbol.call(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
     typeArguments: Map<String, IrType> = emptyMap(),
@@ -118,7 +118,7 @@ fun IrSimpleFunctionSymbol.call(
  * @param extensionReceiver receiver expression for an extension function call, if required.
  * @return a call expression targeting this function.
  */
-fun IrSimpleFunction.call(
+public fun IrSimpleFunction.call(
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET,
     typeArguments: Map<String, IrType> = emptyMap(),
@@ -135,7 +135,7 @@ fun IrSimpleFunction.call(
  * @param endOffset source offset for the generated expression, or [SYNTHETIC_OFFSET].
  * @return an IR function expression with the lambda statement origin.
  */
-fun IrSimpleFunction.createExpression( // @formatter:off
+public fun IrSimpleFunction.createExpression( // @formatter:off
     irBuiltIns: IrBuiltIns,
     startOffset: Int = SYNTHETIC_OFFSET,
     endOffset: Int = SYNTHETIC_OFFSET

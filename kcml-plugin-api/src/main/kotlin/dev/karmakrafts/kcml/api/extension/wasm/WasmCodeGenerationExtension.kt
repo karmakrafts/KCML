@@ -27,9 +27,9 @@ import org.jetbrains.kotlin.ir.IrElement
  * and expressions, including nested expressions. Children are intercepted as they are generated,
  * not in a separate traversal before their parent is generated.
  */
-interface WasmCodeGenerationExtension : LateWasmExtension {
+public interface WasmCodeGenerationExtension : LateWasmExtension {
     /** Selects elements to transform or replace using [process]. */
-    fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean = true
+    public fun shouldProcess(element: IrElement, backend: LateWasmBackend): Boolean = true
 
     /**
      * Transforms [element] in place or replaces its code generation.
@@ -43,5 +43,5 @@ interface WasmCodeGenerationExtension : LateWasmExtension {
      * context and expression generation require an active function body. Generating the same
      * element recursively will intercept it again.
      */
-    fun WasmCodeGenerator.process(element: IrElement): Boolean
+    public fun WasmCodeGenerator.process(element: IrElement): Boolean
 }

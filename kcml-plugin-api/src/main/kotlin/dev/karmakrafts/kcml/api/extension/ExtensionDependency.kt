@@ -24,13 +24,13 @@ import dev.karmakrafts.kcml.api.util.Order
  * KCML resolves these declarations before dispatching compiler extension callbacks so extensions
  * can run in a compatible order.
  */
-interface ExtensionDependency {
+public interface ExtensionDependency {
     /** Identifier of the extension on which the declaring extension depends. */
-    val id: String
+    public val id: String
 
     /** Whether KCML must reject the declaring extension when this dependency is unavailable. */
-    val required: Boolean
+    public val required: Boolean
 
     /** Relative order in which the dependency must run with respect to the declaring extension. */
-    val order: Order
+    public val order: Order
 }

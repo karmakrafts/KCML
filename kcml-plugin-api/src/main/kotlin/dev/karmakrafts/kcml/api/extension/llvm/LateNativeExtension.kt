@@ -25,7 +25,7 @@ import dev.karmakrafts.kcml.api.extension.Extension
  * Implementations can inspect the initialized native backend state or register behavior that is
  * required while Kotlin/Native lowers IR declarations to LLVM.
  */
-interface LateNativeExtension : Extension {
+public interface LateNativeExtension : Extension {
     /**
      * Initializes this extension for a Kotlin/Native backend invocation.
      *
@@ -33,5 +33,5 @@ interface LateNativeExtension : Extension {
      *
      * @param backend KCML context exposing the active native compilation and LLVM state.
      */
-    fun init(backend: LateNativeBackend) = Unit
+    public fun init(backend: LateNativeBackend): Unit = Unit
 }
