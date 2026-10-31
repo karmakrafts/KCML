@@ -16,13 +16,16 @@
 
 package dev.karmakrafts.kcml.api.mixin;
 
+import org.jetbrains.annotations.ApiStatus.Internal;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A dependency-less runtime bridge to pass values into the agent directly.
- * Can be used for emplacing Mixin constant table values for example.
+ * Can be used for emplacing Mixin constant table values and accessing the current {@link MixinSource}.
  */
+@MixinBridgeABI(1) // Use the ABI to detect unusable JVM instances with an older version on the classpath
 public final class MixinBridge {
     public static final MixinBridge INSTANCE = new MixinBridge();
     private final AtomicReference<MixinSource> mixinSource = new AtomicReference<>(null);
@@ -32,16 +35,18 @@ public final class MixinBridge {
     // @formatter:off
     private MixinBridge() {}
 
+    @Internal
+    public ConcurrentHashMap<MixinSource, ConcurrentHashMap<String, Object>> getConstantTable() {
+        return constantTable;
+    }
+
     public MixinSource getMixinSource() {
         return mixinSource.get();
     }
 
+    @Internal
     public void setMixinSource(final MixinSource mixinSource) {
         this.mixinSource.set(mixinSource);
-    }
-
-    public ConcurrentHashMap<MixinSource, ConcurrentHashMap<String, Object>> getConstantTable() {
-        return constantTable;
     }
 
     public Object getConstant(final String pluginId, final String name) {

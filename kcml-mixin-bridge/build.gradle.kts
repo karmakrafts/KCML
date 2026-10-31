@@ -15,19 +15,10 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
-import dev.karmakrafts.conventions.dokka.configureDokka
-import dev.karmakrafts.conventions.dokka.withKotlin
-import dev.karmakrafts.conventions.setProjectInfo
 
 plugins {
     java
-    alias(libs.plugins.dokka)
     signing
-    `maven-publish`
-}
-
-configureDokka {
-    withKotlin()
 }
 
 configureJava(rootProject.libs.versions.java)
@@ -36,15 +27,6 @@ java {
     withSourcesJar()
 }
 
-publishing {
-    setProjectInfo(
-        name = "KCML Mixin Bridge",
-        description = "Mixin bridge API for the Kotlin Compiler Meta Loader",
-        url = "https://git.karmakrafts.dev/kk/kcml"
-    )
-    publications {
-        create<MavenPublication>("bridge") {
-            from(components["java"])
-        }
-    }
+dependencies {
+    implementation(libs.annotations)
 }

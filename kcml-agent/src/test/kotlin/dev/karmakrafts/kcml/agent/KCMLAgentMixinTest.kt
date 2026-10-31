@@ -84,6 +84,10 @@ class KCMLAgentMixinTest {
         }
     }
 
+    private fun Path.createBridge(): Path = resolve("bridge.jar").also { path ->
+        Files.copy(Path.of(checkNotNull(System.getProperty("kcml.bridge.jar"))), path)
+    }
+
     private fun withDirectory(test: (Path) -> Unit) {
         val directory = Files.createTempDirectory(Path.of("build"), "agent-mixin-test-")
         try {
@@ -162,7 +166,7 @@ class KCMLAgentMixinTest {
         val indirect = directory.createJar(
             "indirect.jar", createMixin("example/IndirectMixin", "example/IndirectTarget", false)
         )
-        val transformer = startAgent(loader, directory.createJar("bridge.jar"), listOf(direct, indirect))
+        val transformer = startAgent(loader, directory.createBridge(), listOf(direct, indirect))
 
         for (target in listOf("example/LoaderTarget", "example/DirectTarget", "example/IndirectTarget")) {
             assertMixinApplied(transformer, target)
@@ -172,7 +176,7 @@ class KCMLAgentMixinTest {
     @Test
     fun `agent retains loader mixins without plugins or with unsupported plugin paths`() = withDirectory { directory ->
         val loader = directory.createJar("loader.jar", createMixin("example/LoaderMixin", "example/LoaderTarget", true))
-        val bridge = directory.createJar("bridge.jar")
+        val bridge = directory.createBridge()
         val ordinary = directory.createJar("ordinary.jar", createClass("example/Ordinary"))
 
         for (plugins in listOf(emptyList(), listOf(directory, directory.resolve("missing.jar"), ordinary))) {
@@ -188,7 +192,7 @@ class KCMLAgentMixinTest {
         )
         val retransformed = ArrayList<Class<*>>()
         startAgent(
-            loader, directory.createJar("bridge.jar"), emptyList(), arrayOf(String::class.java, target), retransformed
+            loader, directory.createBridge(), emptyList(), arrayOf(String::class.java, target), retransformed
         )
         assertEquals(listOf<Class<*>>(target), retransformed)
     }

@@ -19,20 +19,19 @@ package dev.karmakrafts.kcml.hooks
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.cli.common.CLICompiler
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
-import kotlin.concurrent.atomics.AtomicReference
 
 @Suppress("UNUSED")
 @KCMLHookApi
 object CommonHooks {
-    private val _compilerArguments: AtomicReference<CommonCompilerArguments?> = AtomicReference(null)
+    private val _compilerArguments: InheritableThreadLocal<CommonCompilerArguments> = InheritableThreadLocal()
     val compilerArguments: CommonCompilerArguments
-        get() = requireNotNull(_compilerArguments.load()) {
+        get() = requireNotNull(_compilerArguments.get()) {
             "Compiler arguments have not been initialized for KCML"
         }
 
     @JvmStatic
     fun <A : CommonCompilerArguments> onExecImpl(compiler: CLICompiler<A>, arguments: A) {
         PluginLoaderImpl.reset()
-        _compilerArguments.store(arguments)
+        _compilerArguments.set(arguments)
     }
 }

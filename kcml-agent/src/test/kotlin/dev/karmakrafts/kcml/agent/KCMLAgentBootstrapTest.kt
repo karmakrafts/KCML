@@ -21,6 +21,11 @@ import dev.karmakrafts.kcml.agent.proto.S2AHandshake
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketHandler
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketReader
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketWriter
+import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.mixin.MixinBridgeABI
+import org.objectweb.asm.AnnotationVisitor
+import org.objectweb.asm.ClassReader
+import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.io.File
@@ -49,6 +54,11 @@ class KCMLAgentBootstrapTest {
     }
 
     @Test
+    fun `reuses instrumented compiler across invocations without compiler plugins`() {
+        assertAgentStartup(false, compile = true)
+    }
+
+    @Test
     fun `reports incompatible bridge retained by previous build`() {
         assertAgentStartup(true)
     }
@@ -58,7 +68,36 @@ class KCMLAgentBootstrapTest {
         assertAgentStartup(true, false)
     }
 
-    private fun assertAgentStartup(legacyBridge: Boolean, replaceBridge: Boolean = true) {
+    @Test
+    fun `rejects older ABI even when bridge methods match`() {
+        assertAgentStartup(true, abi = currentABI - 1)
+    }
+
+    @Test
+    fun `rejects newer ABI even when bridge methods match`() {
+        assertAgentStartup(true, false, currentABI + 1)
+    }
+
+    @Test
+    fun `reuses bridge with matching ABI after jar replacement`() {
+        assertAgentStartup(true, abi = currentABI, compatible = true)
+    }
+
+    @Test
+    fun `reuses bridge with matching ABI from a different path`() {
+        assertAgentStartup(true, false, currentABI, true)
+    }
+
+    private val currentABI: Int
+        get() = MixinBridge::class.java.getAnnotation(MixinBridgeABI::class.java).value
+
+    private fun assertAgentStartup(
+        preloadedBridge: Boolean,
+        replaceBridge: Boolean = true,
+        abi: Int? = null,
+        compatible: Boolean = !preloadedBridge,
+        compile: Boolean = false
+    ) {
         val directory = Files.createTempDirectory(Path.of("build"), "agent-startup-test-").toAbsolutePath()
         try {
             val harness = directory.resolve("harness.jar")
@@ -75,30 +114,40 @@ class KCMLAgentBootstrapTest {
             }
             val loader = directory.resolve("loader.jar")
             JarOutputStream(Files.newOutputStream(loader)).use { }
+            val runtimeLoader = if (compile) checkNotNull(System.getProperty("kcml.loader.jar")) else loader.toString()
             val currentBridge = checkNotNull(System.getProperty("kcml.bridge.jar"))
-            val bridge = if (legacyBridge) {
-                val writer = ClassWriter(0)
-                writer.visit(
-                    Opcodes.V17,
-                    Opcodes.ACC_PUBLIC,
-                    "dev/karmakrafts/kcml/api/mixin/MixinBridge",
-                    null,
-                    "java/lang/Object",
-                    null
-                )
-                writer.visitField(
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
-                    "INSTANCE",
-                    "Ldev/karmakrafts/kcml/api/mixin/MixinBridge;",
-                    null,
-                    null
-                ).visitEnd()
-                writer.visitEnd()
+            val bridge = if (preloadedBridge) {
                 directory.resolve("bridge.jar").also { path ->
-                    JarOutputStream(Files.newOutputStream(path)).use { output ->
-                        output.putNextEntry(JarEntry("dev/karmakrafts/kcml/api/mixin/MixinBridge.class"))
-                        output.write(writer.toByteArray())
-                        output.closeEntry()
+                    ZipFile(currentBridge).use { archive ->
+                        JarOutputStream(Files.newOutputStream(path)).use { output ->
+                            for (entry in archive.entries()) {
+                                output.putNextEntry(JarEntry(entry.name))
+                                archive.getInputStream(entry).use { input ->
+                                    if (entry.name == "dev/karmakrafts/kcml/api/mixin/MixinBridge.class") {
+                                        val writer = ClassWriter(0)
+                                        ClassReader(input).accept(object : ClassVisitor(Opcodes.ASM9, writer) {
+                                            override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
+                                                if (descriptor == "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;") return null
+                                                return super.visitAnnotation(descriptor, visible)
+                                            }
+
+                                            override fun visitEnd() {
+                                                if (abi != null) {
+                                                    super.visitAnnotation("Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;", true).apply {
+                                                        visit("value", abi)
+                                                        visitEnd()
+                                                    }
+                                                }
+                                                super.visitEnd()
+                                            }
+                                        }, 0)
+                                        output.write(writer.toByteArray())
+                                    }
+                                    else input.copyTo(output)
+                                }
+                                output.closeEntry()
+                            }
+                        }
                     }
                 }.toString()
             }
@@ -114,7 +163,7 @@ class KCMLAgentBootstrapTest {
                             writer.write(
                                 S2AHandshake.serializer(), S2AHandshake(
                                     request.signature,
-                                    loader.toString(),
+                                    runtimeLoader,
                                     if (replaceBridge) bridge else currentBridge,
                                     emptyList()
                                 )
@@ -125,17 +174,20 @@ class KCMLAgentBootstrapTest {
                 }
                 val agent = Path.of(checkNotNull(System.getProperty("kcml.agent.jar")))
                 val log = directory.resolve("startup.log")
+                val processClasspath = mutableListOf(harness.toString(), agent.toString())
+                if (compile) processClasspath += listOf(runtimeLoader, checkNotNull(System.getProperty("kcml.test.classpath")))
                 val command = mutableListOf(
                     Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                    "--add-opens=java.base/java.net=ALL-UNNAMED",
                     "-javaagent:$harness",
                     "-cp",
-                    "$harness${File.pathSeparator}$agent",
+                    processClasspath.joinToString(File.pathSeparator),
                     AgentStartupProcess::class.java.name,
                     agent.toUri().toString(),
                     server.localPort.toString()
                 )
-                if (legacyBridge) command += listOf(bridge, currentBridge)
-                if (!replaceBridge) command += "separate"
+                if (compile) command += "compile"
+                if (preloadedBridge) command += listOf(bridge, currentBridge, replaceBridge.toString(), compatible.toString())
                 val process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(process.waitFor(30, TimeUnit.SECONDS), "Agent startup timed out")

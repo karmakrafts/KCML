@@ -76,6 +76,9 @@ tasks {
     shadowJar {
         configurations = setOf(shadeImplementation, shadeApi)
         archiveClassifier = ""
+        filesMatching("META-INF/*.kotlin_module") {
+            duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        }
         val relocationPrefix = "${rootProject.group}.internal"
         relocate("io.github.z4kn4fein.semver", "$relocationPrefix.io.github.z4kn4fein.semver")
         relocate("io.github.alexandrepiveteau.graphs", "$relocationPrefix.io.github.alexandrepiveteau.graphs")

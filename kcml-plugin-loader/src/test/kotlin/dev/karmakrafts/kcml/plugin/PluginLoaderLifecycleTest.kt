@@ -31,11 +31,14 @@ import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotSame
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 @Plugin("lifecycle_test_plugin")
@@ -50,6 +53,52 @@ private class LifecycleTestExtension : AbstractExtension(), LateNativeExtension
 
 @OptIn(KCMLHookApi::class, CompilerConfiguration.Internals::class)
 class PluginLoaderLifecycleTest {
+    @Test
+    fun `concurrent compiler invocations do not reset each others plugins`() {
+        val compiler = K2JVMCompiler()
+        val arguments = K2JVMCompilerArguments()
+        CommonHooks.onExecImpl(compiler, arguments)
+        PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), emptyList())
+        val dispatcher = PluginLoaderImpl.extensionDispatcher
+        try {
+            CompletableFuture.runAsync {
+                CommonHooks.onExecImpl(K2JVMCompiler(), K2JVMCompilerArguments())
+                PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), emptyList())
+                assertNotSame(dispatcher, PluginLoaderImpl.extensionDispatcher)
+            }.get(10, TimeUnit.SECONDS)
+            assertSame(dispatcher, PluginLoaderImpl.extensionDispatcher)
+            assertSame(arguments, CommonHooks.compilerArguments)
+        }
+        finally {
+            CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
+        }
+    }
+
+    @Test
+    fun `code generation workers inherit the current compilation plugins`() {
+        val compiler = K2JVMCompiler()
+        CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
+        PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), emptyList())
+        val dispatcher = PluginLoaderImpl.extensionDispatcher
+        val result = CompletableFuture<Any>()
+        val worker = Thread {
+            try {
+                result.complete(PluginLoaderImpl.extensionDispatcher)
+            }
+            catch (error: Throwable) {
+                result.completeExceptionally(error)
+            }
+        }
+        try {
+            worker.start()
+            assertSame(dispatcher, result.get(10, TimeUnit.SECONDS))
+        }
+        finally {
+            worker.join(10_000)
+            CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
+        }
+    }
+
     private fun writePluginJar(path: Path, generation: Int) {
         val name = "dev/karmakrafts/kcml/test/ReloadablePlugin"
         val writer = ClassWriter(0)

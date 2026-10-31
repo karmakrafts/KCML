@@ -58,6 +58,7 @@ tasks {
         systemProperty("kcml.loader.jar", loaderJar.get().asFile.absolutePath)
         systemProperty("kcml.bridge.jar", bridgeJar.get().asFile.absolutePath)
         useJUnitPlatform()
+        systemProperty("kcml.test.classpath", classpath.asPath)
     }
     jar {
         archiveClassifier = "slim"

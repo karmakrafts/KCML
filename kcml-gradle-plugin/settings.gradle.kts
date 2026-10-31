@@ -57,5 +57,6 @@ nmcpSettings {
 }
 
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+rootProject.name = "kcml-gradle-plugin"
 include(":kcml-agent-protocol")
 project(":kcml-agent-protocol").projectDir = file("../kcml-agent-protocol")

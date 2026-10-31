@@ -38,12 +38,12 @@ internal class ExtensionDispatcher( // @formatter:off
     private val loader: PluginLoader,
     private val registries: Map<String, ExtensionRegistry>
 ) { // @formatter:on
-    private val extensions: List<Pair<String, Extension>> = registries.flatMap { (pluginId, registry) ->
+    private val extensions: List<Pair<String, Extension>> = registries.flatMap { [pluginId, registry] ->
         registry.allSorted().map { extension -> pluginId to extension }
     }
 
     private inline fun <reified E : Extension> gather(): Lazy<List<Pair<String, E>>> = lazy {
-        registries.flatMap { (pluginId, registry) ->
+        registries.flatMap { [pluginId, registry] ->
             registry.allSorted().filterIsInstance<E>().map { extension -> pluginId to extension }
         }
     }
@@ -64,14 +64,14 @@ internal class ExtensionDispatcher( // @formatter:off
         FirExtensionRegistrar.registerExtension(object : FirExtensionRegistrar() {
             override fun ExtensionRegistrarContext.configurePlugin() {
                 +FirDeclarationGenerationExtension.Factory { session ->
-                    val firExtensions = extensions.filter { (_, extension) -> extension is FirExtension }
-                        .map { (pluginId, extension) -> pluginId to extension as FirExtension }
+                    val firExtensions = extensions.filter { [_, extension] -> extension is FirExtension }
+                        .map { [pluginId, extension] -> pluginId to extension as FirExtension }
                     FirExtensionAdapter(loader, config, loggerFactory, session, firExtensions)
                 }
             }
         })
-        val irExtensions = extensions.filter { (_, extension) -> extension is IrExtension }
-            .map { (pluginId, extension) -> pluginId to extension as IrExtension }
+        val irExtensions = extensions.filter { [_, extension] -> extension is IrExtension }
+            .map { [pluginId, extension] -> pluginId to extension as IrExtension }
         IrGenerationExtension.registerExtension(
             IrExtensionAdapter(loader, config, loggerFactory, irExtensions)
         )

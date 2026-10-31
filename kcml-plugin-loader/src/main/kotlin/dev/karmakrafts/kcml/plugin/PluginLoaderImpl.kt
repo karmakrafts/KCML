@@ -54,35 +54,65 @@ import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
 object PluginLoaderImpl : PluginLoader {
-    private lateinit var loggerFactory: MessageCollectorLoggerFactory
-    private val plugins: HashMap<String, CompilerPlugin> = HashMap()
-    private val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
-    private val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
-    private var arePluginsLoaded: Boolean = false
-    private var pluginClassLoader: URLClassLoader? = null
+    private class CompilationState {
+        val owner: Thread = Thread.currentThread()
+        lateinit var loggerFactory: MessageCollectorLoggerFactory
+        val plugins: HashMap<String, CompilerPlugin> = HashMap()
+        val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
+        val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
+        var arePluginsLoaded: Boolean = false
+        var pluginClassLoader: URLClassLoader? = null
+        val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
+        var dispatcher: ExtensionDispatcher? = null
+        val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
+        lateinit var logger: Logger
+        var loadingPluginId: String? = null
+    }
 
-    private val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
-    private var dispatcher: ExtensionDispatcher? = null
+    // Compiler invocations are isolated, while code generation workers share their parent's state.
+    private val compilationState: InheritableThreadLocal<CompilationState> =
+        object : InheritableThreadLocal<CompilationState>() {
+            override fun initialValue(): CompilationState = CompilationState()
+        }
+    private var loggerFactory: MessageCollectorLoggerFactory
+        get() = compilationState.get().loggerFactory
+        set(value) { compilationState.get().loggerFactory = value }
+    private val plugins: HashMap<String, CompilerPlugin>
+        get() = compilationState.get().plugins
+    private val metadata: HashMap<String, SerializablePluginMetadata>
+        get() = compilationState.get().metadata
+    private val sortedPlugins: LinkedHashMap<String, CompilerPlugin>
+        get() = compilationState.get().sortedPlugins
+    private var arePluginsLoaded: Boolean
+        get() = compilationState.get().arePluginsLoaded
+        set(value) { compilationState.get().arePluginsLoaded = value }
+    private var pluginClassLoader: URLClassLoader?
+        get() = compilationState.get().pluginClassLoader
+        set(value) { compilationState.get().pluginClassLoader = value }
+    private val extensionRegistries: HashMap<String, DefaultExtensionRegistry>
+        get() = compilationState.get().extensionRegistries
+    private var dispatcher: ExtensionDispatcher?
+        get() = compilationState.get().dispatcher
+        set(value) { compilationState.get().dispatcher = value }
     internal val extensionDispatcher: ExtensionDispatcher
         get() = checkNotNull(dispatcher) { "KCML plugins have not been loaded" }
 
-    private val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
+    private val ipms: ConcurrentHashMap<String, IPMImpl>
+        get() = compilationState.get().ipms
 
-    override lateinit var logger: Logger
-    override var loadingPluginId: String? = null
+    override var logger: Logger
+        get() = compilationState.get().logger
+        set(value) { compilationState.get().logger = value }
+    override var loadingPluginId: String?
+        get() = compilationState.get().loadingPluginId
+        set(value) { compilationState.get().loadingPluginId = value }
 
     @Synchronized
     internal fun reset() {
-        pluginClassLoader?.close()
-        pluginClassLoader = null
-        plugins.clear()
-        metadata.clear()
-        sortedPlugins.clear()
-        extensionRegistries.clear()
-        ipms.clear()
-        dispatcher = null
-        loadingPluginId = null
-        arePluginsLoaded = false
+        val previous = compilationState.get()
+        // A nested compiler invocation must not close its parent's plugin class loader.
+        if (previous.owner === Thread.currentThread()) previous.pluginClassLoader?.close()
+        compilationState.set(CompilationState())
     }
 
     private fun getOrCreateIpm(pluginId: String): IPM = ipms.getOrPut(pluginId) {
