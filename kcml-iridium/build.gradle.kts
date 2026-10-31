@@ -40,6 +40,12 @@ kotlin {
 dependencies {
     api(projects.kcmlPluginApi)
     api(libs.iridium)
+
+    testImplementation(libs.kotlin.test)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 publishing {
