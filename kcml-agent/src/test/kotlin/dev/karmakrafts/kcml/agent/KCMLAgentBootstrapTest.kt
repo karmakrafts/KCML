@@ -126,14 +126,20 @@ class KCMLAgentBootstrapTest {
                                     if (entry.name == "dev/karmakrafts/kcml/api/mixin/MixinBridge.class") {
                                         val writer = ClassWriter(0)
                                         ClassReader(input).accept(object : ClassVisitor(Opcodes.ASM9, writer) {
-                                            override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
+                                            override fun visitAnnotation(
+                                                descriptor: String,
+                                                visible: Boolean
+                                            ): AnnotationVisitor? {
                                                 if (descriptor == "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;") return null
                                                 return super.visitAnnotation(descriptor, visible)
                                             }
 
                                             override fun visitEnd() {
                                                 if (abi != null) {
-                                                    super.visitAnnotation("Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;", true).apply {
+                                                    super.visitAnnotation(
+                                                        "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;",
+                                                        true
+                                                    ).apply {
                                                         visit("value", abi)
                                                         visitEnd()
                                                     }
@@ -175,7 +181,10 @@ class KCMLAgentBootstrapTest {
                 val agent = Path.of(checkNotNull(System.getProperty("kcml.agent.jar")))
                 val log = directory.resolve("startup.log")
                 val processClasspath = mutableListOf(harness.toString(), agent.toString())
-                if (compile) processClasspath += listOf(runtimeLoader, checkNotNull(System.getProperty("kcml.test.classpath")))
+                if (compile) processClasspath += listOf(
+                    runtimeLoader,
+                    checkNotNull(System.getProperty("kcml.test.classpath"))
+                )
                 val command = mutableListOf(
                     Path.of(System.getProperty("java.home"), "bin", "java").toString(),
                     "--add-opens=java.base/java.net=ALL-UNNAMED",
@@ -187,7 +196,12 @@ class KCMLAgentBootstrapTest {
                     server.localPort.toString()
                 )
                 if (compile) command += "compile"
-                if (preloadedBridge) command += listOf(bridge, currentBridge, replaceBridge.toString(), compatible.toString())
+                if (preloadedBridge) command += listOf(
+                    bridge,
+                    currentBridge,
+                    replaceBridge.toString(),
+                    compatible.toString()
+                )
                 val process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(process.waitFor(30, TimeUnit.SECONDS), "Agent startup timed out")

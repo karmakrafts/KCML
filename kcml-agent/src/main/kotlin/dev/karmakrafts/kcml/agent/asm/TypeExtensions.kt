@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.agent.asm
 import org.objectweb.asm.Type
 
 internal inline val Type.isMethodType: Boolean
-    get() = '(' in descriptor
+    get() = sort == Type.METHOD
 
 internal inline val Type.isObjectType: Boolean
     get() = !isMethodType

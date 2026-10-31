@@ -19,6 +19,13 @@ package dev.karmakrafts.kcml.agent.asm
 import org.objectweb.asm.tree.AbstractInsnNode
 import org.objectweb.asm.tree.InsnList
 
+internal val AbstractInsnNode.previousInstruction: AbstractInsnNode?
+    get() {
+        var instruction = previous
+        while (instruction != null && instruction.opcode == -1) instruction = instruction.previous
+        return instruction
+    }
+
 internal fun AbstractInsnNode.shift(list: InsnList, offset: Int): AbstractInsnNode? {
     val index = list.indexOf(this)
     if (index == -1) return null

@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.agent.mixin.component
 
 import dev.karmakrafts.kcml.agent.asm.Types
+import dev.karmakrafts.kcml.agent.asm.previousInstruction
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
@@ -29,14 +29,14 @@ import org.objectweb.asm.tree.MethodInsnNode
 internal class ConstantTableComponent : AbstractMixinComponent() {
     companion object {
         private val getterDescriptors: Map<String, String> = mapOf(
-            "getString" to Type.getMethodDescriptor(Types.string, Types.string),
-            "getByte" to Type.getMethodDescriptor(Type.BYTE_TYPE, Types.string),
-            "getShort" to Type.getMethodDescriptor(Type.SHORT_TYPE, Types.string),
-            "getInt" to Type.getMethodDescriptor(Type.INT_TYPE, Types.string),
-            "getLong" to Type.getMethodDescriptor(Type.LONG_TYPE, Types.string),
-            "getFloat" to Type.getMethodDescriptor(Type.FLOAT_TYPE, Types.string),
-            "getDouble" to Type.getMethodDescriptor(Type.DOUBLE_TYPE, Types.string),
-            "getBoolean" to Type.getMethodDescriptor(Type.BOOLEAN_TYPE, Types.string)
+            "getString" to Types.Mixin.getStringConstant.descriptor,
+            "getByte" to Types.Mixin.getByteConstant.descriptor,
+            "getShort" to Types.Mixin.getShortConstant.descriptor,
+            "getInt" to Types.Mixin.getIntConstant.descriptor,
+            "getLong" to Types.Mixin.getLongConstant.descriptor,
+            "getFloat" to Types.Mixin.getFloatConstant.descriptor,
+            "getDouble" to Types.Mixin.getDoubleConstant.descriptor,
+            "getBoolean" to Types.Mixin.getBooleanConstant.descriptor
         )
     }
 
@@ -46,8 +46,7 @@ internal class ConstantTableComponent : AbstractMixinComponent() {
         opcode == Opcodes.INVOKESTATIC && owner == Types.Mixin.constantTable.internalName && getterDescriptors[name] == desc
 
     private fun MethodInsnNode.findConstantArgument(): LdcInsnNode {
-        var instruction = previous
-        while (instruction != null && instruction.opcode == -1) instruction = instruction.previous
+        val instruction = previousInstruction
         return checkNotNull(instruction as? LdcInsnNode) {
             "ConstantTable.$name() requires a literal string constant name"
         }.also { constant ->

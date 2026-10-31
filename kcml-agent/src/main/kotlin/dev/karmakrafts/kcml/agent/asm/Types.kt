@@ -23,8 +23,11 @@ internal object Types {
     val string: Type = Type.getObjectType("java/lang/String")
     val unit: Type = Type.getObjectType("kotlin/Unit")
     val intrinsics: Type = Type.getObjectType("kotlin/jvm/internal/Intrinsics")
+    val checkNotNullParameter: Type = Type.getMethodType(Type.VOID_TYPE, any, string)
 
     object Mixin {
+        val bridge: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/MixinBridge")
+        val bridgeABI: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/MixinBridgeABI")
         val intrinsicInterface: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/IntrinsicInterface")
         val componentMarker: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ComponentMarker")
         val directMixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/DirectMixin")
@@ -35,10 +38,21 @@ internal object Types {
         val returnContext: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ReturnContext")
         val capture: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Capture")
         val constantTable: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ConstantTable")
+
+        val getThis: Type = Type.getMethodType(any)
+        val returnFromTarget: Type = Type.getMethodType(Type.VOID_TYPE, any)
+        val getStringConstant: Type = Type.getMethodType(string, string)
+        val getByteConstant: Type = Type.getMethodType(Type.BYTE_TYPE, string)
+        val getShortConstant: Type = Type.getMethodType(Type.SHORT_TYPE, string)
+        val getIntConstant: Type = Type.getMethodType(Type.INT_TYPE, string)
+        val getLongConstant: Type = Type.getMethodType(Type.LONG_TYPE, string)
+        val getFloatConstant: Type = Type.getMethodType(Type.FLOAT_TYPE, string)
+        val getDoubleConstant: Type = Type.getMethodType(Type.DOUBLE_TYPE, string)
+        val getBooleanConstant: Type = Type.getMethodType(Type.BOOLEAN_TYPE, string)
     }
 
-    fun getMethodOrFieldType(descriptor: String): Type = when {
-        '(' in descriptor -> Type.getMethodType(descriptor)
-        else -> Type.getMethodType(descriptor)
+    fun getMethodOrFieldType(descriptor: String): Type {
+        require(descriptor.isNotEmpty()) { "Type descriptor must not be empty" }
+        return Type.getType(descriptor)
     }
 }

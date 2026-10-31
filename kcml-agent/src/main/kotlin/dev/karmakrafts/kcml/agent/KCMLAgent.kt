@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.agent
 
+import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.log.Logger
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.log.RemoteLogger
@@ -52,13 +53,13 @@ object KCMLAgent {
     private fun readMixinBridgeABI(path: String): Int {
         var abi: Int? = null
         JarFile(File(path)).use { jar ->
-            val entry = checkNotNull(jar.getJarEntry("dev/karmakrafts/kcml/api/mixin/MixinBridge.class")) {
+            val entry = checkNotNull(jar.getJarEntry("${Types.Mixin.bridge.internalName}.class")) {
                 "MixinBridge class is missing from $path"
             }
             jar.getInputStream(entry).use { input ->
                 ClassReader(input).accept(object : ClassVisitor(Opcodes.ASM9) {
                     override fun visitAnnotation(descriptor: String, visible: Boolean): AnnotationVisitor? {
-                        if (!visible || descriptor != "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;") return null
+                        if (!visible || descriptor != Types.Mixin.bridgeABI.descriptor) return null
                         return object : AnnotationVisitor(Opcodes.ASM9) {
                             override fun visit(name: String, value: Any) {
                                 if (name == "value") abi = value as? Int
@@ -75,7 +76,7 @@ object KCMLAgent {
         val failure = try {
             val expectedABI = readMixinBridgeABI(path)
             val loader = KCMLAgent::class.java.classLoader
-            val bridge = Class.forName("dev.karmakrafts.kcml.api.mixin.MixinBridge", false, loader)
+            val bridge = Class.forName(Types.Mixin.bridge.className, false, loader)
             val annotation = checkNotNull(bridge.getAnnotation(MixinBridgeABI::class.java)) {
                 "Loaded MixinBridge has no @MixinBridgeABI annotation (expected ABI $expectedABI)"
             }

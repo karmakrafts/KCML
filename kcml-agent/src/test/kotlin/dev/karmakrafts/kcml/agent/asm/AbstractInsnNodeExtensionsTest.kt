@@ -16,16 +16,52 @@
 
 package dev.karmakrafts.kcml.agent.asm
 
+import org.objectweb.asm.Opcodes.F_SAME
 import org.objectweb.asm.Opcodes.ICONST_0
 import org.objectweb.asm.Opcodes.ICONST_1
 import org.objectweb.asm.Opcodes.RETURN
+import org.objectweb.asm.tree.FrameNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.InsnNode
+import org.objectweb.asm.tree.LabelNode
+import org.objectweb.asm.tree.LineNumberNode
 import kotlin.test.Test
 import kotlin.test.assertNull
 import kotlin.test.assertSame
 
 class AbstractInsnNodeExtensionsTest {
+    @Test
+    fun `finds the previous instruction across labels lines and frames`() {
+        val first = InsnNode(ICONST_0)
+        val second = InsnNode(RETURN)
+        val label = LabelNode()
+        InsnList().apply {
+            add(first)
+            add(label)
+            add(LineNumberNode(1, label))
+            add(FrameNode(F_SAME, 0, null, 0, null))
+            add(second)
+        }
+
+        assertSame(first, second.previousInstruction)
+        assertSame(first, label.previousInstruction)
+        assertNull(first.previousInstruction)
+    }
+
+    @Test
+    fun `returns null when no previous executable instruction exists`() {
+        val instruction = InsnNode(RETURN)
+        val label = LabelNode()
+        InsnList().apply {
+            add(label)
+            add(LineNumberNode(1, label))
+            add(instruction)
+        }
+
+        assertNull(instruction.previousInstruction)
+        assertNull(InsnNode(ICONST_0).previousInstruction)
+    }
+
     @Test
     fun `shifts to instructions within list bounds`() {
         val first = InsnNode(ICONST_0)

@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.agent.asm.copy
 import dev.karmakrafts.kcml.agent.asm.dottedName
 import dev.karmakrafts.kcml.agent.asm.findInvisibleParameterAnnotation
 import dev.karmakrafts.kcml.agent.asm.getValue
+import dev.karmakrafts.kcml.agent.asm.previousInstruction
 import dev.karmakrafts.kcml.agent.asm.relocateStack
 import dev.karmakrafts.kcml.agent.mixin.Capture
 import dev.karmakrafts.kcml.agent.mixin.Order
@@ -217,24 +218,22 @@ internal data class InjectComponent( // @formatter:off
         return opcode == Opcodes.INVOKEINTERFACE
             && owner == Types.Mixin.returnContext.internalName
             && name == "returnFromTarget"
-            && desc == Type.getMethodDescriptor(Type.VOID_TYPE, Types.any)
+            && desc == Types.Mixin.returnFromTarget.descriptor
     } // @formatter:on
 
     private fun MethodInsnNode.isParameterNullCheck(): Boolean { // @formatter:off
         return opcode == Opcodes.INVOKESTATIC
             && owner == Types.intrinsics.internalName
             && (name == "checkNotNullParameter" || name == "checkParameterIsNotNull")
-            && desc == Type.getMethodDescriptor(Type.VOID_TYPE, Types.any, Types.string)
+            && desc == Types.checkNotNullParameter.descriptor
     } // @formatter:on
 
     private fun InsnList.removeReturnContextParameterChecks(returnContextIndices: Set<Int>) {
         val checks = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isParameterNullCheck() }
         for (check in checks) {
-            var parameterName = check.previous
-            while (parameterName != null && parameterName.opcode == -1) parameterName = parameterName.previous
+            val parameterName = check.previousInstruction
             if (parameterName !is LdcInsnNode || parameterName.cst !is String) continue
-            var parameter = parameterName.previous
-            while (parameter != null && parameter.opcode == -1) parameter = parameter.previous
+            val parameter = parameterName.previousInstruction
             if (parameter !is VarInsnNode || parameter.opcode != Opcodes.ALOAD || parameter.`var` !in returnContextIndices) continue
             remove(parameter)
             remove(parameterName)
@@ -243,8 +242,7 @@ internal data class InjectComponent( // @formatter:off
     }
 
     private fun InsnList.removeUnitArgument(call: MethodInsnNode): AbstractInsnNode? {
-        var unitValue = call.previous
-        while (unitValue != null && unitValue.opcode == -1) unitValue = unitValue.previous
+        val unitValue = call.previousInstruction
         check( // @formatter:off
             unitValue is FieldInsnNode && unitValue.opcode == Opcodes.GETSTATIC
                 && unitValue.owner == Types.unit.internalName
@@ -286,10 +284,7 @@ internal data class InjectComponent( // @formatter:off
                 receiverStore = receiverStore.previous
             }
             checkNotNull(receiverStore) { "Could not find synthetic ReturnContext receiver store" }
-            var originalReceiver = receiverStore.previous
-            while (originalReceiver != null && originalReceiver.opcode == -1) {
-                originalReceiver = originalReceiver.previous
-            }
+            val originalReceiver = receiverStore.previousInstruction
             check(
                 originalReceiver is VarInsnNode && originalReceiver.opcode == Opcodes.ALOAD && originalReceiver.`var` in returnContextIndices
             ) { "Could not find original ReturnContext receiver load" }

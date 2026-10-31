@@ -18,8 +18,8 @@ package dev.karmakrafts.kcml.agent.mixin.component
 
 import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.implements
+import dev.karmakrafts.kcml.agent.asm.previousInstruction
 import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.MethodInsnNode
@@ -30,18 +30,16 @@ internal class ThisAwareComponent(
     private val mixinClass: ClassNode
 ) : AbstractMixinComponent() {
     private fun InsnList.findGetThisCalls(): List<MethodInsnNode> {
-        val getThisDescriptor = Type.getMethodDescriptor(Types.any)
         return filterIsInstance<MethodInsnNode>().filter { instruction -> // @formatter:off
             instruction.opcode == Opcodes.INVOKEVIRTUAL
                 && instruction.owner == mixinClass.name
                 && instruction.name == "getThis"
-                && instruction.desc == getThisDescriptor
+                && instruction.desc == Types.Mixin.getThis.descriptor
         } // @formatter:on
     }
 
     private fun MethodInsnNode.findReceiver(): VarInsnNode {
-        var receiver = previous
-        while (receiver != null && receiver.opcode == -1) receiver = receiver.previous
+        val receiver = previousInstruction
         return checkNotNull(receiver as? VarInsnNode) {
             "ThisAware.getThis() requires the mixin receiver from a local"
         }.also { instruction ->

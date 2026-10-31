@@ -41,11 +41,7 @@ public final class AgentStartupProcess {
         final boolean incompatible = args.length > 3 && !Boolean.parseBoolean(args[5]);
         if (compile) {
             compilerLoader = createCompilerLoader();
-            for (final String name : new String[]{
-                "org.jetbrains.kotlin.cli.common.CLICompiler",
-                "org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen",
-                "org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen"
-            }) {
+            for (final String name : new String[]{"org.jetbrains.kotlin.cli.common.CLICompiler", "org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen", "org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen"}) {
                 compilerLoader.loadClass(name);
             }
         }
@@ -101,17 +97,15 @@ public final class AgentStartupProcess {
                 final ByteArrayOutputStream output = new ByteArrayOutputStream();
                 final Object compiler = loader.loadClass("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler").getConstructor().newInstance();
                 final Object result = compiler.getClass().getMethod("exec", PrintStream.class, String[].class).invoke(
-                    compiler, new PrintStream(output), new String[]{
-                        "-no-stdlib", "-no-reflect", "-classpath", System.getProperty("java.class.path"),
-                        "-d", directory.resolve("classes").toString(), source.toString()
-                    }
-                );
+                    compiler,
+                    new PrintStream(output),
+                    new String[]{"-no-stdlib", "-no-reflect", "-classpath", System.getProperty("java.class.path"), "-d", directory.resolve(
+                        "classes").toString(), source.toString()});
                 if (!result.toString().equals("OK")) {
                     throw new AssertionError("Compiler invocation " + invocation + " failed: " + output);
                 }
-                try (final URLClassLoader generated = new URLClassLoader(
-                    new URL[]{directory.resolve("classes").toUri().toURL()}, loader
-                )) {
+                try (final URLClassLoader generated = new URLClassLoader(new URL[]{directory.resolve("classes").toUri().toURL()},
+                    loader)) {
                     final Object answer = generated.loadClass("ExampleKt").getMethod("answer").invoke(null);
                     if (!Integer.valueOf(42).equals(answer)) {
                         throw new AssertionError("Unexpected generated result: " + answer);

@@ -146,11 +146,11 @@ internal class MixinLoader(
             try {
                 bridge.mixinSource = findSource(jarPath, classes, builtin)
                 classes.stream().filter(::isValidMixin).map { classNode ->
-                        createMixin(classNode).fold(onSuccess = { mixin -> mixin }, onFailure = { error ->
-                            logger.error(error) { "Could not create complete Mixin from class ${classNode.dottedName}" }
-                            null
-                        })
-                    }.toList().filterNotNull()
+                    createMixin(classNode).fold(onSuccess = { mixin -> mixin }, onFailure = { error ->
+                        logger.error(error) { "Could not create complete Mixin from class ${classNode.dottedName}" }
+                        null
+                    })
+                }.toList().filterNotNull()
             }
             finally {
                 bridge.mixinSource = previousSource
