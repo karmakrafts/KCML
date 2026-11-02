@@ -17,16 +17,17 @@
 package dev.karmakrafts.kcml.util
 
 import dev.karmakrafts.kcml.api.util.Order
+import io.github.alexandrepiveteau.graphs.MutableDirectedGraphScope
 import io.github.alexandrepiveteau.graphs.Vertex
-import io.github.alexandrepiveteau.graphs.edgeTo
+import io.github.alexandrepiveteau.graphs.arcTo
 
-internal fun Order.connectVertices(a: Vertex, b: Vertex) = when (this) {
+internal fun Order.connectVertices(a: Vertex, b: Vertex, graph: MutableDirectedGraphScope) = when (this) {
     Order.NONE -> {}
     Order.BEFORE -> {
-        b edgeTo a
+        graph.addArc(a arcTo b)
     }
 
     Order.AFTER -> {
-        a edgeTo b
+        graph.addArc(b arcTo a)
     }
 }

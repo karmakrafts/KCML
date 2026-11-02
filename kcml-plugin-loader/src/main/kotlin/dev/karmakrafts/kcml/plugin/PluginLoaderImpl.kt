@@ -323,7 +323,7 @@ object PluginLoaderImpl : PluginLoader {
                     }
                     // Connect the vertices according to load order
                     val dependencyVertex = vertices[dependencyId]!!
-                    order.connectVertices(pluginVertex, dependencyVertex)
+                    order.connectVertices(pluginVertex, dependencyVertex, this)
                 }
             }
         }

@@ -116,6 +116,19 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         .map(ResolvedArtifact::getFile)
                         .toTypedArray())
                     // @formatter:on
+                    val plugins = project.configurations.getByName(CONFIGURATION_NAME)
+                    val runtime = project.configurations.getByName("kcmlRuntime")
+                    val prepareCache = project.tasks.register(
+                        "kcmlPrepareJsCache${task.name.capitalized()}", KCMLPrepareJsCacheTask::class.java
+                    ) { prepare ->
+                        prepare.pluginClasspath.from(plugins, runtime)
+                        prepare.cacheDirectory.set(task.rootCacheDirectory)
+                        prepare.markerFile.set(project.layout.buildDirectory.file("kcml_js_cache/${task.name}.marker"))
+                    }
+                    task.dependsOn(prepareCache)
+                    task.inputs.files(plugins, runtime)
+                        .withPropertyName("kcmlPluginClasspath")
+                        .withNormalizer(ClasspathNormalizer::class.java)
                 }
                 val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
                 val nativeCacheTasks = HashMap<String, TaskProvider<KCMLPrepareNativeCacheTask>>()

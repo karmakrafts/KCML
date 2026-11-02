@@ -20,6 +20,9 @@ import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
+import dev.karmakrafts.kcml.example.js.ExampleJsCodeGenerationExtension
+import dev.karmakrafts.kcml.example.js.ExampleJsIntrinsicsExtension
+import dev.karmakrafts.kcml.example.js.ExampleLateJsExtension
 import dev.karmakrafts.kcml.example.jvm.ExampleJvmCodeGenerationExtension
 import dev.karmakrafts.kcml.example.jvm.ExampleJvmIntrinsicsExtension
 import dev.karmakrafts.kcml.example.llvm.ExampleLateNativeExtension
@@ -42,6 +45,10 @@ class ExamplePlugin : CompilerPlugin {
             // JVM
             register(ExampleJvmCodeGenerationExtension())
             register(ExampleJvmIntrinsicsExtension())
+            // JS
+            register(ExampleLateJsExtension())
+            register(ExampleJsCodeGenerationExtension())
+            register(ExampleJsIntrinsicsExtension())
             // LLVM
             register(ExampleLateNativeExtension())
             register(ExampleNativeCodeGenerationExtension())

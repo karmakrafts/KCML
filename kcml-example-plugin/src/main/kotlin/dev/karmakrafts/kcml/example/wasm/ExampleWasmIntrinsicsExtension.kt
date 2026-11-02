@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.backend.wasm.const
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
+import dev.karmakrafts.kcml.api.extension.ExtensionDependsOn
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.wasm.WasmIntrinsicsExtension
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
@@ -32,6 +33,7 @@ import org.jetbrains.kotlin.wasm.ir.source.location.SourceLocation
 
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 @ExtensionId("example_wasm_intrinsics_extension")
+@ExtensionDependsOn("example_wasm_code_generation_extension")
 internal class ExampleWasmIntrinsicsExtension : AbstractExtension(), WasmIntrinsicsExtension {
     companion object {
         private val packageFqName: FqName = FqName("dev.karmakrafts.example")

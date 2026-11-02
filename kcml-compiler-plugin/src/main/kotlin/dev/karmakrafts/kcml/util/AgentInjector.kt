@@ -61,7 +61,8 @@ class AgentInjector( // @formatter:off
                     val args = options.map { (key, value) -> "$key=$value" }.joinToString(":")
                     try {
                         vm.loadAgent(agentPath.absolutePathString(), "${agentPath.toUri()}\n$args")
-                    } finally {
+                    }
+                    finally {
                         vm.detach()
                     }
                     true
