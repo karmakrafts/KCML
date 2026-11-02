@@ -24,9 +24,7 @@ import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 
 internal class JvmCodeGeneratorImpl(
-    override val backend: LateJvmBackend,
-    override val context: ExpressionCodegen,
-    override val blockInfo: BlockInfo
+    override val backend: LateJvmBackend, override val context: ExpressionCodegen, override val blockInfo: BlockInfo
 ) : JvmCodeGenerator {
     override fun generateExpression(expression: IrExpression): PromisedValue = expression.accept(context, blockInfo)
 }

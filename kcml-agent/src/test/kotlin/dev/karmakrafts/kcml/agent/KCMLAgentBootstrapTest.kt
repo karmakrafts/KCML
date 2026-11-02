@@ -59,6 +59,21 @@ class KCMLAgentBootstrapTest {
     }
 
     @Test
+    fun `runs compiler in application class loader without preloading plugin loader`() {
+        assertAgentStartup(false, compile = true, applicationLoader = true)
+    }
+
+    @Test
+    fun `starts compiler in application class loader after agent initialization`() {
+        assertAgentStartup(false, compile = true, applicationLoader = true, preloadCompiler = false)
+    }
+
+    @Test
+    fun `starts compiler in isolated class loader after agent initialization`() {
+        assertAgentStartup(false, compile = true, preloadCompiler = false)
+    }
+
+    @Test
     fun `reports incompatible bridge retained by previous build`() {
         assertAgentStartup(true)
     }
@@ -96,7 +111,9 @@ class KCMLAgentBootstrapTest {
         replaceBridge: Boolean = true,
         abi: Int? = null,
         compatible: Boolean = !preloadedBridge,
-        compile: Boolean = false
+        compile: Boolean = false,
+        applicationLoader: Boolean = false,
+        preloadCompiler: Boolean = true
     ) {
         val directory = Files.createTempDirectory(Path.of("build"), "agent-startup-test-").toAbsolutePath()
         try {
@@ -127,8 +144,7 @@ class KCMLAgentBootstrapTest {
                                         val writer = ClassWriter(0)
                                         ClassReader(input).accept(object : ClassVisitor(Opcodes.ASM9, writer) {
                                             override fun visitAnnotation(
-                                                descriptor: String,
-                                                visible: Boolean
+                                                descriptor: String, visible: Boolean
                                             ): AnnotationVisitor? {
                                                 if (descriptor == "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;") return null
                                                 return super.visitAnnotation(descriptor, visible)
@@ -137,8 +153,7 @@ class KCMLAgentBootstrapTest {
                                             override fun visitEnd() {
                                                 if (abi != null) {
                                                     super.visitAnnotation(
-                                                        "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;",
-                                                        true
+                                                        "Ldev/karmakrafts/kcml/api/mixin/MixinBridgeABI;", true
                                                     ).apply {
                                                         visit("value", abi)
                                                         visitEnd()
@@ -181,13 +196,9 @@ class KCMLAgentBootstrapTest {
                 val agent = Path.of(checkNotNull(System.getProperty("kcml.agent.jar")))
                 val log = directory.resolve("startup.log")
                 val processClasspath = mutableListOf(harness.toString(), agent.toString())
-                if (compile) processClasspath += listOf(
-                    runtimeLoader,
-                    checkNotNull(System.getProperty("kcml.test.classpath"))
-                )
+                if (compile) processClasspath += checkNotNull(System.getProperty("kcml.test.classpath"))
                 val command = mutableListOf(
                     Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                    "--add-opens=java.base/java.net=ALL-UNNAMED",
                     "-javaagent:$harness",
                     "-cp",
                     processClasspath.joinToString(File.pathSeparator),
@@ -195,12 +206,12 @@ class KCMLAgentBootstrapTest {
                     agent.toUri().toString(),
                     server.localPort.toString()
                 )
-                if (compile) command += "compile"
+                if (compile) {
+                    val mode = if (applicationLoader) "compile-application" else "compile"
+                    command += if (preloadCompiler) mode else "$mode-cold"
+                }
                 if (preloadedBridge) command += listOf(
-                    bridge,
-                    currentBridge,
-                    replaceBridge.toString(),
-                    compatible.toString()
+                    bridge, currentBridge, replaceBridge.toString(), compatible.toString()
                 )
                 val process = ProcessBuilder(command).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {

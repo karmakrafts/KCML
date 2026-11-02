@@ -28,7 +28,7 @@ import java.util.jar.JarFile;
 
 public final class AgentStartupProcess {
     private static Instrumentation instrumentation;
-    private static URLClassLoader compilerLoader;
+    private static ClassLoader compilerLoader;
 
     public static void premain(final String options, final Instrumentation value) {
         // Capture JVM instrumentation so main can exercise the agent's dynamic-attach entry point.
@@ -37,12 +37,14 @@ public final class AgentStartupProcess {
 
     public static void main(final String[] args) throws Throwable {
         // Arguments are agent options, communication port, and optionally a bridge JAR and its replacement.
-        final boolean compile = args.length == 3 && args[2].equals("compile");
+        final boolean compile = args.length == 3 && args[2].startsWith("compile");
         final boolean incompatible = args.length > 3 && !Boolean.parseBoolean(args[5]);
         if (compile) {
-            compilerLoader = createCompilerLoader();
-            for (final String name : new String[]{"org.jetbrains.kotlin.cli.common.CLICompiler", "org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen", "org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen"}) {
-                compilerLoader.loadClass(name);
+            compilerLoader = args[2].startsWith("compile-application") ? ClassLoader.getSystemClassLoader() : createCompilerLoader();
+            if (!args[2].endsWith("-cold")) {
+                for (final String name : new String[]{"org.jetbrains.kotlin.cli.common.CLICompiler", "org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen", "org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen"}) {
+                    compilerLoader.loadClass(name);
+                }
             }
         }
         if (args.length > 3) {
@@ -90,7 +92,8 @@ public final class AgentStartupProcess {
 
     private static void compileTwice() throws Exception {
         final Path directory = Files.createTempDirectory(Path.of("build"), "compiler-reuse-");
-        try (final URLClassLoader loader = compilerLoader) {
+        final ClassLoader loader = compilerLoader;
+        try {
             final Path source = directory.resolve("Example.kt");
             Files.writeString(source, "fun answer(): Int = run { 42 }\n");
             for (int invocation = 0; invocation < 2; invocation++) {
@@ -114,6 +117,9 @@ public final class AgentStartupProcess {
             }
         }
         finally {
+            if (loader instanceof URLClassLoader) {
+                ((URLClassLoader) loader).close();
+            }
             try (final var paths = Files.walk(directory)) {
                 for (final Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
                     Files.delete(path);

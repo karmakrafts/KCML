@@ -24,6 +24,7 @@ import dev.karmakrafts.kcml.agent.mixin.MixinClassTransformer
 import dev.karmakrafts.kcml.agent.mixin.MixinLoader
 import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
 import dev.karmakrafts.kcml.agent.util.AgentCommClient
+import dev.karmakrafts.kcml.agent.util.CompilerClassLoaderInjector
 import dev.karmakrafts.kcml.agent.util.KCMLAgentArguments
 import dev.karmakrafts.kcml.agent.util.commPort
 import dev.karmakrafts.kcml.agent.util.logging
@@ -124,6 +125,11 @@ object KCMLAgent {
             putConstant(BuiltinMixinSource, "loader_path", handshake.loaderPath)
             putConstant(BuiltinMixinSource, "bridge_path", handshake.bridgePath)
             putConstant(BuiltinMixinSource, "plugin_paths", handshake.pluginPaths)
+            putConstant(
+                BuiltinMixinSource,
+                "inject_loader",
+                CompilerClassLoaderInjector(Path(handshake.loaderPath), instrumentation)
+            )
         }
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader and plugin mixins" }

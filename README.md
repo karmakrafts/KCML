@@ -32,15 +32,6 @@ This project is in now way associated with Kotlin or JetBrains. Use at your own 
 
 ![KCML Architecture Diagram](docs/architecture.svg)
 
-### Recommendations
-
-It is recommended to use KCML in conjunction with the in-process compiler execution mode.
-This can be enabled by adding the following to your `gradle.properties`:
-
-```properties
-kotlin.compiler.execution.strategy=in-process
-```
-
 ### Troubleshooting
 
 #### Mixin Bridge ABI

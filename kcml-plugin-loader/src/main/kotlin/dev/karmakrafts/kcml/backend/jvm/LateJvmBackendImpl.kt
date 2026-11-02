@@ -29,9 +29,7 @@ import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 
 internal class LateJvmBackendImpl(
-    override val pluginId: String,
-    override val context: JvmBackendContext,
-    override val loader: PluginLoader
+    override val pluginId: String, override val context: JvmBackendContext, override val loader: PluginLoader
 ) : LateJvmBackend {
     override val compileTarget: JvmCompileTarget by lazy { JvmCompileTargetImpl(config.kcmlIsAndroid) }
 

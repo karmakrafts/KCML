@@ -70,7 +70,8 @@ object JSHooks {
                 val replacement = with(extension) { JsCodeGeneratorImpl(backend, context).process(element) } ?: continue
                 val node = if (nodeType == JsStatement::class.java && replacement is JsExpression) {
                     replacement.makeStmt()
-                } else replacement
+                }
+                else replacement
                 require(nodeType.isInstance(node)) {
                     "Expected ${nodeType.simpleName}, got ${node.javaClass.simpleName}"
                 }

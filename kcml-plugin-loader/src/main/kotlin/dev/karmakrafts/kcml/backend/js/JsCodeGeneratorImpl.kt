@@ -27,8 +27,7 @@ import org.jetbrains.kotlin.js.backend.ast.JsExpression
 import org.jetbrains.kotlin.js.backend.ast.JsStatement
 
 internal class JsCodeGeneratorImpl(
-    override val backend: LateJsBackend,
-    override val context: JsGenerationContext
+    override val backend: LateJsBackend, override val context: JsGenerationContext
 ) : JsCodeGenerator {
     override fun generateExpression(expression: IrExpression): JsExpression {
         return expression.accept(IrElementToJsExpressionTransformer(), context)

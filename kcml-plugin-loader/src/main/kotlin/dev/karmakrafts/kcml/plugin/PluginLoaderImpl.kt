@@ -76,7 +76,9 @@ object PluginLoaderImpl : PluginLoader {
         }
     private var loggerFactory: MessageCollectorLoggerFactory
         get() = compilationState.get().loggerFactory
-        set(value) { compilationState.get().loggerFactory = value }
+        set(value) {
+            compilationState.get().loggerFactory = value
+        }
     private val plugins: HashMap<String, CompilerPlugin>
         get() = compilationState.get().plugins
     private val metadata: HashMap<String, SerializablePluginMetadata>
@@ -85,15 +87,21 @@ object PluginLoaderImpl : PluginLoader {
         get() = compilationState.get().sortedPlugins
     private var arePluginsLoaded: Boolean
         get() = compilationState.get().arePluginsLoaded
-        set(value) { compilationState.get().arePluginsLoaded = value }
+        set(value) {
+            compilationState.get().arePluginsLoaded = value
+        }
     private var pluginClassLoader: URLClassLoader?
         get() = compilationState.get().pluginClassLoader
-        set(value) { compilationState.get().pluginClassLoader = value }
+        set(value) {
+            compilationState.get().pluginClassLoader = value
+        }
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry>
         get() = compilationState.get().extensionRegistries
     private var dispatcher: ExtensionDispatcher?
         get() = compilationState.get().dispatcher
-        set(value) { compilationState.get().dispatcher = value }
+        set(value) {
+            compilationState.get().dispatcher = value
+        }
     internal val extensionDispatcher: ExtensionDispatcher
         get() = checkNotNull(dispatcher) { "KCML plugins have not been loaded" }
 
@@ -102,10 +110,14 @@ object PluginLoaderImpl : PluginLoader {
 
     override var logger: Logger
         get() = compilationState.get().logger
-        set(value) { compilationState.get().logger = value }
+        set(value) {
+            compilationState.get().logger = value
+        }
     override var loadingPluginId: String?
         get() = compilationState.get().loadingPluginId
-        set(value) { compilationState.get().loadingPluginId = value }
+        set(value) {
+            compilationState.get().loadingPluginId = value
+        }
 
     @Synchronized
     internal fun reset() {

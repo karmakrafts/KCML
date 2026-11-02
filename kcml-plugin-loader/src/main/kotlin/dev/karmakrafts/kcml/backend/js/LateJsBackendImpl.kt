@@ -28,9 +28,7 @@ import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 
 internal class LateJsBackendImpl(
-    override val pluginId: String,
-    override val context: JsIrBackendContext,
-    override val loader: PluginLoader
+    override val pluginId: String, override val context: JsIrBackendContext, override val loader: PluginLoader
 ) : LateJsBackend {
     override val compileTarget: JsCompileTarget get() = JsCompileTargetImpl
 

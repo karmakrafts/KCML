@@ -84,8 +84,7 @@ class PluginLoaderLifecycleTest {
         val worker = Thread {
             try {
                 result.complete(PluginLoaderImpl.extensionDispatcher)
-            }
-            catch (error: Throwable) {
+            } catch (error: Throwable) {
                 result.completeExceptionally(error)
             }
         }

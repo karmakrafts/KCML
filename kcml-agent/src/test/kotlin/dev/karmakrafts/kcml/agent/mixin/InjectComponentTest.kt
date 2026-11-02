@@ -23,8 +23,6 @@ import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
-import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
-import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
@@ -41,7 +39,6 @@ import org.objectweb.asm.tree.MethodNode
 import org.objectweb.asm.tree.ParameterNode
 import org.objectweb.asm.tree.VarInsnNode
 import java.nio.file.Path
-import java.util.concurrent.ConcurrentHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -268,31 +265,10 @@ class InjectComponentTest {
             candidate.mixinClass.name == "dev/karmakrafts/kcml/mixin/CLICompilerMixin"
         }
 
-        val constantTable =
-            MixinBridge.INSTANCE.constantTable.computeIfAbsent(BuiltinMixinSource) { ConcurrentHashMap() }
-        val previousLoaderPath = constantTable.put("loader_path", loaderJar.toString())
-        try {
-            mixin.apply(parsedTargetClass)
-            assertTrue(mixin.mixinClass.methods.any { method ->
-                method.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
-                    instruction.owner == Types.Mixin.constantTable.internalName
-                }
-            })
-            val repeatedTarget = ClassNode()
-            ClassReader(targetBytecode).accept(repeatedTarget, 0)
-            val nextLoaderPath = loaderJar.resolveSibling("another-loader.jar").toString()
-            constantTable["loader_path"] = nextLoaderPath
-            assertTrue(mixin.apply(repeatedTarget))
-            assertTrue(repeatedTarget.methods.any { method ->
-                method.instructions.filterIsInstance<LdcInsnNode>().any { instruction ->
-                    instruction.cst == nextLoaderPath
-                }
-            })
-        }
-        finally {
-            if (previousLoaderPath == null) constantTable.remove("loader_path")
-            else constantTable["loader_path"] = previousLoaderPath
-        }
+        assertTrue(mixin.apply(parsedTargetClass))
+        val repeatedTarget = ClassNode()
+        ClassReader(targetBytecode).accept(repeatedTarget, 0)
+        assertTrue(mixin.apply(repeatedTarget))
         val targetMethod = parsedTargetClass.methods.single { method ->
             method.name == "exec" && method.desc == "(Lorg/jetbrains/kotlin/cli/common/messages/MessageCollector;Lorg/jetbrains/kotlin/config/Services;Lorg/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments;)Lorg/jetbrains/kotlin/cli/common/ExitCode;"
         }
@@ -304,7 +280,14 @@ class InjectComponentTest {
             instruction.owner == Types.Mixin.constantTable.internalName
         })
         assertTrue(targetMethod.instructions.filterIsInstance<LdcInsnNode>().any { instruction ->
-            instruction.cst == loaderJar.toString()
+            instruction.cst == "inject_loader"
+        })
+        val injectorCall = targetMethod.instructions.filterIsInstance<MethodInsnNode>().single { instruction ->
+            instruction.owner == "java/util/function/Consumer" && instruction.name == "accept"
+        }
+        assertTrue(targetMethod.instructions.indexOf(injectorCall) < targetMethod.instructions.indexOf(hookCalls.single()))
+        assertFalse(targetMethod.instructions.filterIsInstance<MethodInsnNode>().any { instruction ->
+            instruction.owner == "java/net/URLClassLoader"
         })
         val transformedClass = loadClass(parsedTargetClass)
         assertEquals(parsedTargetClass.name.replace('/', '.'), transformedClass.name)
