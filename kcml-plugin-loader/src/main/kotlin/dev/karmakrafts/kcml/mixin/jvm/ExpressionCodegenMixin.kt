@@ -21,7 +21,6 @@ import dev.karmakrafts.kcml.api.mixin.DirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject
 import dev.karmakrafts.kcml.api.mixin.ReturnContext
 import dev.karmakrafts.kcml.api.mixin.ThisAware
-import dev.karmakrafts.kcml.api.mixin.returnFromTarget
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.jvm.JVMHooks
 import org.jetbrains.kotlin.backend.jvm.codegen.BlockInfo
@@ -66,7 +65,9 @@ internal class ExpressionCodegenMixin : ThisAware<ExpressionCodegen> {
         order = Inject.Order.BEFORE
     )
     fun visitContainerExpression(
-        @Capture expression: IrContainerExpression, @Capture data: BlockInfo, returnContext: ReturnContext<PromisedValue>
+        @Capture expression: IrContainerExpression,
+        @Capture data: BlockInfo,
+        returnContext: ReturnContext<PromisedValue>
     ) {
         JVMHooks.onGenerateElement(expression, getThis(), data)?.let { returnContext.returnFromTarget(it) }
     }
@@ -121,7 +122,9 @@ internal class ExpressionCodegenMixin : ThisAware<ExpressionCodegen> {
         order = Inject.Order.BEFORE
     )
     fun visitDelegatingConstructorCall(
-        @Capture expression: IrDelegatingConstructorCall, @Capture data: BlockInfo, returnContext: ReturnContext<PromisedValue>
+        @Capture expression: IrDelegatingConstructorCall,
+        @Capture data: BlockInfo,
+        returnContext: ReturnContext<PromisedValue>
     ) {
         JVMHooks.onGenerateElement(expression, getThis(), data)?.let { returnContext.returnFromTarget(it) }
     }
@@ -176,7 +179,9 @@ internal class ExpressionCodegenMixin : ThisAware<ExpressionCodegen> {
         order = Inject.Order.BEFORE
     )
     fun visitFieldAccess(
-        @Capture expression: IrFieldAccessExpression, @Capture data: BlockInfo, returnContext: ReturnContext<PromisedValue>
+        @Capture expression: IrFieldAccessExpression,
+        @Capture data: BlockInfo,
+        returnContext: ReturnContext<PromisedValue>
     ) {
         JVMHooks.onGenerateElement(expression, getThis(), data)?.let { returnContext.returnFromTarget(it) }
     }
@@ -297,7 +302,9 @@ internal class ExpressionCodegenMixin : ThisAware<ExpressionCodegen> {
         order = Inject.Order.BEFORE
     )
     fun visitStringConcatenation(
-        @Capture expression: IrStringConcatenation, @Capture data: BlockInfo, returnContext: ReturnContext<PromisedValue>
+        @Capture expression: IrStringConcatenation,
+        @Capture data: BlockInfo,
+        returnContext: ReturnContext<PromisedValue>
     ) {
         JVMHooks.onGenerateElement(expression, getThis(), data)?.let { returnContext.returnFromTarget(it) }
     }

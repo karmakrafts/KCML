@@ -33,172 +33,191 @@ import org.jetbrains.kotlin.js.backend.ast.JsExpression
 internal class IrElementToJsExpressionTransformerMixin {
     @Inject(name = "visitComposite", order = Inject.Order.BEFORE)
     fun visitComposite(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitVararg", order = Inject.Order.BEFORE)
     fun visitVararg(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitExpressionBody", order = Inject.Order.BEFORE)
     fun visitExpressionBody(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "body") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitFunctionExpression", order = Inject.Order.BEFORE)
     fun visitFunctionExpression(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitConst", order = Inject.Order.BEFORE)
     fun visitConst(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitStringConcatenation", order = Inject.Order.BEFORE)
     fun visitStringConcatenation(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitGetField", order = Inject.Order.BEFORE)
     fun visitGetField(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitGetValue", order = Inject.Order.BEFORE)
     fun visitGetValue(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitGetObjectValue", order = Inject.Order.BEFORE)
     fun visitGetObjectValue(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitSetField", order = Inject.Order.BEFORE)
     fun visitSetField(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitSetValue", order = Inject.Order.BEFORE)
     fun visitSetValue(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitDelegatingConstructorCall", order = Inject.Order.BEFORE)
     fun visitDelegatingConstructorCall(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitConstructorCall", order = Inject.Order.BEFORE)
     fun visitConstructorCall(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitCall", order = Inject.Order.BEFORE)
     fun visitCall(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitWhen", order = Inject.Order.BEFORE)
     fun visitWhen(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitTypeOperator", order = Inject.Order.BEFORE)
     fun visitTypeOperator(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitDynamicMemberExpression", order = Inject.Order.BEFORE)
     fun visitDynamicMemberExpression(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitDynamicOperatorExpression", order = Inject.Order.BEFORE)
     fun visitDynamicOperatorExpression(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 
     @Inject(name = "visitRawFunctionReference", order = Inject.Order.BEFORE)
     fun visitRawFunctionReference(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsExpression>
     ) {
-        JSHooks.onGenerateExpression(element, context)?.let { result.returnFromTarget(it) }
+        val expression = JSHooks.onGenerateExpression(element, context) ?: return
+        result.returnFromTarget(expression)
     }
 }

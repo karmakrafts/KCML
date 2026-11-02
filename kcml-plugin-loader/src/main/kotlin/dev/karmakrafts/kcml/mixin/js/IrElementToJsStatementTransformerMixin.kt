@@ -34,163 +34,181 @@ internal class IrElementToJsStatementTransformerMixin {
     // The generic expression and delegating-constructor visitors already delegate to the expression transformer.
     @Inject(name = "visitBlockBody", order = Inject.Order.BEFORE)
     fun visitBlockBody(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "body") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitReturnableBlock", order = Inject.Order.BEFORE)
     fun visitReturnableBlock(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitBlock", order = Inject.Order.BEFORE)
     fun visitBlock(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitComposite", order = Inject.Order.BEFORE)
     fun visitComposite(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitFunctionExpression", order = Inject.Order.BEFORE)
     fun visitFunctionExpression(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitBreak", order = Inject.Order.BEFORE)
     fun visitBreak(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "jump") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitContinue", order = Inject.Order.BEFORE)
     fun visitContinue(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "jump") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitSetField", order = Inject.Order.BEFORE)
     fun visitSetField(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitSetValue", order = Inject.Order.BEFORE)
     fun visitSetValue(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitReturn", order = Inject.Order.BEFORE)
     fun visitReturn(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitThrow", order = Inject.Order.BEFORE)
     fun visitThrow(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitVariable", order = Inject.Order.BEFORE)
     fun visitVariable(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "declaration") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitCall", order = Inject.Order.BEFORE)
     fun visitCall(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture(name = "data") context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitInstanceInitializerCall", order = Inject.Order.BEFORE)
     fun visitInstanceInitializerCall(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitTry", order = Inject.Order.BEFORE)
     fun visitTry(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "aTry") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitWhen", order = Inject.Order.BEFORE)
     fun visitWhen(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "expression") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitWhileLoop", order = Inject.Order.BEFORE)
     fun visitWhileLoop(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "loop") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 
     @Inject(name = "visitDoWhileLoop", order = Inject.Order.BEFORE)
     fun visitDoWhileLoop(
-        @Capture(index = 1) element: IrElement,
-        @Capture(index = 2) context: JsGenerationContext,
+        @Capture(name = "loop") element: IrElement,
+        @Capture context: JsGenerationContext,
         result: ReturnContext<JsStatement>
     ) {
-        JSHooks.onGenerateStatement(element, context)?.let { result.returnFromTarget(it) }
+        val statement = JSHooks.onGenerateStatement(element, context) ?: return
+        result.returnFromTarget(statement)
     }
 }
