@@ -63,3 +63,11 @@ publishing {
         }
     }
 }
+
+tasks.withType<PublishToMavenRepository>().configureEach {
+    onlyIf {
+        // Only allow publishing if this is the root/primary build invocation,
+        // preventing duplicate execution when evaluated as an included build.
+        gradle.parent == null
+    }
+}
