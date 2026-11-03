@@ -58,7 +58,7 @@ configureDokka {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
-    shadow(projects.kcmlAgentProtocol)
+    implementation(projects.kcmlAgentProtocol)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
