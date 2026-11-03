@@ -36,6 +36,7 @@ plugins {
     alias(libs.plugins.karmaConventions)
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.dokka)
+    alias(libs.plugins.shadow)
     `java-gradle-plugin`
     `maven-publish`
     signing
@@ -55,13 +56,9 @@ configureDokka {
 }
 
 dependencies {
-    implementation(project(":kcml-agent-protocol"))
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
-
-    implementation(projects.kcmlAgentProtocol)
-    implementation(libs.kotlinx.serialization.core)
-    implementation(libs.kotlinx.serialization.json)
+    shadow(projects.kcmlAgentProtocol)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
@@ -94,8 +91,21 @@ tasks {
         }
         outputs.upToDateWhen { false } // Always re-generate this file
     }
-    processResources { dependsOn(createVersionFile) }
-    compileKotlin { dependsOn(processResources) }
+    processResources {
+        dependsOn(createVersionFile)
+    }
+    compileKotlin {
+        dependsOn(processResources)
+    }
+    jar {
+        archiveClassifier = "slim"
+    }
+    shadowJar {
+        archiveClassifier = ""
+    }
+    assemble {
+        dependsOn(shadowJar)
+    }
 }
 
 gradlePlugin {
