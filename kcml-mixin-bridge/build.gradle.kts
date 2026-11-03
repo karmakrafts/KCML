@@ -46,4 +46,9 @@ publishing {
         description = "Mixin runtime bridge for the Kotlin Compiler Meta Loader",
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
+    publications {
+        create<MavenPublication>("mixinBridge") {
+            from(components["java"])
+        }
+    }
 }
