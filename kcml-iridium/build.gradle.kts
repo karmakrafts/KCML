@@ -15,6 +15,9 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.dokka.configureDokka
+import dev.karmakrafts.conventions.dokka.withJava
+import dev.karmakrafts.conventions.dokka.withKotlin
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
 
@@ -26,6 +29,12 @@ plugins {
 }
 
 configureJava(rootProject.libs.versions.java)
+
+configureDokka {
+    withJava()
+    withKotlin()
+    dependsOn(projects.kcmlPluginApi)
+}
 
 java {
     withSourcesJar()

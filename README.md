@@ -20,8 +20,8 @@ and provides a stable API for FIR, IR and backend processing.
 It also provides a clean API for implementing custom target code generation (intrinsics) for  
 every available Kotlin Multiplatform to allow customization beyond IR.
 
-> KCML heavily tampers with the compiler based on what meta plugins are applied.  
-> In order to prevent an influx of false reports on the Kotlin issue tracker,  
+> KCML heavily tampers with the compiler based on what meta plugins are applied.
+> In order to prevent an influx of false reports on the Kotlin issue tracker,
 > **please do not report any issues occurring in a project setup that uses KCML to the Kotlin
 > issue tracker!**  
 > Report the issue to the KCML repository and we will delegate the issue if needed.

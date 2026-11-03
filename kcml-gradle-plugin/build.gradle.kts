@@ -20,6 +20,7 @@ import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.defaultDependencyLocking
 import dev.karmakrafts.conventions.dokka.configureDokka
 import dev.karmakrafts.conventions.dokka.withGradle
+import dev.karmakrafts.conventions.dokka.withJava
 import dev.karmakrafts.conventions.dokka.withKotlin
 import dev.karmakrafts.conventions.dokka.withKotlinGradle
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
@@ -44,13 +45,14 @@ group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
 if (GitLabCI.isCI) defaultDependencyLocking()
 
+configureJava(rootProject.libs.versions.java)
+
 configureDokka {
+    withJava()
     withKotlin()
     withKotlinGradle()
     withGradle()
 }
-
-configureJava(rootProject.libs.versions.java)
 
 dependencies {
     implementation(project(":kcml-agent-protocol"))
