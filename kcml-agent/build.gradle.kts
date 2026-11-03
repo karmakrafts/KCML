@@ -33,13 +33,13 @@ val bridgeJar = project(":kcml-mixin-bridge").tasks.named<Jar>("jar").flatMap { 
 dependencies {
     compileOnly(projects.kcmlMixinBridge)
 
-    shadow(projects.kcmlAgentProtocol)
-    shadow(libs.ow2.asm.core)
-    shadow(libs.ow2.asm.tree)
-    shadow(libs.annotations)
-    shadow(libs.kotlinGraphs)
-    shadow(libs.kotlinx.serialization.core)
-    shadow(libs.kotlinx.serialization.json)
+    implementation(projects.kcmlAgentProtocol)
+    implementation(libs.ow2.asm.core)
+    implementation(libs.ow2.asm.tree)
+    implementation(libs.annotations)
+    implementation(libs.kotlinGraphs)
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
 
     testImplementation(projects.kcmlMixinBridge)
     testImplementation(libs.kotlin.compiler.embeddable)
