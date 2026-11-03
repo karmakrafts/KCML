@@ -15,14 +15,28 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import dev.karmakrafts.conventions.dokka.configureDokka
+import dev.karmakrafts.conventions.dokka.withJava
+import dev.karmakrafts.conventions.dokka.withKotlin
+import dev.karmakrafts.conventions.dokka.withKotlinxSerialization
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
+import dev.karmakrafts.conventions.setProjectInfo
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.dokka)
+    signing
+    `maven-publish`
 }
 
 configureJava(rootProject.libs.versions.java)
+
+configureDokka {
+    withJava()
+    withKotlin()
+    withKotlinxSerialization()
+}
 
 java {
     withSourcesJar()
@@ -35,4 +49,17 @@ kotlin {
 dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
+}
+
+publishing {
+    setProjectInfo(
+        name = "KCML Agent Protocol",
+        description = "Agent protocol implementation for the Kotlin Compiler Meta Loader",
+        url = "https://git.karmakrafts.dev/kk/kcml"
+    )
+    publications {
+        create<MavenPublication>("agentProtocol") {
+            from(components["kotlin"])
+        }
+    }
 }
