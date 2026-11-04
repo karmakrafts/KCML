@@ -56,7 +56,14 @@ nmcpSettings {
     }
 }
 
+fun includeFromRoot(name: String) {
+    val targetName = ":$name"
+    include(targetName)
+    project(targetName).projectDir = file("../$name")
+}
+
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 rootProject.name = "kcml-gradle-plugin"
-include(":kcml-agent-protocol")
-project(":kcml-agent-protocol").projectDir = file("../kcml-agent-protocol")
+
+includeFromRoot("kcml-gradle-api")
+includeFromRoot("kcml-agent-protocol")
