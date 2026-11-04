@@ -80,6 +80,9 @@ configurations {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+
+    implementation(libs.kotlinx.serialization.core)
+    implementation(libs.kotlinx.serialization.json)
     shade(projects.kcmlAgentProtocol)
 
     testImplementation(libs.kotlin.gradle.plugin)
@@ -125,6 +128,11 @@ tasks {
     shadowJar {
         archiveClassifier = ""
         configurations = listOf(shade)
+        dependencies {
+            exclude { "kotlin-stdlib" in it.moduleName }
+            exclude { "kotlin-reflect" in it.moduleName }
+            exclude { "kotlinx-serialization" in it.moduleName }
+        }
     }
     assemble {
         dependsOn(shadowJar)
