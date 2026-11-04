@@ -110,7 +110,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
             project.afterEvaluate {
                 // We need to load plugins during JS/WASM IR linking ourselves to get a bootstrap entrypoint
                 project.tasks.withType(KotlinJsIrLink::class.java) { task ->
-                    project.logger.lifecycle("Configuring KCML task options for '${task.name}'")
+                    project.logger.info("Configuring KCML task options for '${task.name}'")
                     // @formatter:off
                     task.pluginClasspath.from(*getPluginClasspaths(project)
                         .map(ResolvedArtifact::getFile)
