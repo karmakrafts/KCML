@@ -16,8 +16,10 @@
 
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.dokka.configureDokka
+import dev.karmakrafts.conventions.dokka.withGradle
 import dev.karmakrafts.conventions.dokka.withJava
 import dev.karmakrafts.conventions.dokka.withKotlin
+import dev.karmakrafts.conventions.dokka.withKotlinGradle
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 import dev.karmakrafts.conventions.setProjectInfo
 
@@ -33,6 +35,8 @@ configureJava(rootProject.libs.versions.java)
 configureDokka {
     withJava()
     withKotlin()
+    withKotlinGradle()
+    withGradle()
 }
 
 java {
@@ -45,6 +49,8 @@ kotlin {
 }
 
 dependencies {
+    compileOnly(gradleApi())
+    compileOnly(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
 }
 

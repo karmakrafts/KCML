@@ -84,7 +84,8 @@ class KCMLPrepareJsCacheTaskTest {
         writeJar(runtime, "runtime v1")
         Files.writeString(directory.resolve("settings.gradle"), "rootProject.name = 'js-cache-test'\n")
         val taskClasses = Path.of(KCMLPrepareJsCacheTask::class.java.protectionDomain.codeSource.location.toURI())
-        Files.writeString(directory.resolve("build.gradle"), """
+        Files.writeString(
+            directory.resolve("build.gradle"), """
             buildscript {
                 dependencies { classpath files('${taskClasses.toFile().invariantSeparatorsPath}') }
             }
@@ -93,7 +94,8 @@ class KCMLPrepareJsCacheTaskTest {
                 cacheDirectory.set(layout.projectDirectory.dir('cache'))
                 markerFile.set(layout.buildDirectory.file('cache.marker'))
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val runner = GradleRunner.create()
             .withProjectDir(directory.toFile())
             .withTestKitDir(directory.resolve("testkit").toFile())

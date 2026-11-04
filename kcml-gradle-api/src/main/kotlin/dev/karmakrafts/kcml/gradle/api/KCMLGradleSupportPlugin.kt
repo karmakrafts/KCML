@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.gradle
+package dev.karmakrafts.kcml.gradle.api
 
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
  * Implementations can be applied alongside the KCML Gradle plugin to customize
  * the compiler options supplied to individual Kotlin compilations.
  */
-interface KCMLGradleSupportPlugin : Plugin<Project> {
+public interface KCMLGradleSupportPlugin : Plugin<Project> {
     /**
      * Applies this support plugin to [target].
      *
@@ -36,7 +36,7 @@ interface KCMLGradleSupportPlugin : Plugin<Project> {
      *
      * @param target the project to which this plugin is applied.
      */
-    override fun apply(target: Project) = Unit
+    override fun apply(target: Project): Unit = Unit
 
     /**
      * Produces the additional KCML compiler options for [kotlinCompilation].
@@ -44,5 +44,5 @@ interface KCMLGradleSupportPlugin : Plugin<Project> {
      * @param kotlinCompilation the Kotlin compilation being configured.
      * @return a provider of compiler options to pass to the KCML compiler plugin.
      */
-    fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>>
+    public fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>>
 }

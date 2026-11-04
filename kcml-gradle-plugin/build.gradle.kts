@@ -84,6 +84,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     shade(projects.kcmlAgentProtocol)
+    shade(projects.kcmlGradleApi)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
@@ -176,7 +177,7 @@ publishing {
                         val name = it.name()
                         name == "artifactId" || (name is groovy.namespace.QName && name.localPart == "artifactId")
                     }?.text()
-                    artifactId == "kcml-agent-protocol"
+                    artifactId == "kcml-agent-protocol" || artifactId == "kcml-gradle-api"
                 }?.forEach { dependenciesNode.remove(it) }
             }
         }

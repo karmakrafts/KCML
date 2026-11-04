@@ -52,7 +52,9 @@ class KCMLNativeLinkTest {
             val otherLink = otherTarget.binaries.getTest("DEBUG").linkTaskProvider.get()
             assertSame(
                 prepareCache,
-                otherLink.taskDependencies.getDependencies(otherLink).filterIsInstance<KCMLPrepareNativeCacheTask>().single()
+                otherLink.taskDependencies.getDependencies(otherLink)
+                    .filterIsInstance<KCMLPrepareNativeCacheTask>()
+                    .single()
             )
         }
         finally {

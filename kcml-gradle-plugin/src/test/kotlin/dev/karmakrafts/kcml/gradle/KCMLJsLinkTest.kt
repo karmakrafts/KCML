@@ -43,8 +43,8 @@ class KCMLJsLinkTest {
 
             links.forEachIndexed { index, link ->
                 assertEquals(index != 0, link.incrementalJsIr, link.name)
-                val prepareCache = link.taskDependencies.getDependencies(link)
-                    .filterIsInstance<KCMLPrepareJsCacheTask>().single()
+                val prepareCache =
+                    link.taskDependencies.getDependencies(link).filterIsInstance<KCMLPrepareJsCacheTask>().single()
                 assertEquals(link.rootCacheDirectory.get(), prepareCache.cacheDirectory.get())
                 assertTrue(prepareCache.taskDependencies.getDependencies(prepareCache).none { it is KotlinJsIrLink })
             }
