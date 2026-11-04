@@ -32,8 +32,10 @@ import java.net.InetAddress
 import java.net.Socket
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -231,6 +233,35 @@ class AgentCommServerTest {
 
         assertEquals(0, server.connectionCount)
         assertEquals(-1, connections.single().read())
+    }
+
+    @Test
+    fun `close does not wait indefinitely for a blocked packet handler`() = withServer { server, connections ->
+        val handlerStarted = CountDownLatch(1)
+        val releaseHandler = CountDownLatch(1)
+        val handlerThread = AtomicReference<Thread>()
+        val close = FutureTask { server.close() }
+        val closingThread = Thread(close).apply { isDaemon = true }
+        server.receive<A2SHandshake> {
+            handlerThread.set(Thread.currentThread())
+            handlerStarted.countDown()
+            releaseHandler.await()
+        }
+        try {
+            connections.single().send(A2SHandshake("blocked"))
+            assertTrue(handlerStarted.await(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+            closingThread.start()
+
+            close.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS)
+            assertEquals(0, server.connectionCount)
+            assertEquals(-1, connections.single().read())
+            assertTrue(handlerThread.get().isDaemon, "A blocked handler must not keep the JVM alive")
+        }
+        finally {
+            releaseHandler.countDown()
+            closingThread.join(TIMEOUT_MILLIS.toLong())
+            handlerThread.get()?.join(TIMEOUT_MILLIS.toLong())
+        }
     }
 
     @Test

@@ -40,6 +40,8 @@ internal class AgentCommServer(
     port: Int, private val handshakeProvider: ((A2SHandshake) -> S2AHandshake)? = null
 ) : AutoCloseable {
     companion object {
+        private const val SHUTDOWN_TIMEOUT_MILLIS: Long = 1_000
+
         fun isPortInUse(port: Int): Boolean = try {
             ServerSocket(port).close()
             false
@@ -96,7 +98,7 @@ internal class AgentCommServer(
                 close()
                 onClosed(this)
             }
-        }
+        }.apply { isDaemon = true }
 
         fun start() = ioThread.start()
 
@@ -110,7 +112,8 @@ internal class AgentCommServer(
             }
             runCatching { socket.close() }
             if (Thread.currentThread() != ioThread) {
-                ioThread.join()
+                // A handler may be waiting on Gradle state held by the thread closing the service.
+                ioThread.join(SHUTDOWN_TIMEOUT_MILLIS)
             }
         }
     }
@@ -141,7 +144,7 @@ internal class AgentCommServer(
         } catch (_: Throwable) {
             // Can't do anything here
         }
-    }
+    }.apply { isDaemon = true }
 
     init {
         receive<A2SLog> { message ->
@@ -181,7 +184,7 @@ internal class AgentCommServer(
         }
         logger.info("Stopping KCML agent comm server..")
         socket.close()
-        connectionThread.join()
+        connectionThread.join(SHUTDOWN_TIMEOUT_MILLIS)
         while (true) {
             val connection = connections.poll() ?: break
             runCatching { connection.close() }
