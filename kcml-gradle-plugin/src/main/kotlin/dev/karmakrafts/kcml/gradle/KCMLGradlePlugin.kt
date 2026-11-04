@@ -48,6 +48,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
     private val providerFactory: ProviderFactory
 ) : KotlinCompilerPluginSupportPlugin {
     companion object {
+        private const val SUPPORT_PLUGIN_SEPARATOR: String = "__"
         private const val CONFIGURATION_NAME: String = "kcml"
         private const val OPT_PLUGIN_CLASSPATH: String = "pluginClasspaths"
         private const val OPT_AGENT_LOGGING: String = "agentLogging"
@@ -266,7 +267,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
             buildList {
                 this += supportPlugins.flatMap { plugin ->
                     plugin.applyToCompilation(kotlinCompilation).get().map { option ->
-                        SubpluginOption("${plugin.pluginId}:${option.key}", option.value)
+                        SubpluginOption("${plugin.pluginId}${SUPPORT_PLUGIN_SEPARATOR}${option.key}", option.value)
                     }
                 }
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
