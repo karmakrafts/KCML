@@ -129,8 +129,6 @@ publish:snapshot:maven:
     - ./gradlew
       :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
       :kcml-gradle-plugin:publishAggregationToCentralSnapshots
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToGitLabRepository
-      :kcml-gradle-plugin:kcml-gradle-api:publishAggregationToCentralSnapshots
       publishAllPublicationsToGitLabRepository 
       publishAggregationToCentralSnapshots
   tags:
@@ -144,8 +142,6 @@ publish:release:maven:
     - ./gradlew
       :kcml-gradle-plugin:publishAllPublicationsToGitLabRepository 
       :kcml-gradle-plugin:publishAggregationToCentralPortal
-      :kcml-gradle-plugin:kcml-gradle-api:publishAllPublicationsToGitLabRepository
-      :kcml-gradle-plugin:kcml-gradle-api:publishAggregationToCentralPortal
       publishAllPublicationsToGitLabRepository 
       publishAggregationToCentralPortal
   tags:
