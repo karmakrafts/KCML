@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.backend.jvm.JvmCodeGeneratorImpl
 import dev.karmakrafts.kcml.backend.jvm.LateJvmBackendImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.codegen.BlockInfo
 import org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen
@@ -38,6 +39,8 @@ object JVMHooks {
 
     @JvmStatic
     fun onGenerateClass(context: JvmBackendContext) = synchronized(initializationLock) {
+        // The agent also patches unrelated compilations in a reused Gradle/compiler JVM.
+        if (context.configuration.kcmlPluginClasspaths.isEmpty()) return@synchronized
         if (context in initializedInstances) return@synchronized
         val pluginPaths = requireNotNull(MixinBridge.INSTANCE.getConstant("kcml", "plugin_paths") as? List<*>) {
             "KCML agent handshake has not supplied plugin paths"
@@ -52,6 +55,7 @@ object JVMHooks {
 
     @JvmStatic
     fun onGenerateElement(element: IrElement, generator: ExpressionCodegen, blockInfo: BlockInfo): PromisedValue? {
+        if (generator.context.configuration.kcmlPluginClasspaths.isEmpty()) return null
         for ([pluginId, extension] in PluginLoaderImpl.extensionDispatcher.lateJvmExtensions) {
             if (extension !is JvmCodeGenerationExtension) continue
             val backend = LateJvmBackendImpl(pluginId, generator.context, PluginLoaderImpl)

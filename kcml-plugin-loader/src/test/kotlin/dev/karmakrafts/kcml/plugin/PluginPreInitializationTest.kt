@@ -58,7 +58,13 @@ class OptionsTestPlugin : CompilerPlugin {
         context.addOption("value", "<int>", "An integer") { value, config ->
             config.put(valueKey, value.toInt())
         }
-        context.addOption("entry", "<string>", "An entry", required = false, allowMultipleOccurrences = true) { value, config ->
+        context.addOption(
+            "entry",
+            "<string>",
+            "An entry",
+            required = false,
+            allowMultipleOccurrences = true
+        ) { value, config ->
             config.add(entriesKey, value)
         }
     }
@@ -130,7 +136,11 @@ class PluginPreInitializationTest {
 
     @Test
     fun `preInit registers options before init and runs once per compilation`() = withPlugin(
-        arrayOf("plugin:kcml:options_testValue=42", "plugin:kcml:options_testEntry=first", "plugin:kcml:options_testEntry=second")
+        arrayOf(
+            "plugin:kcml:options_testValue=42",
+            "plugin:kcml:options_testEntry=first",
+            "plugin:kcml:options_testEntry=second"
+        )
     ) { config, arguments ->
         PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
         val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
@@ -187,7 +197,11 @@ class PluginPreInitializationTest {
     ) { config, arguments ->
         config.kcmlPluginClasspaths = arguments.pluginClasspaths.map(Path::of)
         PluginLoaderImpl.preInitialize(config)
-        processCompilerPluginsOptions(config, arguments.pluginOptions.asIterable(), listOf(PluginLoaderImpl.commandLineProcessor))
+        processCompilerPluginsOptions(
+            config,
+            arguments.pluginOptions.asIterable(),
+            listOf(PluginLoaderImpl.commandLineProcessor)
+        )
         val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
         assertEquals(1, plugin.preInitCount)
         assertEquals(0, plugin.initCount)
@@ -227,7 +241,10 @@ class PluginPreInitializationTest {
         PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
         assertEquals(listOf("options_test", "dependent_options_test"), PluginLoaderImpl.allPluginsSorted())
         assertEquals(42, (PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin).initializedValue)
-        assertEquals("independent", (PluginLoaderImpl.getPlugin("dependent_options_test") as DependentOptionsTestPlugin).initializedValue)
+        assertEquals(
+            "independent",
+            (PluginLoaderImpl.getPlugin("dependent_options_test") as DependentOptionsTestPlugin).initializedValue
+        )
     }
 
     @Test

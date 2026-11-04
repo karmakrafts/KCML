@@ -20,8 +20,8 @@ import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
-import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
+import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments

@@ -36,9 +36,7 @@ class MessageCollectorLoggerTest {
         override fun hasErrors(): Boolean = messages.any { it.first.isError }
 
         override fun report(
-            severity: CompilerMessageSeverity,
-            message: String,
-            location: CompilerMessageSourceLocation?
+            severity: CompilerMessageSeverity, message: String, location: CompilerMessageSourceLocation?
         ) {
             if (requireLock) assertTrue(Thread.holdsLock(this), "Loggers must lock their shared collector")
             messages += severity to message
@@ -83,8 +81,7 @@ class MessageCollectorLoggerTest {
                 CompilerMessageSeverity.INFO to "[example] info",
                 CompilerMessageSeverity.WARNING to "[example] warn",
                 CompilerMessageSeverity.ERROR to "[example] error"
-            ),
-            collector.messages
+            ), collector.messages
         )
     }
 

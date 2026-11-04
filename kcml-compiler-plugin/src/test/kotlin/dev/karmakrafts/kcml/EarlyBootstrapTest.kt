@@ -21,18 +21,29 @@ import dev.karmakrafts.kcml.agent.proto.S2AHandshake
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketHandler
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketReader
 import dev.karmakrafts.kcml.agent.proto.io.AgentPacketWriter
+import dev.karmakrafts.kcml.api.backend.jvm.JvmCodeGenerator
+import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
+import dev.karmakrafts.kcml.api.extension.AbstractExtension
+import dev.karmakrafts.kcml.api.extension.ExtensionId
+import dev.karmakrafts.kcml.api.extension.jvm.JvmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
+import org.jetbrains.kotlin.cli.common.ExitCode
+import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.cli.plugins.processCompilerPluginsOptions
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
+import org.jetbrains.kotlin.ir.IrElement
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.PrintStream
 import java.net.InetAddress
 import java.net.ServerSocket
 import java.nio.file.Files
@@ -56,6 +67,8 @@ class EarlyOptionsTestPlugin : CompilerPlugin {
 
     var preInitCount: Int = 0
     var initializedValue: Int? = null
+    var lateInitCount: Int = 0
+    var generatedElementCount: Int = 0
 
     override fun preInit(context: PreInitializationContext) {
         ++preInitCount
@@ -64,6 +77,19 @@ class EarlyOptionsTestPlugin : CompilerPlugin {
 
     override fun init(context: InitializationContext) {
         initializedValue = context.config[key]
+        context.extensionRegistry.register(EarlyJvmTestExtension(this))
+    }
+}
+
+@ExtensionId("early_jvm_test")
+private class EarlyJvmTestExtension(private val plugin: EarlyOptionsTestPlugin) : AbstractExtension(), JvmCodeGenerationExtension {
+    override fun init(backend: LateJvmBackend) {
+        ++plugin.lateInitCount
+    }
+
+    override fun JvmCodeGenerator.process(element: IrElement): PromisedValue? {
+        ++plugin.generatedElementCount
+        return null
     }
 }
 
@@ -89,7 +115,7 @@ class EarlyBootstrapTest {
             ServerSocket(0, 2, InetAddress.getLoopbackAddress()).use { server ->
                 server.soTimeout = 30_000
                 val handshakes = CompletableFuture.runAsync {
-                    repeat(2) {
+                    repeat(4) {
                         server.accept().use { socket ->
                             socket.soTimeout = 30_000
                             val writer = AgentPacketWriter(socket.getOutputStream())
@@ -147,6 +173,47 @@ object EarlyBootstrapProcess {
             with(KCMLCompilerPluginRegistrar()) { CompilerPluginRegistrar.ExtensionStorage().registerExtensions(config) }
             assertEquals(value, plugin.initializedValue)
             previous = plugin
+        }
+        val directory = Files.createTempDirectory(Path.of("build"), "unconfigured-compiler-")
+        try {
+            val source = directory.resolve("Plain.kt")
+            Files.writeString(source, "class Plain { fun value(): Int = 42 }")
+            val compiler = K2JVMCompiler()
+            fun compile(options: List<String> = emptyList()) {
+                val output = ByteArrayOutputStream()
+                val result = PrintStream(output).use { stream ->
+                    compiler.exec(stream, *(listOf(
+                        "-no-stdlib", "-no-reflect",
+                        "-classpath", Path.of(Unit::class.java.protectionDomain.codeSource.location.toURI()).toString(),
+                        "-d", directory.resolve("classes").toString(), source.toString()
+                    ) + options).toTypedArray())
+                }
+                assertEquals(ExitCode.OK, result, output.toString())
+                assertTrue(Files.exists(directory.resolve("classes/Plain.class")))
+            }
+            val compilerPlugin = Path.of(KCMLCompilerPluginRegistrar::class.java.protectionDomain.codeSource.location.toURI())
+            for (value in 3..4) {
+                compile(listOf(
+                    "-Xplugin=$compilerPlugin",
+                    "-P", "plugin:kcml:early_options_testValue=$value",
+                    "-P", "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
+                    "-P", "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
+                ))
+                val plugin = PluginLoaderImpl.getPlugin("early_options_test") as EarlyOptionsTestPlugin
+                assertNotSame(previous, plugin)
+                assertEquals(value, plugin.initializedValue)
+                assertEquals(1, plugin.lateInitCount)
+                assertTrue(plugin.generatedElementCount > 0)
+                val generatedElementCount = plugin.generatedElementCount
+                previous = plugin
+                compile()
+                assertTrue(PluginLoaderImpl.allPlugins().isEmpty())
+                assertEquals(1, plugin.lateInitCount)
+                assertEquals(generatedElementCount, plugin.generatedElementCount)
+            }
+        }
+        finally {
+            directory.toFile().deleteRecursively()
         }
     }
 }

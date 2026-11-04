@@ -22,8 +22,8 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
-import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
+import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
@@ -307,10 +307,10 @@ object PluginLoaderImpl : PluginLoader {
         state.areOptionsProcessed = true
     }
 
-    private fun parseOptions(options: Iterable<String>?): List<CliOptionValue> = (options ?: emptyList()).map { option ->
-        parseLegacyPluginOption(option)
-            ?: throw CliOptionProcessingException("Wrong plugin option format: $option")
-    }
+    private fun parseOptions(options: Iterable<String>?): List<CliOptionValue> =
+        (options ?: emptyList()).map { option ->
+            parseLegacyPluginOption(option) ?: throw CliOptionProcessingException("Wrong plugin option format: $option")
+        }
 
     private fun createOptionsProcessor(): CommandLineProcessor {
         val delegates = LinkedHashMap<AbstractCliOption, Pair<CommandLineProcessor, AbstractCliOption>>()
