@@ -32,13 +32,15 @@ import java.lang.instrument.ClassFileTransformer
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
 import java.security.ProtectionDomain
+import java.util.function.Consumer
 import kotlin.io.path.div
 import kotlin.io.path.writeBytes
 
 internal class MixinClassTransformer( // @formatter:off
     private val logger: Logger,
     private val loader: MixinLoader,
-    private val dumpPath: Path?
+    private val dumpPath: Path?,
+    private val compilerClassLoaderInjector: Consumer<ClassLoader>? = null
 ) : ClassFileTransformer { // @formatter:on
     companion object {
         private val packageBlacklist: List<String> = listOf( // @formatter:off
@@ -112,6 +114,8 @@ internal class MixinClassTransformer( // @formatter:off
                 }
             }
             if (wasChanged) { // If class changed, rewrite it
+                // Backend targets can be used without CLICompiler.exec, e.g. by Gradle's Kotlin DSL compiler.
+                if (loader != null) compilerClassLoaderInjector?.accept(loader)
                 val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
                 classNode.accept(writer)
                 val newClassfileBuffer = writer.toByteArray()

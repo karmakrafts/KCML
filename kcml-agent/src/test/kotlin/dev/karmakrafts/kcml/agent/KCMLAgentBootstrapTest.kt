@@ -74,6 +74,16 @@ class KCMLAgentBootstrapTest {
     }
 
     @Test
+    fun `makes backend hooks available without a CLI invocation`() {
+        assertAgentStartup(false, compile = true, backendOnly = true)
+    }
+
+    @Test
+    fun `makes backend hooks available when backend is loaded after attachment`() {
+        assertAgentStartup(false, compile = true, preloadCompiler = false, backendOnly = true)
+    }
+
+    @Test
     fun `reports incompatible bridge retained by previous build`() {
         assertAgentStartup(true)
     }
@@ -113,7 +123,8 @@ class KCMLAgentBootstrapTest {
         compatible: Boolean = !preloadedBridge,
         compile: Boolean = false,
         applicationLoader: Boolean = false,
-        preloadCompiler: Boolean = true
+        preloadCompiler: Boolean = true,
+        backendOnly: Boolean = false
     ) {
         val directory = Files.createTempDirectory(Path.of("build"), "agent-startup-test-").toAbsolutePath()
         try {
@@ -207,7 +218,11 @@ class KCMLAgentBootstrapTest {
                     server.localPort.toString()
                 )
                 if (compile) {
-                    val mode = if (applicationLoader) "compile-application" else "compile"
+                    val mode = when {
+                        backendOnly -> "compile-backend"
+                        applicationLoader -> "compile-application"
+                        else -> "compile"
+                    }
                     command += if (preloadCompiler) mode else "$mode-cold"
                 }
                 if (preloadedBridge) command += listOf(

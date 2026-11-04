@@ -121,6 +121,7 @@ object KCMLAgent {
         }
         // ================== Mixin Bridge boundary ==================
         logger.info { "Initializing default constant table entries" }
+        val compilerClassLoaderInjector = CompilerClassLoaderInjector(Path(handshake.loaderPath), instrumentation)
         MixinBridge.INSTANCE.apply {
             putConstant(BuiltinMixinSource, "loader_path", handshake.loaderPath)
             putConstant(BuiltinMixinSource, "bridge_path", handshake.bridgePath)
@@ -128,7 +129,7 @@ object KCMLAgent {
             putConstant(
                 BuiltinMixinSource,
                 "inject_loader",
-                CompilerClassLoaderInjector(Path(handshake.loaderPath), instrumentation)
+                compilerClassLoaderInjector
             )
         }
         val loader = MixinLoader(logger)
@@ -136,7 +137,9 @@ object KCMLAgent {
         loader.load((listOf(handshake.loaderPath) + handshake.pluginPaths).map(::Path), Path(handshake.loaderPath))
         val dumpPath = if (handshake.dumpClasses) handshake.dumpPath?.let(::Path) else null
         val canRetransform = instrumentation.isRetransformClassesSupported
-        instrumentation.addTransformer(MixinClassTransformer(logger, loader, dumpPath), canRetransform)
+        instrumentation.addTransformer(
+            MixinClassTransformer(logger, loader, dumpPath, compilerClassLoaderInjector), canRetransform
+        )
         if (canRetransform) {
             val targets = loader.mixins.map { mixin -> mixin.target.className }.toSet()
             val loadedTargets = instrumentation.allLoadedClasses.filter { type ->

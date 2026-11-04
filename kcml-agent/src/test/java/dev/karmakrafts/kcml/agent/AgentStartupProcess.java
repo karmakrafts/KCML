@@ -76,6 +76,11 @@ public final class AgentStartupProcess {
         if (source.getClassLoader() != null) {
             throw new AssertionError("Mixin source must be loaded by the bootstrap class loader");
         }
+        if (compile && args[2].startsWith("compile-backend")) {
+            compilerLoader.loadClass("org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen");
+            Class.forName("dev.karmakrafts.kcml.hooks.jvm.JVMHooks", true, compilerLoader);
+            return;
+        }
         if (compile) {
             compileTwice();
         }
