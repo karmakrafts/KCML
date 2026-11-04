@@ -55,10 +55,32 @@ configureDokka {
     withGradle()
 }
 
+subprojects {
+    group = rootProject.group
+    version = rootProject.version
+}
+
+val shade = configurations.create("shade") {
+    isTransitive = true
+}
+
+configurations {
+    compileOnly { extendsFrom(shade) }
+    testImplementation { extendsFrom(shade) }
+    apiElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(tasks.shadowJar)
+    }
+    runtimeElements {
+        outgoing.artifacts.clear()
+        outgoing.artifact(tasks.shadowJar)
+    }
+}
+
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
-    implementation(projects.kcmlAgentProtocol)
+    shade(projects.kcmlAgentProtocol)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
@@ -102,6 +124,7 @@ tasks {
     }
     shadowJar {
         archiveClassifier = ""
+        configurations = listOf(shade)
     }
     assemble {
         dependsOn(shadowJar)
@@ -133,6 +156,23 @@ publishing {
         description = "Gradle plugin for the Kotlin Compiler Meta Loader",
         url = "https://git.karmakrafts.dev/kk/kcml"
     )
+    publications {
+        withType<MavenPublication>().configureEach {
+            pom.withXml {
+                val dependenciesNode = asNode().children().filterIsInstance<groovy.util.Node>().find {
+                    val name = it.name()
+                    name == "dependencies" || (name is groovy.namespace.QName && name.localPart == "dependencies")
+                }
+                dependenciesNode?.children()?.filterIsInstance<groovy.util.Node>()?.filter { dep ->
+                    val artifactId = dep.children().filterIsInstance<groovy.util.Node>().find {
+                        val name = it.name()
+                        name == "artifactId" || (name is groovy.namespace.QName && name.localPart == "artifactId")
+                    }?.text()
+                    artifactId == "kcml-agent-protocol"
+                }?.forEach { dependenciesNode.remove(it) }
+            }
+        }
+    }
 }
 
 signing {
