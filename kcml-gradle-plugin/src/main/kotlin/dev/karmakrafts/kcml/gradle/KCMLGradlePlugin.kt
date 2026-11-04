@@ -265,7 +265,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
         return providerFactory.provider {
             buildList {
                 this += supportPlugins.flatMap { plugin ->
-                    plugin.applyToCompilation(kotlinCompilation).get()
+                    plugin.applyToCompilation(kotlinCompilation).get().map { option ->
+                        SubpluginOption("${plugin.pluginId}:${option.key}", option.value)
+                    }
                 }
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))

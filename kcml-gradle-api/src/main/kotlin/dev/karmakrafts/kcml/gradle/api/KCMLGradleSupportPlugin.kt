@@ -30,6 +30,12 @@ import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
  */
 public interface KCMLGradleSupportPlugin : Plugin<Project> {
     /**
+     * The ID of this support plugins associated compiler plugin.
+     * Should match the value specified in the `Plugin` annotation.
+     */
+    public val pluginId: String
+
+    /**
      * Applies this support plugin to [target].
      *
      * The default implementation performs no project-level configuration.
