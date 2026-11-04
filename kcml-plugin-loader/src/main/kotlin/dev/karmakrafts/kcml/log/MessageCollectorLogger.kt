@@ -28,8 +28,21 @@ internal class MessageCollectorLogger( // @formatter:off
     override val name: String
 ) : Logger { // @formatter:on
     private fun formatMessage(message: String): String = "[$name] $message"
-    override fun debug(message: String) = messageCollector.verbose(formatMessage(message))
-    override fun info(message: String) = messageCollector.info(formatMessage(message))
-    override fun warn(message: String) = messageCollector.warn(formatMessage(message))
-    override fun error(message: String) = messageCollector.error(formatMessage(message))
+
+    // Parallel native backend workers share the collector across logger instances.
+    override fun debug(message: String) = synchronized(messageCollector) {
+        messageCollector.verbose(formatMessage(message))
+    }
+
+    override fun info(message: String) = synchronized(messageCollector) {
+        messageCollector.info(formatMessage(message))
+    }
+
+    override fun warn(message: String) = synchronized(messageCollector) {
+        messageCollector.warn(formatMessage(message))
+    }
+
+    override fun error(message: String) = synchronized(messageCollector) {
+        messageCollector.error(formatMessage(message))
+    }
 }
