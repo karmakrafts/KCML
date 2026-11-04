@@ -55,7 +55,8 @@ dependencies {
     kapt(libs.autoService.processor)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.iridium)
-    testRuntimeOnly(projects.kcmlPluginLoader)
+    testImplementation(projects.kcmlPluginLoader)
+    testImplementation(projects.kcmlAgentProtocol)
 }
 
 tasks {
@@ -71,6 +72,9 @@ tasks {
     }
     test {
         useJUnitPlatform()
+        dependsOn(jar)
+        systemProperty("kcml.compiler.plugin.jar", jar.get().archiveFile.get().asFile.absolutePath)
+        systemProperty("kcml.test.classpath", classpath.asPath)
         maxParallelForks = Runtime.getRuntime().availableProcessors()
     }
     jar {

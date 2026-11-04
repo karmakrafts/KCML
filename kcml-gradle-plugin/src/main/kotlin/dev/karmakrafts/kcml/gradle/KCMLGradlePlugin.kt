@@ -23,7 +23,6 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.TaskProvider
-import org.gradle.internal.extensions.stdlib.capitalized
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -48,7 +47,6 @@ internal open class KCMLGradlePlugin @Inject constructor(
     private val providerFactory: ProviderFactory
 ) : KotlinCompilerPluginSupportPlugin {
     companion object {
-        private const val SUPPORT_PLUGIN_SEPARATOR: String = "__"
         private const val CONFIGURATION_NAME: String = "kcml"
         private const val OPT_PLUGIN_CLASSPATH: String = "pluginClasspaths"
         private const val OPT_AGENT_LOGGING: String = "agentLogging"
@@ -104,6 +102,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
         registerPostBuildTasks(target)
         logger.info("Registered KCML tasks")
         configureTaskOptions(target)
+        target.pluginManager.apply(KCMLBootstrapGradlePlugin::class.java)
         logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
     }
 
@@ -121,7 +120,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
                     val plugins = project.configurations.getByName(CONFIGURATION_NAME)
                     val runtime = project.configurations.getByName("kcmlRuntime")
                     val prepareCache = project.tasks.register(
-                        "kcmlPrepareJsCache${task.name.capitalized()}", KCMLPrepareJsCacheTask::class.java
+                        "kcmlPrepareJsCache${task.name.replaceFirstChar { it.uppercase() }}",
+                        KCMLPrepareJsCacheTask::class.java
                     ) { prepare ->
                         prepare.pluginClasspath.from(plugins, runtime)
                         prepare.cacheDirectory.set(task.rootCacheDirectory)
@@ -141,7 +141,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         // Kotlin shares this cache root across targets with the same binary name.
                         val prepareCache = nativeCacheTasks.getOrPut(binary.name) {
                             project.tasks.register(
-                                "kcmlPrepareNativeCache${binary.name.capitalized()}",
+                                "kcmlPrepareNativeCache${binary.name.replaceFirstChar { it.uppercase() }}",
                                 KCMLPrepareNativeCacheTask::class.java
                             ) { task ->
                                 task.pluginClasspath.from(plugins, runtime)
@@ -171,7 +171,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
     }
 
     private fun createPreBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPreBuildTask> {
-        val taskName = "kcmlPreBuild${target.name.capitalized()}"
+        val taskName = "kcmlPreBuild${target.name.replaceFirstChar { it.uppercase() }}"
         return project.tasks.register(taskName, KCMLPreBuildTask::class.java) { task ->
             task.dependsOn("kcmlStartAgentServer")
             task.buildService.set(project.gradle.sharedServices.registrations.getByName("${KCMLBuildService.NAME}${project.path}").service.map { it as KCMLBuildService })
@@ -208,7 +208,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
     }
 
     private fun createPostBuildTask(project: Project, target: KotlinTarget): TaskProvider<KCMLPostBuildTask> {
-        val taskName = "kcmlPostBuild${target.name.capitalized()}"
+        val taskName = "kcmlPostBuild${target.name.replaceFirstChar { it.uppercase() }}"
         return project.tasks.register(taskName, KCMLPostBuildTask::class.java) { task ->
             task.buildService.set(project.gradle.sharedServices.registrations.getByName("${KCMLBuildService.NAME}${project.path}").service.map { it as KCMLBuildService })
             task.apply {
@@ -257,7 +257,19 @@ internal open class KCMLGradlePlugin @Inject constructor(
 
     override fun applyToCompilation(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
-        val supportPlugins = project.plugins.withType(KCMLGradleSupportPlugin::class.java)
+        return providerFactory.provider {
+            project.plugins.filterIsInstance<KCMLGradleSupportPlugin>().flatMap { plugin ->
+                plugin.applyToCompilation(kotlinCompilation).get().map { option ->
+                    SubpluginOption(
+                        "${plugin.pluginId}${option.key.replaceFirstChar { it.uppercase() }}",
+                        lazy { option.value })
+                }
+            }
+        }
+    }
+
+    internal fun bootstrapOptions(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
+        val project = kotlinCompilation.target.project
         val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
             it.file.toPath().absolutePathString()
         }
@@ -265,11 +277,6 @@ internal open class KCMLGradlePlugin @Inject constructor(
         val moduleName = getModuleName(kotlinCompilation)
         return providerFactory.provider {
             buildList {
-                this += supportPlugins.flatMap { plugin ->
-                    plugin.applyToCompilation(kotlinCompilation).get().map { option ->
-                        SubpluginOption("${plugin.pluginId}${SUPPORT_PLUGIN_SEPARATOR}${option.key}", option.value)
-                    }
-                }
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))

@@ -18,9 +18,6 @@ package dev.karmakrafts.kcml.api.plugin
 
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 
-@PublishedApi
-internal const val SUPPORT_PLUGIN_SEPARATOR: String = "__"
-
 /**
  * Resolve a compiler option for the given KCML plugin by its ID and key.
  * Works the same way as [CompilerConfigurationKey.Companion.create], except
@@ -34,6 +31,5 @@ internal const val SUPPORT_PLUGIN_SEPARATOR: String = "__"
 public inline fun <T : Any> CompilerConfigurationKey.Companion.createForPlugin(
     pluginId: String, key: String
 ): CompilerConfigurationKey<T> {
-    require(SUPPORT_PLUGIN_SEPARATOR !in key) { "Support plugin option key should not contain $SUPPORT_PLUGIN_SEPARATOR" }
-    return CompilerConfigurationKey.create("${pluginId}${SUPPORT_PLUGIN_SEPARATOR}$key")
+    return CompilerConfigurationKey.create("$pluginId${key.replaceFirstChar { it.uppercase() }}")
 }

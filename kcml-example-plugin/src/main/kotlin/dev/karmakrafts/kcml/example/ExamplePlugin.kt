@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.example
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
+import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.example.js.ExampleJsCodeGenerationExtension
 import dev.karmakrafts.kcml.example.js.ExampleJsIntrinsicsExtension
 import dev.karmakrafts.kcml.example.js.ExampleLateJsExtension
@@ -36,7 +36,7 @@ import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
 @AutoService(CompilerPlugin::class)
 @Plugin("example")
 class ExamplePlugin : CompilerPlugin {
-    override fun load(context: PluginLoadContext) {
+    override fun init(context: InitializationContext) {
         context.logger.info("Loading example plugin!")
         context.extensionRegistry.apply {
             register(ExampleFirExtension())

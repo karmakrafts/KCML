@@ -16,9 +16,13 @@
 
 package dev.karmakrafts.kcml
 
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.util.AgentInjector
 import dev.karmakrafts.kcml.util.EmbeddedJar
 import dev.karmakrafts.kcml.util.FileLock
 import dev.karmakrafts.kcml.util.KCMLVersion
+import dev.karmakrafts.kcml.util.kcmlAgentCommPort
+import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -42,7 +46,7 @@ internal object KCMLBootstrap {
         report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
 
     @OptIn(MessageCollectorAccess::class)
-    fun init(configuration: CompilerConfiguration) = synchronized(lock) {
+    fun prepare(configuration: CompilerConfiguration) = synchronized(lock) {
         val lockPath = kcmlVersionDir / "bootstrap.lock"
         val messageCollector = configuration.messageCollector
         messageCollector.log("Acquiring KCML bootstrap lock at $lockPath")
@@ -69,8 +73,22 @@ internal object KCMLBootstrap {
         messageCollector.log("Releasing KCML bootstrap lock at $lockPath")
     }
 
+    @OptIn(MessageCollectorAccess::class)
+    fun init(configuration: CompilerConfiguration) = synchronized(lock) {
+        val messageCollector = configuration.messageCollector
+        AgentInjector(kcmlVersionDir) { messageCollector.log(it) }.inject(
+            mapOf(
+                "comm_port" to requireNotNull(configuration.kcmlAgentCommPort) {
+                    "KCML agent requires a communication port"
+                },
+                "logging" to configuration.kcmlAgentLogging
+            )
+        )
+        PluginLoaderImpl.preInitialize(configuration)
+    }
+
     /**
-     * This is only for our direct entrypoint via KCMLCommandLineProcessor.
+     * This is only for our direct entrypoint via KCMLBootstrapCommandLineProcessor.
      * Any subsequent tasks that do not use the plugin pipeline will inherit
      * the loader in their compiler CP via a direct injection.
      * See `CLICompilerTransformer` in the agent.

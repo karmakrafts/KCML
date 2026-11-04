@@ -21,7 +21,7 @@ import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
+import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
@@ -43,7 +43,7 @@ import kotlin.test.assertTrue
 
 @Plugin("lifecycle_test_plugin")
 class LifecycleTestPlugin : CompilerPlugin {
-    override fun load(context: PluginLoadContext) {
+    override fun init(context: InitializationContext) {
         context.extensionRegistry.register(LifecycleTestExtension())
     }
 }
@@ -119,7 +119,8 @@ class PluginLoaderLifecycleTest {
             visitEnd()
         }
         for ([method, parameter] in listOf(
-            "load" to "dev/karmakrafts/kcml/api/plugin/PluginLoadContext",
+            CompilerPlugin::init.name to InitializationContext::class.java.name.replace('.', '/'),
+            CompilerPlugin::preInit.name to "dev/karmakrafts/kcml/api/plugin/PreInitializationContext",
             "processIpms" to "dev/karmakrafts/kcml/api/ipm/IPM"
         )) {
             writer.visitMethod(Opcodes.ACC_PUBLIC, method, "(L$parameter;)V", null, null).apply {

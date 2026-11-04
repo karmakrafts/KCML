@@ -61,7 +61,8 @@ class JsCodeGenerationExtensionTest {
         override val context: JsGenerationContext
             get() = error("Unexpected generation context access")
 
-        override fun generateExpression(expression: IrExpression): JsExpression = error("Unexpected expression generation")
+        override fun generateExpression(expression: IrExpression): JsExpression =
+            error("Unexpected expression generation")
 
         override fun generateStatement(statement: IrStatement): JsStatement = error("Unexpected statement generation")
     }

@@ -16,18 +16,22 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.KCMLConstants
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import dev.karmakrafts.kcml.api.plugin.PluginLoadContext
+import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
+import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
+import dev.karmakrafts.kcml.hooks.CommonHooks
+import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.util.connectVertices
@@ -40,8 +44,14 @@ import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.json.decodeFromStream
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
+import org.jetbrains.kotlin.cli.plugins.processCompilerPluginOptions
+import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
+import org.jetbrains.kotlin.compiler.plugin.CliOptionProcessingException
+import org.jetbrains.kotlin.compiler.plugin.CliOptionValue
+import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
+import org.jetbrains.kotlin.compiler.plugin.parseLegacyPluginOption
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
@@ -52,7 +62,7 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
 
-@OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class)
+@OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class, KCMLHookApi::class)
 object PluginLoaderImpl : PluginLoader {
     private class CompilationState {
         val owner: Thread = Thread.currentThread()
@@ -60,6 +70,10 @@ object PluginLoaderImpl : PluginLoader {
         val plugins: HashMap<String, CompilerPlugin> = HashMap()
         val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
         val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
+        val optionProcessors: ArrayList<CommandLineProcessor> = ArrayList()
+        var commandLineProcessor: CommandLineProcessor? = null
+        var arePluginsPreInitialized: Boolean = false
+        var areOptionsProcessed: Boolean = false
         var arePluginsLoaded: Boolean = false
         var pluginClassLoader: URLClassLoader? = null
         val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
@@ -235,7 +249,7 @@ object PluginLoaderImpl : PluginLoader {
             try {
                 loadingPluginId = pluginId
                 val extensionRegistry = getOrCreateExtensionRegistry(pluginId)
-                plugin.load(PluginLoadContext( // @formatter:off
+                plugin.init(InitializationContext( // @formatter:off
                     extensionRegistry = extensionRegistry,
                     config = config,
                     loggerFactory = loggerFactory,
@@ -259,10 +273,10 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    private fun loadAllPlugins(
-        config: CompilerConfiguration, candidates: List<CompilerPlugin> = loadCandidates(config)
-    ) {
-        if (arePluginsLoaded) return
+    private fun preInitializePlugins(candidates: () -> List<CompilerPlugin>) {
+        val state = compilationState.get()
+        if (state.arePluginsPreInitialized) return
+        val candidates = candidates()
         logger.info("Found ${candidates.size} plugin candidates")
         // Try to load metadata for all plugins
         loadMetadata(candidates)
@@ -270,6 +284,78 @@ object PluginLoaderImpl : PluginLoader {
         // Log plugin load order for debugging purposes
         val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
         logger.info("Sorted plugins into load order: $sortedNames")
+        try {
+            for ((pluginId, plugin) in sortedPlugins) {
+                loadingPluginId = pluginId
+                val context = PreInitializationContext()
+                plugin.preInit(context)
+                state.optionProcessors += context.createCommandLineProcessor(pluginId)
+            }
+        }
+        finally {
+            loadingPluginId = null
+        }
+        state.arePluginsPreInitialized = true
+    }
+
+    private fun processPluginOptions(config: CompilerConfiguration, options: Iterable<String>?) {
+        val state = compilationState.get()
+        if (state.areOptionsProcessed) return
+        val processor = createOptionsProcessor()
+        val values = parseOptions(options).filter { it.pluginId == KCMLConstants.PLUGIN_ID }
+        processCompilerPluginOptions(processor, values, config)
+        state.areOptionsProcessed = true
+    }
+
+    private fun parseOptions(options: Iterable<String>?): List<CliOptionValue> = (options ?: emptyList()).map { option ->
+        parseLegacyPluginOption(option)
+            ?: throw CliOptionProcessingException("Wrong plugin option format: $option")
+    }
+
+    private fun createOptionsProcessor(): CommandLineProcessor {
+        val delegates = LinkedHashMap<AbstractCliOption, Pair<CommandLineProcessor, AbstractCliOption>>()
+        val names = HashSet<String>()
+        for (processor in compilationState.get().optionProcessors) {
+            for (option in processor.pluginOptions) {
+                val scopedOption = object : AbstractCliOption by option {
+                    override val optionName: String =
+                        "${processor.pluginId}${option.optionName.replaceFirstChar { it.uppercase() }}"
+                }
+                require(names.add(scopedOption.optionName)) { "Duplicate KCML option '${scopedOption.optionName}'" }
+                delegates[scopedOption] = processor to option
+            }
+        }
+        return object : CommandLineProcessor {
+            override val pluginId: String = KCMLConstants.PLUGIN_ID
+            override val pluginOptions: Collection<AbstractCliOption> = delegates.keys
+
+            override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
+                val (processor, originalOption) = delegates.getValue(option)
+                processor.processOption(originalOption, value, configuration)
+            }
+        }
+    }
+
+    val commandLineProcessor: CommandLineProcessor
+        get() = checkNotNull(compilationState.get().commandLineProcessor) { "KCML has not been pre-initialized" }
+
+    @Synchronized
+    fun preInitialize(config: CompilerConfiguration) {
+        reset()
+        setupLogging(config)
+        preInitializePlugins { loadCandidates(config) }
+        compilationState.get().commandLineProcessor = createOptionsProcessor()
+        compilationState.get().areOptionsProcessed = true
+    }
+
+    private fun loadAllPlugins(
+        config: CompilerConfiguration,
+        options: Iterable<String>? = CommonHooks.compilerArgumentsOrNull?.pluginOptions?.asIterable(),
+        candidates: () -> List<CompilerPlugin> = { loadCandidates(config) }
+    ) {
+        if (arePluginsLoaded) return
+        preInitializePlugins(candidates)
+        processPluginOptions(config, options)
         // Load all plugins in the proper order
         loadPlugins(config)
         // Invoke all inter-plugin messaging
@@ -284,13 +370,13 @@ object PluginLoaderImpl : PluginLoader {
     @Synchronized
     fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) {
         setupLogging(config)
-        if (!arePluginsLoaded) loadAllPlugins(config, loadCandidates(arguments))
+        loadAllPlugins(config, arguments.pluginOptions.asIterable()) { loadCandidates(arguments) }
     }
 
     @Synchronized
     fun loadAndInvokeStandalone(config: CompilerConfiguration, pluginPaths: List<URL>) {
         setupLogging(config)
-        if (!arePluginsLoaded) loadAllPlugins(config, loadCandidates(pluginPaths))
+        loadAllPlugins(config) { loadCandidates(pluginPaths) }
     }
 
     // Invoked through a delegate IR plugin

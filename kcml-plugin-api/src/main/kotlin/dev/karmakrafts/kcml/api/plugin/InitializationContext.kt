@@ -26,7 +26,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * Services supplied while KCML loads one [CompilerPlugin] for a Kotlin compiler invocation.
  *
  * The context combines the plugin-specific extension registry with the compiler configuration and
- * KCML services shared by extensions. It is supplied only to [CompilerPlugin.load]; extensions
+ * KCML services shared by extensions. It is supplied only to [CompilerPlugin.init]; extensions
  * receive the corresponding frontend or backend context when Kotlin reaches their compiler phase.
  *
  * @property extensionRegistry registry owned by the plugin being loaded; register its extensions
@@ -39,7 +39,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  *   extension registries for this invocation.
  * @property ipm messaging service for exchanging named payloads with other loaded plugins.
  */
-public data class PluginLoadContext( // @formatter:off
+public data class InitializationContext( // @formatter:off
     public val extensionRegistry: ExtensionRegistry,
     public val config: CompilerConfiguration,
     public val loggerFactory: LoggerFactory,

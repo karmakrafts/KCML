@@ -18,35 +18,15 @@ package dev.karmakrafts.kcml
 
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
-import dev.karmakrafts.kcml.util.AgentInjector
-import dev.karmakrafts.kcml.util.kcmlAgentCommPort
-import dev.karmakrafts.kcml.util.kcmlAgentLogging
-import org.jetbrains.kotlin.cli.common.messages.CompilerMessageSeverity
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.config.MessageCollectorAccess
-import org.jetbrains.kotlin.config.messageCollector
 
 @Suppress("UNUSED")
 @OptIn(ExperimentalCompilerApi::class)
 @AutoService(CompilerPluginRegistrar::class)
 class KCMLCompilerPluginRegistrar : CompilerPluginRegistrar() {
-    private fun buildAgentArgs(
-        configuration: CompilerConfiguration
-    ): Map<String, Any> = buildMap {
-        this["comm_port"] =
-            requireNotNull(configuration.kcmlAgentCommPort) { "KCML agent requires a communication port" }
-        this["logging"] = configuration.kcmlAgentLogging
-    }
-
-    @OptIn(MessageCollectorAccess::class)
     override fun ExtensionStorage.registerExtensions(configuration: CompilerConfiguration) {
-        val agentArgs = buildAgentArgs(configuration)
-        val messageCollector = configuration.messageCollector
-        AgentInjector(KCMLBootstrap.kcmlVersionDir) { message ->
-            messageCollector.report(CompilerMessageSeverity.INFO, "[KCML Bootstrap] $message")
-        }.inject(agentArgs)
         with(PluginLoaderImpl) { loadAndInvoke(configuration) }
     }
 
