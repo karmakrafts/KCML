@@ -32,13 +32,16 @@ public interface IPM {
     @InternalKcmlApi
     public val queue: Deque<IPMMessage>
 
-    /** Receivers keyed by message name. */
+    /** Receivers keyed by message name; repeated registrations are composed into a single callback. */
     @InternalKcmlApi
     public val callbacks: MutableMap<String, IPMCallback>
 
     /**
-     * Sends a message to a plugin. Messages for an unavailable plugin are ignored; messages with
-     * no receiver are queued until one is registered.
+     * Sends a message to a plugin, invoking an available receiver synchronously.
+     *
+     * Messages for a plugin without an available message service are ignored. Messages to another
+     * plugin with a service but no receiver are queued until a receiver is registered. Messages to
+     * this plugin itself are delivered only if a receiver is already registered; otherwise they are ignored.
      *
      * @param pluginId receiving plugin ID.
      * @param name message name.
@@ -47,7 +50,9 @@ public interface IPM {
     public fun send(pluginId: String, name: String, data: IPMData)
 
     /**
-     * Sends a message to every plugin in dependency order.
+     * Sends a message to every plugin, including this plugin, in dependency order.
+     *
+     * Each delivery follows the same receiver and queueing rules as [send].
      *
      * @param name message name.
      * @param data message payload.
@@ -56,6 +61,9 @@ public interface IPM {
 
     /**
      * Registers a receiver for a message name and delivers queued messages for that name.
+     *
+     * Queued payloads are passed to this callback synchronously before registration completes.
+     * Existing receivers are retained; future deliveries invoke them in registration order.
      *
      * @param name message name.
      * @param callback message receiver.

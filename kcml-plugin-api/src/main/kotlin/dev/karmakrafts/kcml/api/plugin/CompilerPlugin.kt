@@ -21,9 +21,10 @@ import dev.karmakrafts.kcml.api.ipm.IPM
 /**
  * Entry point for a KCML compiler plugin discovered through Java's [java.util.ServiceLoader].
  *
- * KCML calls [init] once after ordering discovered plugins by their declared dependencies and
- * before it installs the Kotlin FIR and IR extension adapters. Implementations register the
- * extensions that should participate in this compilation through the supplied context.
+ * KCML orders discovered plugins by their declared dependencies, calls [preInit] to register their
+ * CLI options, and processes option values before calling [init]. Initialization completes before
+ * KCML installs the Kotlin FIR and IR extension adapters. Implementations register the extensions
+ * that should participate in this compilation through the supplied initialization context.
  */
 public interface CompilerPlugin {
     /**
@@ -32,10 +33,12 @@ public interface CompilerPlugin {
      * Options are prefixed with this plugin's [Plugin.id] and an uppercased first character,
      * matching the KCML Gradle support plugin: `-P plugin:kcml:<pluginId>OptionName=<value>`.
      * Parsers store their results in the compiler configuration supplied to [init].
+     * Values placed in [PreInitializationContext.storage] remain available through
+     * [InitializationContext.storage] during [init] for this invocation.
      * This method is called once per compilation,
      * in dependency order. The default implementation registers no options.
      *
-     * @param context registry for this plugin's option definitions and parsers.
+     * @param context registry for this plugin's option definitions and parsers, with invocation-scoped storage.
      */
     public fun preInit(context: PreInitializationContext): Unit = Unit
 
@@ -48,7 +51,7 @@ public interface CompilerPlugin {
     public fun init(context: InitializationContext)
 
     /**
-     * Processes inter-plugin messages after loading.
+     * Processes inter-plugin messages after all plugins have been initialized, in dependency order.
      *
      * The default implementation does nothing. Implementations can register receivers or send
      * messages through the supplied service.

@@ -110,8 +110,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateConstructors(
-                frontend: Frontend,
-                context: MemberGenerationContext
+                frontend: Frontend, context: MemberGenerationContext
             ): List<FirConstructorSymbol> {
                 calls += listOf(frontend, context)
                 return result
@@ -203,8 +202,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateTopLevelClassLikeDeclaration(
-                frontend: Frontend,
-                classId: ClassId
+                frontend: Frontend, classId: ClassId
             ): FirClassLikeSymbol<*>? {
                 calls += listOf(frontend, classId)
                 return result

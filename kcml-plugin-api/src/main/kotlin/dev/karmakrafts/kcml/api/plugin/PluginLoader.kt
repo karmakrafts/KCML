@@ -24,14 +24,15 @@ import dev.karmakrafts.kcml.api.log.Logger
 /**
  * Discovers, validates, and loads compiler plugins for one Kotlin compiler invocation.
  *
- * The loader exposes plugin instances and metadata together with each plugin's extension registry
- * after dependency ordering and plugin initialization have completed.
+ * Plugin instances and available metadata can be queried once discovery completes. Storage becomes
+ * available as each plugin is pre-initialized; extension registries and message services become
+ * available as each plugin is initialized. Lookups do not create missing services.
  */
 public interface PluginLoader {
     /** Logger for plugin discovery and loading. */
     public val logger: Logger
 
-    /** Stable identifier of the plugin currently loading, or `null` outside plugin initialization. */
+    /** Stable identifier of the plugin currently in [CompilerPlugin.preInit] or [CompilerPlugin.init], or `null` otherwise. */
     public val loadingPluginId: String?
 
     /**
@@ -86,6 +87,25 @@ public interface PluginLoader {
     public fun getExtensionRegistry(pluginId: String): ExtensionRegistry
 
     /**
+     * Finds a plugin's invocation-scoped storage without creating it.
+     *
+     * The same storage is supplied to the plugin during pre-initialization and initialization.
+     *
+     * @param pluginId ID of the plugin that owns the storage.
+     * @return the storage, or `null` if it is not yet available or the plugin is unknown.
+     */
+    public fun findPluginStorage(pluginId: String): PluginStorage?
+
+    /**
+     * Returns a plugin's invocation-scoped storage without creating it.
+     *
+     * @param pluginId ID of the plugin that owns the storage.
+     * @return the storage shared by the plugin's pre-initialization and initialization contexts.
+     * @throws IllegalArgumentException if no storage exists for [pluginId].
+     */
+    public fun getPluginStorage(pluginId: String): PluginStorage
+
+    /**
      * Finds a plugin's message service.
      *
      * @param pluginId plugin ID.
@@ -115,6 +135,7 @@ public interface PluginLoader {
      * Lists all discovered plugin IDs in resolved dependency order.
      *
      * @return plugin IDs in dependency order.
+     * @throws IllegalStateException if plugin loading has not completed.
      */
     public fun allPluginsSorted(): List<String>
 }

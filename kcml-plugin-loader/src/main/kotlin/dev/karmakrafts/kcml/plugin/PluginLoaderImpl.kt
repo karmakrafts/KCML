@@ -26,6 +26,7 @@ import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
+import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
@@ -64,69 +65,63 @@ import kotlin.io.path.absolute
 
 @OptIn(ExperimentalCompilerApi::class, InternalKcmlApi::class, KCMLHookApi::class)
 object PluginLoaderImpl : PluginLoader {
-    private class CompilationState {
-        val owner: Thread = Thread.currentThread()
-        lateinit var loggerFactory: MessageCollectorLoggerFactory
-        val plugins: HashMap<String, CompilerPlugin> = HashMap()
-        val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
-        val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
-        val optionProcessors: ArrayList<CommandLineProcessor> = ArrayList()
-        var commandLineProcessor: CommandLineProcessor? = null
-        var arePluginsPreInitialized: Boolean = false
-        var areOptionsProcessed: Boolean = false
-        var arePluginsLoaded: Boolean = false
-        var pluginClassLoader: URLClassLoader? = null
-        val extensionRegistries: HashMap<String, DefaultExtensionRegistry> = HashMap()
-        var dispatcher: ExtensionDispatcher? = null
-        val ipms: ConcurrentHashMap<String, IPMImpl> = ConcurrentHashMap()
-        lateinit var logger: Logger
-        var loadingPluginId: String? = null
-    }
-
     // Compiler invocations are isolated, while code generation workers share their parent's state.
     private val compilationState: InheritableThreadLocal<CompilationState> =
         object : InheritableThreadLocal<CompilationState>() {
             override fun initialValue(): CompilationState = CompilationState()
         }
+
     private var loggerFactory: MessageCollectorLoggerFactory
         get() = compilationState.get().loggerFactory
         set(value) {
             compilationState.get().loggerFactory = value
         }
+
     private val plugins: HashMap<String, CompilerPlugin>
         get() = compilationState.get().plugins
+
     private val metadata: HashMap<String, SerializablePluginMetadata>
         get() = compilationState.get().metadata
+
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin>
         get() = compilationState.get().sortedPlugins
+
     private var arePluginsLoaded: Boolean
         get() = compilationState.get().arePluginsLoaded
         set(value) {
             compilationState.get().arePluginsLoaded = value
         }
+
     private var pluginClassLoader: URLClassLoader?
         get() = compilationState.get().pluginClassLoader
         set(value) {
             compilationState.get().pluginClassLoader = value
         }
+
     private val extensionRegistries: HashMap<String, DefaultExtensionRegistry>
         get() = compilationState.get().extensionRegistries
+
     private var dispatcher: ExtensionDispatcher?
         get() = compilationState.get().dispatcher
         set(value) {
             compilationState.get().dispatcher = value
         }
+
     internal val extensionDispatcher: ExtensionDispatcher
         get() = checkNotNull(dispatcher) { "KCML plugins have not been loaded" }
 
     private val ipms: ConcurrentHashMap<String, IPMImpl>
         get() = compilationState.get().ipms
 
+    private val storages: ConcurrentHashMap<String, PluginStorageImpl>
+        get() = compilationState.get().storages
+
     override var logger: Logger
         get() = compilationState.get().logger
         set(value) {
             compilationState.get().logger = value
         }
+
     override var loadingPluginId: String?
         get() = compilationState.get().loadingPluginId
         set(value) {
@@ -147,6 +142,10 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun getOrCreateExtensionRegistry(pluginId: String): DefaultExtensionRegistry {
         return extensionRegistries.getOrPut(pluginId) { DefaultExtensionRegistry(this, pluginId, logger) }
+    }
+
+    private fun getOrCreatePluginStorage(pluginId: String): PluginStorageImpl {
+        return storages.getOrPut(pluginId) { PluginStorageImpl(pluginId) }
     }
 
     override fun findIpm(pluginId: String): IPM? = ipms[pluginId]
@@ -173,6 +172,12 @@ object PluginLoaderImpl : PluginLoader {
         requireNotNull(findExtensionRegistry(pluginId)) {
             "No extension registry for plugin ID '$pluginId'"
         }
+
+    override fun findPluginStorage(pluginId: String): PluginStorage? = storages[pluginId]
+
+    override fun getPluginStorage(pluginId: String): PluginStorage = requireNotNull(findPluginStorage(pluginId)) {
+        "No plugin storage for plugin ID '$pluginId'"
+    }
 
     override fun allPlugins(): List<String> = plugins.keys.toList()
 
@@ -245,17 +250,17 @@ object PluginLoaderImpl : PluginLoader {
     }
 
     private fun loadPlugins(config: CompilerConfiguration) {
-        for ((pluginId, plugin) in sortedPlugins) {
+        for ([pluginId, plugin] in sortedPlugins) {
             try {
                 loadingPluginId = pluginId
-                val extensionRegistry = getOrCreateExtensionRegistry(pluginId)
                 plugin.init(InitializationContext( // @formatter:off
-                    extensionRegistry = extensionRegistry,
+                    extensionRegistry = getOrCreateExtensionRegistry(pluginId),
                     config = config,
                     loggerFactory = loggerFactory,
                     logger = loggerFactory.getForPlugin(pluginId),
                     loader = this,
-                    ipm = getOrCreateIpm(pluginId)
+                    ipm = getOrCreateIpm(pluginId),
+                    storage = getOrCreatePluginStorage(pluginId)
                 )
                 ) // @formatter:on
             } catch (error: Throwable) {
@@ -267,7 +272,7 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun processIpms() {
         logger.info("Processing IPMs..")
-        for ((pluginId, plugin) in sortedPlugins) {
+        for ([pluginId, plugin] in sortedPlugins) {
             logger.info("Processing IPMs for plugin '$pluginId'")
             plugin.processIpms(getIpm(pluginId))
         }
@@ -285,9 +290,11 @@ object PluginLoaderImpl : PluginLoader {
         val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
         logger.info("Sorted plugins into load order: $sortedNames")
         try {
-            for ((pluginId, plugin) in sortedPlugins) {
+            for ([pluginId, plugin] in sortedPlugins) {
                 loadingPluginId = pluginId
-                val context = PreInitializationContext()
+                val context = PreInitializationContext(
+                    storage = getOrCreatePluginStorage(pluginId)
+                )
                 plugin.preInit(context)
                 state.optionProcessors += context.createCommandLineProcessor(pluginId)
             }
@@ -330,7 +337,7 @@ object PluginLoaderImpl : PluginLoader {
             override val pluginOptions: Collection<AbstractCliOption> = delegates.keys
 
             override fun processOption(option: AbstractCliOption, value: String, configuration: CompilerConfiguration) {
-                val (processor, originalOption) = delegates.getValue(option)
+                val [processor, originalOption] = delegates.getValue(option)
                 processor.processOption(originalOption, value, configuration)
             }
         }

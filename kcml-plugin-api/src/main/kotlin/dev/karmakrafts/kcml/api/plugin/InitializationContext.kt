@@ -38,6 +38,8 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * @property loader loader that exposes the other discovered KCML plugins, metadata, and available
  *   extension registries for this invocation.
  * @property ipm messaging service for exchanging named payloads with other loaded plugins.
+ * @property storage storage owned by the plugin being loaded for this compiler invocation; the same
+ *   instance was supplied through [PreInitializationContext.storage] during pre-initialization.
  */
 public data class InitializationContext( // @formatter:off
     public val extensionRegistry: ExtensionRegistry,
@@ -45,5 +47,6 @@ public data class InitializationContext( // @formatter:off
     public val loggerFactory: LoggerFactory,
     public val logger: Logger,
     public val loader: PluginLoader,
-    public val ipm: IPM
+    public val ipm: IPM,
+    public val storage: PluginStorage
 ) // @formatter:on

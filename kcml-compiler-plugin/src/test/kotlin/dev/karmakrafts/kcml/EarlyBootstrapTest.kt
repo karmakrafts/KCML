@@ -48,7 +48,7 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.ServiceLoader
+import java.util.*
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
@@ -102,7 +102,7 @@ class EarlyBootstrapTest {
             val runtimeLoader = directory.resolve("loader.jar")
             val bridge = directory.resolve("bridge.jar")
             ZipFile(compilerPlugin).use { archive ->
-                for ((entry, path) in listOf("kcml-loader.jar" to runtimeLoader, "kcml-mixin-bridge.jar" to bridge)) {
+                for ([entry, path] in listOf("kcml-loader.jar" to runtimeLoader, "kcml-mixin-bridge.jar" to bridge)) {
                     archive.getInputStream(archive.getEntry(entry)).use { input -> Files.copy(input, path) }
                 }
             }
@@ -120,23 +120,36 @@ class EarlyBootstrapTest {
                             socket.soTimeout = 30_000
                             val writer = AgentPacketWriter(socket.getOutputStream())
                             val handler = AgentPacketHandler(A2SHandshake.serializer()) { request ->
-                                writer.write(S2AHandshake.serializer(), S2AHandshake(
-                                    request.signature, runtimeLoader.toString(), bridge.toString(), listOf(plugin.toString())
-                                ))
+                                writer.write(
+                                    S2AHandshake.serializer(), S2AHandshake(
+                                        request.signature,
+                                        runtimeLoader.toString(),
+                                        bridge.toString(),
+                                        listOf(plugin.toString())
+                                    )
+                                )
                             }
                             AgentPacketReader(socket.getInputStream()).read { type -> handler.takeIf { it.type == type } }
                         }
                     }
                 }
                 val log = directory.resolve("compiler.log")
-                val classpath = compilerPlugin + File.pathSeparator + checkNotNull(System.getProperty("kcml.test.classpath"))
+                val classpath =
+                    compilerPlugin + File.pathSeparator + checkNotNull(System.getProperty("kcml.test.classpath"))
                 val process = ProcessBuilder(
                     Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-                    "-Duser.home=${directory.resolve("home")}", "-cp", classpath,
-                    EarlyBootstrapProcess::class.java.name, server.localPort.toString(), plugin.toString()
+                    "-Duser.home=${directory.resolve("home")}",
+                    "-cp",
+                    classpath,
+                    EarlyBootstrapProcess::class.java.name,
+                    server.localPort.toString(),
+                    plugin.toString()
                 ).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
-                    assertTrue(process.waitFor(45, TimeUnit.SECONDS), "Early bootstrap timed out: ${Files.readString(log)}")
+                    assertTrue(
+                        process.waitFor(45, TimeUnit.SECONDS),
+                        "Early bootstrap timed out: ${Files.readString(log)}"
+                    )
                     assertEquals(0, process.exitValue(), Files.readString(log))
                     handshakes.get(10, TimeUnit.SECONDS)
                 }
@@ -160,17 +173,22 @@ object EarlyBootstrapProcess {
         var previous: CompilerPlugin? = null
         for (value in 1..2) {
             val config = CompilerConfiguration()
-            processCompilerPluginsOptions(config, listOf(
-                "plugin:kcml:early_options_testValue=$value",
-                "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
-                "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
-            ), processors)
+            processCompilerPluginsOptions(
+                config, listOf(
+                    "plugin:kcml:early_options_testValue=$value",
+                    "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
+                    "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
+                ), processors
+            )
             val plugin = PluginLoaderImpl.getPlugin("early_options_test") as EarlyOptionsTestPlugin
             assertNotSame(previous, plugin)
             assertEquals(1, plugin.preInitCount)
             assertEquals(value, config[EarlyOptionsTestPlugin.key])
             assertEquals(null, plugin.initializedValue)
-            with(KCMLCompilerPluginRegistrar()) { CompilerPluginRegistrar.ExtensionStorage().registerExtensions(config) }
+            with(KCMLCompilerPluginRegistrar()) {
+                CompilerPluginRegistrar.ExtensionStorage()
+                    .registerExtensions(config)
+            }
             assertEquals(value, plugin.initializedValue)
             previous = plugin
         }
@@ -182,23 +200,36 @@ object EarlyBootstrapProcess {
             fun compile(options: List<String> = emptyList()) {
                 val output = ByteArrayOutputStream()
                 val result = PrintStream(output).use { stream ->
-                    compiler.exec(stream, *(listOf(
-                        "-no-stdlib", "-no-reflect",
-                        "-classpath", Path.of(Unit::class.java.protectionDomain.codeSource.location.toURI()).toString(),
-                        "-d", directory.resolve("classes").toString(), source.toString()
-                    ) + options).toTypedArray())
+                    compiler.exec(
+                        stream, *(listOf(
+                            "-no-stdlib",
+                            "-no-reflect",
+                            "-classpath",
+                            Path.of(Unit::class.java.protectionDomain.codeSource.location.toURI()).toString(),
+                            "-d",
+                            directory.resolve("classes").toString(),
+                            source.toString()
+                        ) + options).toTypedArray()
+                    )
                 }
                 assertEquals(ExitCode.OK, result, output.toString())
                 assertTrue(Files.exists(directory.resolve("classes/Plain.class")))
             }
-            val compilerPlugin = Path.of(KCMLCompilerPluginRegistrar::class.java.protectionDomain.codeSource.location.toURI())
+
+            val compilerPlugin =
+                Path.of(KCMLCompilerPluginRegistrar::class.java.protectionDomain.codeSource.location.toURI())
             for (value in 3..4) {
-                compile(listOf(
-                    "-Xplugin=$compilerPlugin",
-                    "-P", "plugin:kcml:early_options_testValue=$value",
-                    "-P", "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
-                    "-P", "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
-                ))
+                compile(
+                    listOf(
+                        "-Xplugin=$compilerPlugin",
+                        "-P",
+                        "plugin:kcml:early_options_testValue=$value",
+                        "-P",
+                        "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
+                        "-P",
+                        "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
+                    )
+                )
                 val plugin = PluginLoaderImpl.getPlugin("early_options_test") as EarlyOptionsTestPlugin
                 assertNotSame(previous, plugin)
                 assertEquals(value, plugin.initializedValue)

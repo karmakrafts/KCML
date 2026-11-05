@@ -59,11 +59,7 @@ class OptionsTestPlugin : CompilerPlugin {
             config.put(valueKey, value.toInt())
         }
         context.addOption(
-            "entry",
-            "<string>",
-            "An entry",
-            required = false,
-            allowMultipleOccurrences = true
+            "entry", "<string>", "An entry", required = false, allowMultipleOccurrences = true
         ) { value, config ->
             config.add(entriesKey, value)
         }
@@ -198,9 +194,7 @@ class PluginPreInitializationTest {
         config.kcmlPluginClasspaths = arguments.pluginClasspaths.map(Path::of)
         PluginLoaderImpl.preInitialize(config)
         processCompilerPluginsOptions(
-            config,
-            arguments.pluginOptions.asIterable(),
-            listOf(PluginLoaderImpl.commandLineProcessor)
+            config, arguments.pluginOptions.asIterable(), listOf(PluginLoaderImpl.commandLineProcessor)
         )
         val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
         assertEquals(1, plugin.preInitCount)
