@@ -16,9 +16,16 @@
 
 package dev.karmakrafts.kcml.api.frontend
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
+import dev.karmakrafts.kcml.api.backend.Backend
+import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
+import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.plugin.PluginMetadata
+import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
@@ -60,3 +67,24 @@ public interface Frontend {
     public val messageCollector: MessageCollector
         get() = config.messageCollector
 }
+
+/** Storage for [Frontend.pluginId], scoped to the current compiler invocation. */
+public inline val Frontend.storage: PluginStorage
+    get() = loader.getPluginStorage(pluginId)
+
+/** Extension registry containing the extensions contributed by [Frontend.pluginId]. */
+public inline val Frontend.extensionRegistry: ExtensionRegistry
+    get() = loader.getExtensionRegistry(pluginId)
+
+/** Metadata describing the plugin identified by [Frontend.pluginId]. */
+public inline val Frontend.metadata: PluginMetadata
+    get() = loader.getMetadata(pluginId)
+
+/** Loaded compiler plugin identified by [Frontend.pluginId]. */
+public inline val Frontend.plugin: CompilerPlugin
+    get() = loader.getPlugin(pluginId)
+
+/** Inter-plugin messaging service associated with [Frontend.pluginId]. */
+@OptIn(InternalKcmlApi::class)
+public inline val Frontend.ipm: IPM
+    get() = loader.getIpm(pluginId)
