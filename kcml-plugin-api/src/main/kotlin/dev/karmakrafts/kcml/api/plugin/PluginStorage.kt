@@ -36,11 +36,16 @@ public interface PluginStorage {
     public interface Key<T : Any> {
         /** Factory functions for storage keys. */
         public companion object {
+            @PublishedApi
+            internal data class KeyImpl<T : Any>( // @formatter:off
+                override val type: KClass<T>,
+                override val name: String,
+                override val isFinal: Boolean
+            ) : Key<T> // @formatter:on
+
             /**
              * Creates a key for values of type [T].
-             *
-             * Each call creates a distinct key, even when the name and type match an existing key.
-             * Retain and reuse the returned key to access the same entry.
+             * Keys always use value equality.
              *
              * @param T non-null value type.
              * @param name name used in diagnostics and type consistency checks.
@@ -50,11 +55,7 @@ public interface PluginStorage {
             public inline fun <reified T : Any> create( // @formatter:off
                 name: String,
                 isFinal: Boolean = false
-            ): Key<T> = object : Key<T> { // @formatter:on
-                override val type: KClass<T> = T::class
-                override val name: String = name
-                override val isFinal: Boolean = isFinal
-            }
+            ): Key<T> = KeyImpl(T::class, name, isFinal) // @formatter:on
         }
 
         /** Runtime type expected for values stored under this key. */
