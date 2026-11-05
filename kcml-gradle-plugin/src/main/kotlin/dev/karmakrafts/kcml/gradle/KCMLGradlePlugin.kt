@@ -112,13 +112,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 // We need to load plugins during JS/WASM IR linking ourselves to get a bootstrap entrypoint
                 project.tasks.withType(KotlinJsIrLink::class.java) { task ->
                     project.logger.info("Configuring KCML task options for '${task.name}'")
-                    // @formatter:off
-                    task.pluginClasspath.from(*getPluginClasspaths(project)
-                        .map(ResolvedArtifact::getFile)
-                        .toTypedArray())
-                    // @formatter:on
                     val plugins = project.configurations.getByName(CONFIGURATION_NAME)
                     val runtime = project.configurations.getByName("kcmlRuntime")
+                    task.pluginClasspath.from(plugins, runtime)
                     val prepareCache = project.tasks.register(
                         "kcmlPrepareJsCache${task.name.replaceFirstChar { it.uppercase() }}",
                         KCMLPrepareJsCacheTask::class.java

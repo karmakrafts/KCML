@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.gradle
 
 import org.gradle.api.internal.project.ProjectInternal
 import org.gradle.testfixtures.ProjectBuilder
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
 import java.nio.file.Files
@@ -28,21 +29,36 @@ import kotlin.test.assertTrue
 
 class KCMLJsLinkTest {
     @Test
-    fun `JS links preserve incremental IR compilation settings`() {
+    @OptIn(ExperimentalWasmDsl::class)
+    fun `JS and Wasm links include KCML runtime and contributed plugins`() {
         val directory = Files.createTempDirectory(Path.of("build"), "js-link-test-").toAbsolutePath()
         try {
+            val contributedPlugin = Files.createFile(directory.resolve("contributed-plugin.jar"))
+            val runtimePlugin = Files.createFile(directory.resolve("runtime-plugin.jar"))
             val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
             project.pluginManager.apply("org.jetbrains.kotlin.multiplatform")
             project.pluginManager.apply(KCMLGradlePlugin::class.java)
-            project.extensions.getByType(KotlinMultiplatformExtension::class.java).js { nodejs() }
+            val runtime = project.configurations.getByName("kcmlRuntime")
+            runtime.dependencies.clear()
+            project.dependencies.add("kcml", project.files(contributedPlugin.toFile()))
+            project.dependencies.add("kcmlRuntime", project.files(runtimePlugin.toFile()))
+            project.extensions.getByType(KotlinMultiplatformExtension::class.java).apply {
+                js { nodejs() }
+                wasmJs { nodejs() }
+                wasmWasi { nodejs() }
+            }
             val links = project.tasks.withType(KotlinJsIrLink::class.java).toList()
             assertTrue(links.isNotEmpty())
+            assertTrue(links.any { "WasmJs" in it.name })
+            assertTrue(links.any { "WasmWasi" in it.name })
             links.forEach { it.incrementalJsIr = true }
             links.first().incrementalJsIr = false
             (project as ProjectInternal).evaluate()
 
             links.forEachIndexed { index, link ->
                 assertEquals(index != 0, link.incrementalJsIr, link.name)
+                assertTrue(runtimePlugin.toFile() in link.pluginClasspath.files, link.name)
+                assertTrue(contributedPlugin.toFile() in link.pluginClasspath.files, link.name)
                 val prepareCache =
                     link.taskDependencies.getDependencies(link).filterIsInstance<KCMLPrepareJsCacheTask>().single()
                 assertEquals(link.rootCacheDirectory.get(), prepareCache.cacheDirectory.get())
