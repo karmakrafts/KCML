@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.backend.js.JsCodeGeneratorImpl
 import dev.karmakrafts.kcml.backend.js.LateJsBackendImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
@@ -41,8 +42,13 @@ object JSHooks {
         val pluginPaths = requireNotNull(MixinBridge.INSTANCE.getConstant("kcml", "plugin_paths") as? List<*>) {
             "KCML agent handshake has not supplied plugin paths"
         }
+        val config = context.configuration
+        val loaderConfig = if (config.kcmlCompileTarget == null) {
+            config.copy().apply { kcmlCompileTarget = "js" }
+        }
+        else config
         PluginLoaderImpl.loadAndInvokeStandalone(
-            context.configuration, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
+            loaderConfig, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
         for ([pluginId, extension] in PluginLoaderImpl.extensionDispatcher.lateJsExtensions) {
             extension.init(LateJsBackendImpl(pluginId, context, PluginLoaderImpl))
         }

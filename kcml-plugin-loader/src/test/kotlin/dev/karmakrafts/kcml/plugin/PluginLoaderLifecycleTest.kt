@@ -24,6 +24,7 @@ import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -53,6 +54,8 @@ private class LifecycleTestExtension : AbstractExtension(), LateNativeExtension
 
 @OptIn(KCMLHookApi::class, CompilerConfiguration.Internals::class)
 class PluginLoaderLifecycleTest {
+    private fun jvmCompilerConfiguration(): CompilerConfiguration =
+        CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
     @Test
     fun `concurrent compiler invocations do not reset each others plugins`() {
         val compiler = K2JVMCompiler()
@@ -160,7 +163,7 @@ class PluginLoaderLifecycleTest {
             for (generation in 1..2) {
                 CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
                 writePluginJar(archive, generation)
-                PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), listOf(archive.toUri().toURL()))
+                PluginLoaderImpl.loadAndInvokeStandalone(jvmCompilerConfiguration(), listOf(archive.toUri().toURL()))
                 val plugin = PluginLoaderImpl.getPlugin("reloadable_plugin")
                 assertEquals(generation, plugin.javaClass.getMethod("generation").invoke(plugin))
             }
@@ -182,14 +185,14 @@ class PluginLoaderLifecycleTest {
             val compiler = K2JVMCompiler()
 
             CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
-            PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), urls)
+            PluginLoaderImpl.loadAndInvokeStandalone(jvmCompilerConfiguration(), urls)
             val first = PluginLoaderImpl.getPlugin("lifecycle_test_plugin")
             val firstIpm = PluginLoaderImpl.getIpm("lifecycle_test_plugin")
             val firstExtension = PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.single().second
             assertEquals(listOf("lifecycle_test_plugin"), PluginLoaderImpl.allPluginsSorted())
 
             CommonHooks.onExecImpl(compiler, K2JVMCompilerArguments())
-            PluginLoaderImpl.loadAndInvokeStandalone(CompilerConfiguration(), urls)
+            PluginLoaderImpl.loadAndInvokeStandalone(jvmCompilerConfiguration(), urls)
             assertNotSame(first, PluginLoaderImpl.getPlugin("lifecycle_test_plugin"))
             assertNotSame(firstIpm, PluginLoaderImpl.getIpm("lifecycle_test_plugin"))
             assertNotSame(firstExtension, PluginLoaderImpl.extensionDispatcher.lateNativeExtensions.single().second)

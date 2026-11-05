@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.plugin
 
 import dev.karmakrafts.kcml.api.InternalKcmlApi
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
@@ -48,9 +49,11 @@ public typealias ScopedOptionParser = (value: String, config: CompilerConfigurat
  *
  * @property storage storage owned by this plugin for the current compiler invocation; the same
  *   instance is supplied through [InitializationContext.storage] during initialization.
+ * @property compileTarget The compile target the compiler was invoked for.
  */
 public data class PreInitializationContext( // @formatter:off
-    public val storage: PluginStorage
+    public val storage: PluginStorage,
+    public val compileTarget: CompileTarget
 ) { // @formatter:on
     private val optionsLock: Any = Any()
     private val options: ArrayList<AbstractCliOption> = ArrayList()

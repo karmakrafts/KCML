@@ -147,8 +147,7 @@ class EarlyBootstrapTest {
                 ).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(
-                        process.waitFor(45, TimeUnit.SECONDS),
-                        "Early bootstrap timed out: ${Files.readString(log)}"
+                        process.waitFor(45, TimeUnit.SECONDS), "Early bootstrap timed out: ${Files.readString(log)}"
                     )
                     assertEquals(0, process.exitValue(), Files.readString(log))
                     handshakes.get(10, TimeUnit.SECONDS)
@@ -176,6 +175,7 @@ object EarlyBootstrapProcess {
             processCompilerPluginsOptions(
                 config, listOf(
                     "plugin:kcml:early_options_testValue=$value",
+                    "plugin:kcml.bootstrap:compileTarget=jvm",
                     "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
                     "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
                 ), processors
@@ -186,8 +186,7 @@ object EarlyBootstrapProcess {
             assertEquals(value, config[EarlyOptionsTestPlugin.key])
             assertEquals(null, plugin.initializedValue)
             with(KCMLCompilerPluginRegistrar()) {
-                CompilerPluginRegistrar.ExtensionStorage()
-                    .registerExtensions(config)
+                CompilerPluginRegistrar.ExtensionStorage().registerExtensions(config)
             }
             assertEquals(value, plugin.initializedValue)
             previous = plugin
@@ -224,6 +223,8 @@ object EarlyBootstrapProcess {
                         "-Xplugin=$compilerPlugin",
                         "-P",
                         "plugin:kcml:early_options_testValue=$value",
+                        "-P",
+                        "plugin:kcml.bootstrap:compileTarget=jvm",
                         "-P",
                         "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
                         "-P",

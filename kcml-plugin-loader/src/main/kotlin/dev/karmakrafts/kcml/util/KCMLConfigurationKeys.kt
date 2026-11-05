@@ -28,7 +28,7 @@ internal object KCMLConfigurationKeys {
     val agentDumpClasses: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlAgentDumpClasses")
     val agentDumpPath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentDumpPath")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
-    val isAndroid: CompilerConfigurationKey<Boolean> = CompilerConfigurationKey.create("kcmlIsAndroid")
+    val compileTarget: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlCompileTarget")
 }
 
 inline var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
@@ -67,8 +67,8 @@ inline var CompilerConfiguration.kcmlModuleName: String?
         put(KCMLConfigurationKeys.moduleName, value ?: return)
     }
 
-inline var CompilerConfiguration.kcmlIsAndroid: Boolean
-    get() = get(KCMLConfigurationKeys.isAndroid) ?: false
+inline var CompilerConfiguration.kcmlCompileTarget: String?
+    get() = get(KCMLConfigurationKeys.compileTarget)
     set(value) {
-        put(KCMLConfigurationKeys.isAndroid, value)
+        put(KCMLConfigurationKeys.compileTarget, value ?: return)
     }

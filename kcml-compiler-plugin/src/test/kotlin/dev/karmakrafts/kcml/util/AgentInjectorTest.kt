@@ -59,7 +59,8 @@ class AgentInjectorTest {
             Files.createFile(directory / "release")
             assertTrue(injection.get(5, TimeUnit.SECONDS))
             assertEquals("acquired", pending.get(5, TimeUnit.SECONDS))
-        } finally {
+        }
+        finally {
             if (!(directory / "release").exists()) Files.createFile(directory / "release")
             executor.shutdown()
             assertTrue(executor.awaitTermination(15, TimeUnit.SECONDS))
@@ -81,7 +82,8 @@ class AgentInjectorTest {
             }
             start.countDown()
             injections.forEach { assertTrue(it.get(15, TimeUnit.SECONDS)) }
-        } finally {
+        }
+        finally {
             executor.shutdown()
             assertTrue(executor.awaitTermination(15, TimeUnit.SECONDS))
             directory.deleteRecursively()
@@ -96,7 +98,8 @@ class AgentInjectorTest {
                 AgentInjector(directory).inject(mapOf("fail" to true))
             }
             assertTrue(AgentInjector(directory).inject())
-        } finally {
+        }
+        finally {
             directory.deleteRecursively()
         }
     }

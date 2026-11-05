@@ -23,7 +23,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 import dev.karmakrafts.kcml.backend.AbstractIrBackend
 import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
-import dev.karmakrafts.kcml.util.kcmlIsAndroid
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
@@ -36,6 +36,6 @@ internal class JvmBackendImpl( // @formatter:off
     loader: PluginLoader
 ) : AbstractIrBackend(pluginId, context, config, loggerFactory, logger, loader), JvmBackend {
     override val compileTarget: JvmCompileTarget by lazy {
-        JvmCompileTargetImpl(config.kcmlIsAndroid)
+        JvmCompileTargetImpl(config.kcmlCompileTarget == "android")
     }
 }

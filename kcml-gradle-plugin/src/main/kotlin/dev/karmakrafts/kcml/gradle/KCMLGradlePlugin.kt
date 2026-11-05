@@ -33,7 +33,6 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinJvmAndroidCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
@@ -54,7 +53,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
         private const val OPT_AGENT_DUMP_CLASSES: String = "agentDumpClasses"
         private const val OPT_AGENT_DUMP_PATH: String = "agentDumpPath"
         private const val OPT_MODULE_NAME: String = "moduleName"
-        private const val OPT_IS_ANDROID: String = "isAndroid"
+        private const val OPT_COMPILE_TARGET: String = "compileTarget"
+        private const val OPT_KONAN_TARGET: String = "konanTarget"
     }
 
     override fun apply(target: Project) {
@@ -268,6 +268,20 @@ internal open class KCMLGradlePlugin @Inject constructor(
         }
     }
 
+    private fun getCompileTarget(compilation: KotlinCompilation<*>): String? {
+        return when (compilation.platformType) {
+            KotlinPlatformType.androidJvm -> "android"
+            KotlinPlatformType.jvm -> "jvm"
+            KotlinPlatformType.js -> "js"
+            KotlinPlatformType.wasm -> "wasm"
+            KotlinPlatformType.native -> "native"
+            KotlinPlatformType.common -> null
+        }
+    }
+
+    private fun getKonanTarget(compilation: KotlinCompilation<*>): String? =
+        (compilation.target as? KotlinNativeTarget)?.konanTarget?.name
+
     internal fun bootstrapOptions(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
         val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
@@ -275,10 +289,11 @@ internal open class KCMLGradlePlugin @Inject constructor(
         }
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
         val moduleName = getModuleName(kotlinCompilation)
+        val compileTarget = getCompileTarget(kotlinCompilation)
+        val konanTarget = getKonanTarget(kotlinCompilation)
         return providerFactory.provider {
             buildList {
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
-                add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))
                 add(SubpluginOption(OPT_AGENT_DUMP_CLASSES, extension.agentDumpClasses.get().toString()))
                 add(SubpluginOption(OPT_AGENT_DUMP_PATH, extension.agentDumpPath.get().asFile.absolutePath))
@@ -287,9 +302,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         .replace('-', '_')
                         .replace(':', '-')))
                 } // @formatter:on
-                if (kotlinCompilation is KotlinJvmAndroidCompilation) {
-                    add(SubpluginOption(OPT_IS_ANDROID, true.toString()))
-                }
+                if (compileTarget != null) add(SubpluginOption(OPT_COMPILE_TARGET, compileTarget))
+                if (konanTarget != null) add(SubpluginOption(OPT_KONAN_TARGET, konanTarget))
+                add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
             }
         }
     }

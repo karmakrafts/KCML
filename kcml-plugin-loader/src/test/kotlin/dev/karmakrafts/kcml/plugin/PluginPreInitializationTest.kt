@@ -22,6 +22,7 @@ import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
@@ -31,6 +32,7 @@ import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
+import org.jetbrains.kotlin.konan.config.konanTarget
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.AfterTest
@@ -51,10 +53,12 @@ class OptionsTestPlugin : CompilerPlugin {
     var preInitCount: Int = 0
     var initCount: Int = 0
     var initializedValue: Int? = null
+    var compileTargetName: String? = null
 
     override fun preInit(context: PreInitializationContext) {
         assertEquals("options_test", PluginLoaderImpl.loadingPluginId)
         ++preInitCount
+        compileTargetName = context.compileTarget.name
         context.addOption("value", "<int>", "An integer") { value, config ->
             config.put(valueKey, value.toInt())
         }
@@ -110,6 +114,7 @@ class PluginPreInitializationTest {
     private fun withPlugin(
         options: Array<String>,
         plugins: List<Class<out CompilerPlugin>> = listOf(OptionsTestPlugin::class.java),
+        compileTarget: String? = "jvm",
         action: (CompilerConfiguration, K2JVMCompilerArguments) -> Unit
     ) {
         val directory = Files.createTempDirectory(Path.of("build"), "plugin-options-")
@@ -122,7 +127,10 @@ class PluginPreInitializationTest {
                 pluginOptions = options
             }
             CommonHooks.onExecImpl(K2JVMCompiler(), arguments)
-            action(CompilerConfiguration(), arguments)
+            val config = CompilerConfiguration().apply {
+                if (compileTarget != null) kcmlCompileTarget = compileTarget
+            }
+            action(config, arguments)
         }
         finally {
             reset()
@@ -149,6 +157,18 @@ class PluginPreInitializationTest {
         assertEquals(1, plugin.preInitCount)
         assertEquals(1, plugin.initCount)
         assertEquals(listOf("first", "second"), config[OptionsTestPlugin.entriesKey])
+    }
+
+    @Test
+    fun `native target is inferred from Konan configuration when KCML target is absent`() = withPlugin(
+        arrayOf("plugin:kcml:options_testValue=1"), compileTarget = null
+    ) { config, arguments ->
+        config.konanTarget = "linux_x64"
+
+        PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+
+        val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+        assertEquals("linux_x64", plugin.compileTargetName)
     }
 
     @Test
@@ -216,7 +236,7 @@ class PluginPreInitializationTest {
         val first = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
         CommonHooks.onExecImpl(K2JVMCompiler(), arguments)
         arguments.pluginOptions = arrayOf("plugin:kcml:options_testValue=2")
-        val secondConfig = CompilerConfiguration()
+        val secondConfig = CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
         PluginLoaderImpl.loadAndInvokeStandalone(secondConfig, arguments)
         val second = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
         assertNotSame(first, second)

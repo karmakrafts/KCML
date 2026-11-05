@@ -48,7 +48,8 @@ class FileLockTest {
                     assertEquals("acquired", pending.get(5, TimeUnit.SECONDS))
                 }
             }
-        } finally {
+        }
+        finally {
             executor.shutdownNow()
             executor.awaitTermination(5, TimeUnit.SECONDS)
             Files.deleteIfExists(path)
@@ -63,7 +64,8 @@ class FileLockTest {
                 assertFailsWith<IllegalStateException> { lock.withLock { error("failed") } }
             }
             FileLock(path).use { lock -> assertEquals("acquired", lock.withLock { "acquired" }) }
-        } finally {
+        }
+        finally {
             Files.deleteIfExists(path)
         }
     }

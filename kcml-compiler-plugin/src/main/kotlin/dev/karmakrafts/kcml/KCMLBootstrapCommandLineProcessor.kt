@@ -21,7 +21,7 @@ import dev.karmakrafts.kcml.util.kcmlAgentCommPort
 import dev.karmakrafts.kcml.util.kcmlAgentDumpClasses
 import dev.karmakrafts.kcml.util.kcmlAgentDumpPath
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
-import dev.karmakrafts.kcml.util.kcmlIsAndroid
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
@@ -29,6 +29,7 @@ import org.jetbrains.kotlin.compiler.plugin.CliOption
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.konan.config.konanTarget
 import kotlin.io.path.Path
 
 @Suppress("UNUSED")
@@ -42,7 +43,8 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
         private const val AGENT_DUMP_CLASSES: String = "agentDumpClasses"
         private const val AGENT_DUMP_PATH: String = "agentDumpPath"
         private const val MODULE_NAME: String = "moduleName"
-        private const val IS_ANDROID: String = "isAndroid"
+        private const val COMPILE_TARGET: String = "compileTarget"
+        private const val KONAN_TARGET: String = "konanTarget"
     }
 
     override val pluginId: String get() = "${KCMLConstants.PLUGIN_ID}.bootstrap"
@@ -54,6 +56,18 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
             optionName = PLUGIN_CLASSPATHS,
             valueDescription = "<string>",
             description = "File paths to all JARs added to the KCML plugin class loader"
+        ),
+        CliOption(
+            optionName = COMPILE_TARGET,
+            valueDescription = "<string>",
+            description = "The current kotlin platform type the compilation belongs to",
+            required = false
+        ),
+        CliOption(
+            optionName = KONAN_TARGET,
+            valueDescription = "<string>",
+            description = "The current Kotlin/Native target",
+            required = false
         ),
         CliOption(
             optionName = AGENT_LOGGING,
@@ -79,12 +93,6 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
             description = "Name of the module currently being compiled",
             required = false
         ),
-        CliOption(
-            optionName = IS_ANDROID,
-            valueDescription = "<true|false>",
-            description = "Whether the current compiler invocation is for an Android JVM target",
-            required = false
-        ),
         // Bootstrap last so all settings are available before plugin pre-initialization.
         CliOption(
             optionName = AGENT_COMM_PORT,
@@ -105,10 +113,12 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
                 configuration.kcmlAgentCommPort = value.toInt()
                 KCMLBootstrap.init(configuration)
             }
+
             AGENT_DUMP_CLASSES -> configuration.kcmlAgentDumpClasses = value.lowercase().toBooleanStrictOrNull() == true
             AGENT_DUMP_PATH -> configuration.kcmlAgentDumpPath = Path(value)
             MODULE_NAME -> configuration.kcmlModuleName = value
-            IS_ANDROID -> configuration.kcmlIsAndroid = value.lowercase().toBooleanStrictOrNull() == true
+            COMPILE_TARGET -> configuration.kcmlCompileTarget = value
+            KONAN_TARGET -> configuration.konanTarget = value
         }
     }
 }

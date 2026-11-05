@@ -47,8 +47,8 @@ class KCMLCompilerOptionsTest {
             project.pluginManager.apply("org.jetbrains.kotlin.jvm")
             project.pluginManager.apply(KCMLGradlePlugin::class.java)
             project.pluginManager.apply(OptionsSupportPlugin::class.java)
-            val compilation = project.extensions.getByType(KotlinJvmProjectExtension::class.java)
-                .target.compilations.getByName("main")
+            val compilation =
+                project.extensions.getByType(KotlinJvmProjectExtension::class.java).target.compilations.getByName("main")
             val plugin = project.plugins.getPlugin(KCMLGradlePlugin::class.java)
             val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
             assertEquals("kcml", plugin.getCompilerPluginId())

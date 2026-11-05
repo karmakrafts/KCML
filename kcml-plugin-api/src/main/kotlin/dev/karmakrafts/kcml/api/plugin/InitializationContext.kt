@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 /**
@@ -40,6 +41,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * @property ipm messaging service for exchanging named payloads with other loaded plugins.
  * @property storage storage owned by the plugin being loaded for this compiler invocation; the same
  *   instance was supplied through [PreInitializationContext.storage] during pre-initialization.
+ * @property compileTarget The compile target the compiler was invoked for.
  */
 public data class InitializationContext( // @formatter:off
     public val extensionRegistry: ExtensionRegistry,
@@ -48,5 +50,6 @@ public data class InitializationContext( // @formatter:off
     public val logger: Logger,
     public val loader: PluginLoader,
     public val ipm: IPM,
-    public val storage: PluginStorage
+    public val storage: PluginStorage,
+    public val compileTarget: CompileTarget
 ) // @formatter:on

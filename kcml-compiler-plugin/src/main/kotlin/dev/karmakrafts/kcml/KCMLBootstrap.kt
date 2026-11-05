@@ -80,8 +80,7 @@ internal object KCMLBootstrap {
             mapOf(
                 "comm_port" to requireNotNull(configuration.kcmlAgentCommPort) {
                     "KCML agent requires a communication port"
-                },
-                "logging" to configuration.kcmlAgentLogging
+                }, "logging" to configuration.kcmlAgentLogging
             )
         )
         PluginLoaderImpl.preInitialize(configuration)

@@ -25,6 +25,7 @@ import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.ReflectionUtils
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.IrFileToWasmIrGenerator
@@ -55,8 +56,12 @@ object WASMHooks {
         val pluginPaths = requireNotNull(MixinBridge.INSTANCE.getConstant("kcml", "plugin_paths") as? List<*>) {
             "KCML agent handshake has not supplied plugin paths"
         }
+        val loaderConfig = if (config.kcmlCompileTarget == null) {
+            config.copy().apply { kcmlCompileTarget = "wasm" }
+        }
+        else config
         PluginLoaderImpl.loadAndInvokeStandalone(
-            config, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
+            loaderConfig, pluginPaths.map { path -> Path(path as String).toUri().toURL() })
         initializedInstances += config
     }
 
