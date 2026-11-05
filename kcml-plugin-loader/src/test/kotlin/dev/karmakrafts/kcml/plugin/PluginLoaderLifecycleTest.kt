@@ -56,6 +56,7 @@ private class LifecycleTestExtension : AbstractExtension(), LateNativeExtension
 class PluginLoaderLifecycleTest {
     private fun jvmCompilerConfiguration(): CompilerConfiguration =
         CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
+
     @Test
     fun `concurrent compiler invocations do not reset each others plugins`() {
         val compiler = K2JVMCompiler()

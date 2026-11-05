@@ -324,9 +324,10 @@ object PluginLoaderImpl : PluginLoader {
         try {
             for ([pluginId, plugin] in sortedPlugins) {
                 loadingPluginId = pluginId
-                val context = PreInitializationContext(
-                    storage = getOrCreatePluginStorage(pluginId), compileTarget = getCompileTarget(config)
-                )
+                val context = PreInitializationContext( // @formatter:off
+                    storage = getOrCreatePluginStorage(pluginId),
+                    compileTarget = getCompileTarget(config)
+                ) // @formatter:on
                 plugin.preInit(context)
                 state.optionProcessors += context.createCommandLineProcessor(pluginId)
             }
@@ -354,6 +355,7 @@ object PluginLoaderImpl : PluginLoader {
     private fun createOptionsProcessor(): CommandLineProcessor {
         val delegates = LinkedHashMap<AbstractCliOption, Pair<CommandLineProcessor, AbstractCliOption>>()
         val names = HashSet<String>()
+
         for (processor in compilationState.get().optionProcessors) {
             for (option in processor.pluginOptions) {
                 val scopedOption = object : AbstractCliOption by option {
@@ -364,6 +366,7 @@ object PluginLoaderImpl : PluginLoader {
                 delegates[scopedOption] = processor to option
             }
         }
+
         return object : CommandLineProcessor {
             override val pluginId: String = KCMLConstants.PLUGIN_ID
             override val pluginOptions: Collection<AbstractCliOption> = delegates.keys
