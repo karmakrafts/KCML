@@ -22,6 +22,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 class PluginStorageImplTest {
@@ -152,17 +153,39 @@ class PluginStorageImplTest {
     }
 
     @Test
-    fun `distinct keys with the same name and type can be stored independently`() {
+    fun `equal keys share the same stored value`() {
         val storage = PluginStorageImpl("storage_test")
         val firstKey = Key.create<String>("value")
         val secondKey = Key.create<String>("value")
+        assertNotSame(firstKey, secondKey)
+        assertEquals(firstKey, secondKey)
         storage[firstKey] = "first"
-        assertFailsWith<IllegalArgumentException> {
-            storage[secondKey]
-        }
+        assertEquals("first", storage[secondKey])
         storage[secondKey] = "second"
-        assertEquals("first", storage[firstKey])
+        assertEquals("second", storage[firstKey])
         assertEquals("second", storage[secondKey])
+        assertEquals(1, storage.values.size)
+    }
+
+    @Test
+    fun `equal final keys cannot overwrite the stored value`() {
+        val storage = PluginStorageImpl("storage_test")
+        val firstKey = Key.create<String>("value", isFinal = true)
+        val secondKey = Key.create<String>("value", isFinal = true)
+        assertNotSame(firstKey, secondKey)
+        assertEquals(firstKey, secondKey)
+        storage[firstKey] = "first"
+        assertEquals("first", storage[secondKey])
+        val exception = assertFailsWith<IllegalArgumentException> {
+            storage[secondKey] = "second"
+        }
+        assertEquals(
+            "Plugin storage value with key 'value' for plugin 'storage_test' is final and cannot be set again",
+            exception.message
+        )
+        assertEquals("first", storage[firstKey])
+        assertEquals("first", storage[secondKey])
+        assertEquals(1, storage.values.size)
     }
 
     @Test
@@ -275,18 +298,47 @@ class PluginStorageImplTest {
     }
 
     @Test
-    fun `delegates use key identity rather than key name`() {
+    fun `delegates for equal keys share the same stored value`() {
         val storage = PluginStorageImpl("storage_test")
         val firstKey = Key.create<String>("value")
         val secondKey = Key.create<String>("value")
+        assertNotSame(firstKey, secondKey)
+        assertEquals(firstKey, secondKey)
         var first by storage.delegateFor(firstKey)
         var second by storage.delegateFor(secondKey)
         first = "first"
+        assertEquals("first", second)
         second = "second"
-        assertEquals("first", first)
+        assertEquals("second", first)
         assertEquals("second", second)
-        assertEquals("first", storage[firstKey])
+        assertEquals("second", storage[firstKey])
         assertEquals("second", storage[secondKey])
+        assertEquals(1, storage.values.size)
+    }
+
+    @Test
+    fun `delegated writes with equal final keys cannot overwrite the stored value`() {
+        val storage = PluginStorageImpl("storage_test")
+        val firstKey = Key.create<String>("value", isFinal = true)
+        val secondKey = Key.create<String>("value", isFinal = true)
+        assertNotSame(firstKey, secondKey)
+        assertEquals(firstKey, secondKey)
+        var first by storage.delegateFor(firstKey)
+        var second by storage.delegateFor(secondKey)
+        first = "first"
+        assertEquals("first", second)
+        val exception = assertFailsWith<IllegalArgumentException> {
+            second = "second"
+        }
+        assertEquals(
+            "Plugin storage value with key 'value' for plugin 'storage_test' is final and cannot be set again",
+            exception.message
+        )
+        assertEquals("first", first)
+        assertEquals("first", second)
+        assertEquals("first", storage[firstKey])
+        assertEquals("first", storage[secondKey])
+        assertEquals(1, storage.values.size)
     }
 
     @Test
