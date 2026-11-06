@@ -172,6 +172,16 @@ class PluginPreInitializationTest {
     }
 
     @Test
+    fun `common metadata target is available to plugins`() = withPlugin(
+        arrayOf("plugin:kcml:options_testValue=1"), compileTarget = "common"
+    ) { config, arguments ->
+        PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+
+        val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+        assertEquals("Common", plugin.compileTargetName)
+    }
+
+    @Test
     fun `missing required options are rejected before init`() = withPlugin(emptyArray()) { config, arguments ->
         assertFailsWith<CliOptionProcessingException> {
             PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)

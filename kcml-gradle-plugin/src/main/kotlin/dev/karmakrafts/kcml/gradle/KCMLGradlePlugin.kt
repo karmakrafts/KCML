@@ -271,7 +271,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
             KotlinPlatformType.js -> "js"
             KotlinPlatformType.wasm -> "wasm"
             KotlinPlatformType.native -> "native"
-            KotlinPlatformType.common -> null
+            KotlinPlatformType.common -> "common"
         }
     }
 

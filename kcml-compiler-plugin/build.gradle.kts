@@ -92,9 +92,13 @@ tasks {
     val createVersionFile = register("createVersionFile") {
         group = "build"
         description = "Generate the version file embedded in the finished plugin JAR"
-        outputs.file(layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version")
+        val legacyPath = layout.buildDirectory.asFile.get().toPath() / "generated" / "kcml.version"
+        outputs.file(
+            layout.buildDirectory.asFile.get().toPath() / "generated" / "dev" / "karmakrafts" / "kcml" / "util" / "kcml.version"
+        )
         inputs.property("version", version)
         doFirst {
+            legacyPath.deleteIfExists()
             val path = outputs.files.singleFile.toPath()
             path.deleteIfExists()
             path.parent.createDirectories()

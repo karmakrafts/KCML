@@ -36,6 +36,7 @@ import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
+import dev.karmakrafts.kcml.target.CommonCompileTargetImpl
 import dev.karmakrafts.kcml.target.JsCompileTargetImpl
 import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
 import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
@@ -262,6 +263,7 @@ object PluginLoaderImpl : PluginLoader {
             config.kcmlCompileTarget ?: if (config.konanTarget != null) "native" else null
         ) { "KCML compile target not specified" }
         return when (compileTargetName) {
+            "common" -> CommonCompileTargetImpl
             "android" -> JvmCompileTargetImpl(true)
             "jvm" -> JvmCompileTargetImpl(false)
             "js" -> JsCompileTargetImpl

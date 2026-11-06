@@ -24,7 +24,7 @@ internal object BuildInfo {
     const val PLUGIN_ID: String = "kcml"
 
     val version: String by lazy {
-        BuildInfo::class.java.getResourceAsStream("/kcml.version")?.bufferedReader().use {
+        BuildInfo::class.java.getResourceAsStream("/dev/karmakrafts/kcml/gradle/kcml.version")?.bufferedReader().use {
             it?.readText()
         }!!
     }

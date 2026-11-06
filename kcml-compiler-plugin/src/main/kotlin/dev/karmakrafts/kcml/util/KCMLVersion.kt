@@ -18,7 +18,7 @@ package dev.karmakrafts.kcml.util
 
 internal object KCMLVersion {
     val version: String by lazy {
-        KCMLVersion::class.java.getResourceAsStream("/kcml.version")?.bufferedReader().use {
+        KCMLVersion::class.java.getResourceAsStream("/dev/karmakrafts/kcml/util/kcml.version")?.bufferedReader().use {
             it?.readText()
         }!!
     }
