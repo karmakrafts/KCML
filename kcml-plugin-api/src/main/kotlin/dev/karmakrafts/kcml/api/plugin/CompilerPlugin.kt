@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.plugin
 
 import dev.karmakrafts.kcml.api.ipm.IPM
+import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
 
 /**
  * Entry point for a KCML compiler plugin discovered through Java's [java.util.ServiceLoader].
@@ -27,6 +28,9 @@ import dev.karmakrafts.kcml.api.ipm.IPM
  * that should participate in this compilation through the supplied initialization context.
  */
 public interface CompilerPlugin {
+    // TODO: document this
+    public fun registerTargets(registry: CompileTargetRegistry): Unit = Unit
+
     /**
      * Registers compiler CLI options before [init] is called.
      *
