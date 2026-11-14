@@ -52,9 +52,9 @@ public typealias ScopedOptionParser = (value: String, config: CompilerConfigurat
  * @property compileTarget The compile target the compiler was invoked for.
  */
 public data class PreInitializationContext( // @formatter:off
-    public val storage: PluginStorage,
-    public val compileTarget: CompileTarget
-) { // @formatter:on
+    override val storage: PluginStorage,
+    override val compileTarget: CompileTarget
+) : AbstractPluginContext() { // @formatter:on
     private val optionsLock: Any = Any()
     private val options: ArrayList<AbstractCliOption> = ArrayList()
     private val optionParsers: ArrayList<OptionParser> = ArrayList()

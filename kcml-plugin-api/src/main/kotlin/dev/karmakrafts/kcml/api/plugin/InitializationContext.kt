@@ -50,6 +50,6 @@ public data class InitializationContext( // @formatter:off
     public val logger: Logger,
     public val loader: PluginLoader,
     public val ipm: IPM,
-    public val storage: PluginStorage,
-    public val compileTarget: CompileTarget
-) // @formatter:on
+    override val storage: PluginStorage,
+    override val compileTarget: CompileTarget
+) : AbstractPluginContext() // @formatter:on

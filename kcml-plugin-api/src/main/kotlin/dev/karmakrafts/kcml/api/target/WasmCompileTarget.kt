@@ -17,4 +17,9 @@
 package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin/WebAssembly compilation target. */
-public interface WasmCompileTarget : CompileTarget
+public interface WasmCompileTarget : CompileTarget {
+    public companion object Type : CompileTargetType
+
+    override val type: CompileTargetType
+        get() = Type
+}

@@ -23,4 +23,6 @@ public sealed interface CompileTarget {
 
     /** Compiler-defined name that uniquely identifies this target. */
     public val name: String
+
+    public val type: CompileTargetType
 }

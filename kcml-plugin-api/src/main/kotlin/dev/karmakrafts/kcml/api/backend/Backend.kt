@@ -25,7 +25,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
-import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.CompileTargetProvider
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 /**
@@ -35,7 +35,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
  * configuration, logging, and plugin-loading services. They may represent an IR phase or a later
  * target-specific code-generation phase. [IrBackend] adds services specific to IR processing.
  */
-public interface Backend {
+public interface Backend : CompileTargetProvider {
     /** Namespace for utilities shared by all backend contexts. */
     public companion object; // Semicolon needed because of parser bug..
 
@@ -44,9 +44,6 @@ public interface Backend {
 
     /** Backend phase represented by this context, such as IR processing or later code generation. */
     public val type: BackendType
-
-    /** Platform target of the active compilation; this is distinct from the backend phase in [type]. */
-    public val compileTarget: CompileTarget
 
     /** Kotlin compiler configuration for the active compilation. */
     public val config: CompilerConfiguration

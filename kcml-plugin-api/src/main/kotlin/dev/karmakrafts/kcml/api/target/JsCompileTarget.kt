@@ -17,4 +17,9 @@
 package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin/JavaScript compilation target. */
-public interface JsCompileTarget : CompileTarget
+public interface JsCompileTarget : CompileTarget {
+    public companion object Type : CompileTargetType
+
+    override val type: CompileTargetType
+        get() = Type
+}

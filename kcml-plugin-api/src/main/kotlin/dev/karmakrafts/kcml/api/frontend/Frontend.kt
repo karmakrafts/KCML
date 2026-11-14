@@ -17,7 +17,6 @@
 package dev.karmakrafts.kcml.api.frontend
 
 import dev.karmakrafts.kcml.api.InternalKcmlApi
-import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.log.Logger
