@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.target
 
+import dev.karmakrafts.kcml.api.target.CommonCompileTarget
 import dev.karmakrafts.kcml.api.target.CompileTarget
 import dev.karmakrafts.kcml.api.target.CompileTargetFactory
 import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
@@ -34,6 +35,7 @@ internal object CompileTargetRegistryImpl : CompileTargetRegistry {
     override val factories: ConcurrentHashMap<CompileTargetType, CompileTargetFactory> = ConcurrentHashMap()
 
     init {
+        factories[CommonCompileTarget] = CompileTargetFactory { CommonCompileTargetImpl }
         factories[JvmCompileTarget] = CompileTargetFactory { config ->
             JvmCompileTargetImpl(config.kcmlCompileTarget == "android")
         }
@@ -58,5 +60,13 @@ internal object CompileTargetRegistryImpl : CompileTargetRegistry {
 
     override fun createTarget(type: CompileTargetType, config: CompilerConfiguration): CompileTarget {
         return requireNotNull(factories[type]) { "No compile target factory registered for type $type" }(config)
+    }
+
+    override fun createTarget(config: CompilerConfiguration): CompileTarget {
+        val compileTargetName = requireNotNull(
+            config.kcmlCompileTarget ?: if (config.konanTarget != null) "native" else null
+        ) { "KCML compile target not specified" }
+        val targetType = factories.keys.first { type -> compileTargetName in type.aliases && type.isSelected(config) }
+        return createTarget(targetType, config)
     }
 }

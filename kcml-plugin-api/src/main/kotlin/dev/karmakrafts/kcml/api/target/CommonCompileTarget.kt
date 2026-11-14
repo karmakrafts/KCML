@@ -18,7 +18,9 @@ package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin common metadata compilation target. */
 public interface CommonCompileTarget : CompileTarget {
-    public companion object Type : CompileTargetType
+    public companion object Type : CompileTargetType {
+        override val aliases: Set<String> = setOf("common")
+    }
 
     override val type: CompileTargetType
         get() = Type

@@ -16,4 +16,13 @@
 
 package dev.karmakrafts.kcml.api.target
 
-public interface CompileTargetType
+import org.jetbrains.kotlin.config.CompilerConfiguration
+
+// TODO: add documentation
+public interface CompileTargetType {
+    // TODO: add documentation
+    public val aliases: Set<String>
+
+    // TODO: add documentation
+    public fun isSelected(config: CompilerConfiguration): Boolean = true
+}

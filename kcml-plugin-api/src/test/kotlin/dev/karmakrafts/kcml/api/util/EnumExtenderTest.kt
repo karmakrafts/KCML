@@ -16,19 +16,18 @@
 
 package dev.karmakrafts.kcml.api.util
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertSame
 
 private enum class EnumExtenderBasic {
-    FIRST,
-    SECOND
+    FIRST, SECOND
 }
 
 private enum class EnumExtenderDuplicate {
-    FIRST,
-    SECOND
+    FIRST, SECOND
 }
 
 private enum class EnumExtenderEmpty
@@ -64,6 +63,7 @@ private enum class EnumExtenderThrowing(val value: String) {
     }
 }
 
+@OptIn(DelicateKcmlApi::class)
 class EnumExtenderTest {
     @Test
     fun `defines constants with sequential ordinals and refreshes enum caches`() {

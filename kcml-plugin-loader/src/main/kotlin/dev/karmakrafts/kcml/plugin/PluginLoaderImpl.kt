@@ -29,21 +29,15 @@ import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
-import dev.karmakrafts.kcml.api.target.CompileTarget
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.target.CommonCompileTargetImpl
-import dev.karmakrafts.kcml.target.JsCompileTargetImpl
-import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
-import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
-import dev.karmakrafts.kcml.target.WasmCompileTargetImpl
+import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
-import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import io.github.alexandrepiveteau.graphs.DirectedGraph
 import io.github.alexandrepiveteau.graphs.Vertex
@@ -63,8 +57,6 @@ import org.jetbrains.kotlin.compiler.plugin.parseLegacyPluginOption
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.konan.config.konanTarget
-import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.net.URL
 import java.net.URLClassLoader
 import java.util.*
@@ -258,30 +250,6 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    private fun getCompileTarget(config: CompilerConfiguration): CompileTarget {
-        val compileTargetName = requireNotNull(
-            config.kcmlCompileTarget ?: if (config.konanTarget != null) "native" else null
-        ) { "KCML compile target not specified" }
-        return when (compileTargetName) {
-            "common" -> CommonCompileTargetImpl
-            "android" -> JvmCompileTargetImpl(true)
-            "jvm" -> JvmCompileTargetImpl(false)
-            "js" -> JsCompileTargetImpl
-            "wasm" -> WasmCompileTargetImpl
-            "native" -> {
-                val konanTargetName = requireNotNull(config.konanTarget) {
-                    "Konan target name not specified"
-                }
-                val konanTarget = requireNotNull(KonanTarget.predefinedTargets[konanTargetName]) {
-                    "Unrecognized Konan target name '$konanTargetName'"
-                }
-                NativeCompileTargetImpl(konanTarget)
-            }
-
-            else -> error("Unrecognized KCML compile target '$compileTargetName'")
-        }
-    }
-
     private fun loadPlugins(config: CompilerConfiguration) {
         for ([pluginId, plugin] in sortedPlugins) {
             try {
@@ -294,7 +262,7 @@ object PluginLoaderImpl : PluginLoader {
                     loader = this,
                     ipm = getOrCreateIpm(pluginId),
                     storage = getOrCreatePluginStorage(pluginId),
-                    compileTarget = getCompileTarget(config)
+                    compileTarget = CompileTargetRegistryImpl.createTarget(config)
                 )
                 ) // @formatter:on
             } catch (error: Throwable) {
@@ -328,7 +296,7 @@ object PluginLoaderImpl : PluginLoader {
                 loadingPluginId = pluginId
                 val context = PreInitializationContext( // @formatter:off
                     storage = getOrCreatePluginStorage(pluginId),
-                    compileTarget = getCompileTarget(config)
+                    compileTarget = CompileTargetRegistryImpl.createTarget(config)
                 ) // @formatter:on
                 plugin.preInit(context)
                 state.optionProcessors += context.createCommandLineProcessor(pluginId)

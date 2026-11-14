@@ -32,6 +32,9 @@ public interface CompileTargetRegistry {
 
     // TODO: document this
     public fun createTarget(type: CompileTargetType, config: CompilerConfiguration): CompileTarget
+
+    // TODO: document this
+    public fun createTarget(config: CompilerConfiguration): CompileTarget
 }
 
 // TODO: document this

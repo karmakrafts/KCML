@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.util.UnsafeUtils
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -30,6 +31,7 @@ class AgentInjector( // @formatter:off
     private val agentPath: Path = directory / "agent-${FileChecksum.forResource(agentJar.path)}.jar"
     private val lockPath: Path = directory / "agent.lock"
 
+    @OptIn(DelicateKcmlApi::class)
     @Suppress("DEPRECATION")
     private fun tryOverwriteAttachPermissions() {
         try {

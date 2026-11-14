@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.api.util
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import java.lang.reflect.Modifier
 import java.util.Locale.getDefault
 
@@ -25,6 +26,7 @@ import java.util.Locale.getDefault
  * Lookups are limited to members declared by the selected class or supertype; access to non-public members
  * depends on JVM reflection access restrictions.
  */
+@DelicateKcmlApi
 public object ReflectionUtils {
     /**
      * Reads the declared field named [name] from [instance], or from [C] when [instance] is `null`.

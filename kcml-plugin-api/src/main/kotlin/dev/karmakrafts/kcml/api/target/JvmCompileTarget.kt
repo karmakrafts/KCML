@@ -18,7 +18,9 @@ package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin/JVM compilation target. */
 public interface JvmCompileTarget : CompileTarget {
-    public companion object Type : CompileTargetType
+    public companion object Type : CompileTargetType {
+        override val aliases: Set<String> = setOf("jvm", "android")
+    }
 
     override val type: CompileTargetType
         get() = Type

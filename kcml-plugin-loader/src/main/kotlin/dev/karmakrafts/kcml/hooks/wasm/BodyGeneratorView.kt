@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
@@ -34,6 +35,7 @@ internal class BodyGeneratorView(
     val generateExpressionCallback: (IrExpression) -> Unit
 ) {
     companion object {
+        @OptIn(DelicateKcmlApi::class)
         fun fromImpl(generator: BodyGenerator): Result<BodyGeneratorView> = runCatching {
             val backendContext =
                 ReflectionUtils.getField<BodyGenerator, WasmBackendContext>("backendContext", generator)

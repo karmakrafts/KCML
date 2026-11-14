@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.util.ReflectionUtils
@@ -43,7 +44,7 @@ internal data class NativeGenerationStateView(
     val llvmModule: LLVMModuleRef
 ) {
     companion object {
-        @OptIn(MessageCollectorAccess::class)
+        @OptIn(MessageCollectorAccess::class, DelicateKcmlApi::class)
         fun fromImpl( // @formatter:off
             @ActualType("NativeGenerationState") impl: Any,
             loader: PluginLoader

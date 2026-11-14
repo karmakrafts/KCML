@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -28,6 +29,7 @@ internal data class FunctionGenerationContextView( // @formatter:off
     val builderGetter: () -> LLVMBuilderRef
 ) { // @formatter:on
     companion object {
+        @OptIn(DelicateKcmlApi::class)
         fun fromImpl( // @formatter:off
             @ActualType("FunctionGenerationContext") impl: Any,
             loader: PluginLoader

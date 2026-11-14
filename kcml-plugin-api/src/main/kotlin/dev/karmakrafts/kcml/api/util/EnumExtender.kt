@@ -18,6 +18,7 @@
 
 package dev.karmakrafts.kcml.api.util
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import java.lang.invoke.MethodHandles
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -33,8 +34,9 @@ import java.lang.Short as JShort
 import java.lang.reflect.Array as ReflectArray
 
 /**
- * Allows creating new enum constants for an already existing enum type.
+ * Allows creating new enum constants for an already existing enum type at runtime.
  */
+@DelicateKcmlApi
 public object EnumExtender {
     /**
      * Define a new enum value for the enum type [E] with the given

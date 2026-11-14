@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -31,6 +32,7 @@ internal data class CodeGeneratorVisitorView( // @formatter:off
     val functionGenContextGetter: () -> FunctionGenerationContextView
 ) { // @formatter:on
     companion object {
+        @OptIn(DelicateKcmlApi::class)
         @Suppress("UNCHECKED_CAST")
         fun fromImpl( // @formatter:off
             @ActualType("CodeGeneratorVisitor") impl: Any,

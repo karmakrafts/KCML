@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
+import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
@@ -108,6 +109,7 @@ object WASMHooks {
             })
     }
 
+    @OptIn(DelicateKcmlApi::class)
     @JvmStatic
     fun onGenerateDeclaration(element: IrElement, generator: IrFileToWasmIrGenerator): Boolean {
         if (!hasCodeGenerationExtensions()) return false
