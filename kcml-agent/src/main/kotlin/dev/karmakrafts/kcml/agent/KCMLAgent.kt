@@ -103,7 +103,7 @@ object KCMLAgent {
         require(joinedArgs != null) { "KCML compiler agent requires initial startup options" }
         val args = KCMLAgentArguments.parse(joinedArgs)
         val commClient = AgentCommClient(args.commPort)
-        val handshake = try {
+        (val loaderPath, val bridgePath, val pluginPaths, val dumpClasses, val rawDumpPath = dumpPath) = try {
             commClient.handshake()
         } catch (error: Throwable) {
             commClient.close()
@@ -113,29 +113,27 @@ object KCMLAgent {
         logger.info { "Agent invoked with options: $joinedArgs" }
         logger.info { "Initializing KCML compiler agent.." }
         try {
-            injectMixinBridge(handshake.bridgePath, logger, instrumentation)
-            verifyMixinBridge(handshake.bridgePath)
+            injectMixinBridge(bridgePath, logger, instrumentation)
+            verifyMixinBridge(bridgePath)
         } catch (error: Throwable) {
             commClient.close()
             throw error
         }
         // ================== Mixin Bridge boundary ==================
         logger.info { "Initializing default constant table entries" }
-        val compilerClassLoaderInjector = CompilerClassLoaderInjector(Path(handshake.loaderPath), instrumentation)
+        val compilerClassLoaderInjector = CompilerClassLoaderInjector(Path(loaderPath), instrumentation)
         MixinBridge.INSTANCE.apply {
-            putConstant(BuiltinMixinSource, "loader_path", handshake.loaderPath)
-            putConstant(BuiltinMixinSource, "bridge_path", handshake.bridgePath)
-            putConstant(BuiltinMixinSource, "plugin_paths", handshake.pluginPaths)
+            putConstant(BuiltinMixinSource, "loader_path", loaderPath)
+            putConstant(BuiltinMixinSource, "bridge_path", bridgePath)
+            putConstant(BuiltinMixinSource, "plugin_paths", pluginPaths)
             putConstant(
-                BuiltinMixinSource,
-                "inject_loader",
-                compilerClassLoaderInjector
+                BuiltinMixinSource, "inject_loader", compilerClassLoaderInjector
             )
         }
         val loader = MixinLoader(logger)
         logger.info { "Loading builtin loader and plugin mixins" }
-        loader.load((listOf(handshake.loaderPath) + handshake.pluginPaths).map(::Path), Path(handshake.loaderPath))
-        val dumpPath = if (handshake.dumpClasses) handshake.dumpPath?.let(::Path) else null
+        loader.load((listOf(loaderPath) + pluginPaths).map(::Path), Path(loaderPath))
+        val dumpPath = if (dumpClasses) rawDumpPath?.let(::Path) else null
         val canRetransform = instrumentation.isRetransformClassesSupported
         instrumentation.addTransformer(
             MixinClassTransformer(logger, loader, dumpPath, compilerClassLoaderInjector), canRetransform

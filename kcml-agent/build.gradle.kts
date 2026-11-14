@@ -42,6 +42,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
 
     testImplementation(projects.kcmlMixinBridge)
+    testImplementation(projects.kcmlPluginApi)
     testImplementation(libs.kotlin.compiler.embeddable)
     testImplementation(libs.kotlin.native.compiler.embeddable)
     testImplementation(libs.kotlin.test)

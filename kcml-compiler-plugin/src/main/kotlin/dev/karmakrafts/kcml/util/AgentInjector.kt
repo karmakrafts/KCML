@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
+import dev.karmakrafts.kcml.api.util.UnsafeUtils
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div

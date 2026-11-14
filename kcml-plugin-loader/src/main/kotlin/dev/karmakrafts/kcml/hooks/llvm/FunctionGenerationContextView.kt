@@ -17,8 +17,8 @@
 package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.ActualType
-import dev.karmakrafts.kcml.util.ReflectionUtils
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toLong
 import llvm.LLVMBuilderRef

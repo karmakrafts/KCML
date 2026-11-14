@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
-import dev.karmakrafts.kcml.util.ReflectionUtils
+import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext

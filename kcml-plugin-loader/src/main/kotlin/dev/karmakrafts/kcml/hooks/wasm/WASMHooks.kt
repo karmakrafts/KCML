@@ -20,11 +20,11 @@ import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
-import dev.karmakrafts.kcml.util.ReflectionUtils
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.BodyGenerator
