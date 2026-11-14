@@ -92,15 +92,44 @@ class AgentInjectorTest {
 
     @Test
     fun `propagates agent load failures and releases the lock for subsequent injections`() {
-        val directory = Files.createTempDirectory(Path.of("build"), "agent-injector-test-")
+        val directory = Files.createTempDirectory(Path.of("build"), "agent-injector-test-").toAbsolutePath()
+        val outputFile = directory / "child-process.log"
+        var process: Process? = null
         try {
-            assertFailsWith<AgentInitializationException> {
-                AgentInjector(directory).inject(mapOf("fail" to true))
+            process = ProcessBuilder(
+                Path.of(System.getProperty("java.home"), "bin", "java").toString(),
+                "-cp",
+                requireNotNull(System.getProperty("kcml.test.classpath")),
+                "dev.karmakrafts.kcml.util.AgentInjectorTestKt",
+                directory.toString()
+            ).redirectErrorStream(true).redirectOutput(outputFile.toFile()).start()
+            val completed = process.waitFor(30, TimeUnit.SECONDS)
+            if (!completed) {
+                process.destroyForcibly()
+                process.waitFor(5, TimeUnit.SECONDS)
             }
-            assertTrue(AgentInjector(directory).inject())
+            val output = Files.readString(outputFile)
+            assertTrue(completed, "Child JVM did not finish in time. Output:\n$output")
+            assertEquals(0, process.exitValue(), "Child JVM failed. Output:\n$output")
+            assertTrue("Requested agent failure" in output, "Expected agent failure was not reported. Output:\n$output")
         }
         finally {
+            process?.let {
+                if (it.isAlive) {
+                    it.destroyForcibly()
+                    it.waitFor(5, TimeUnit.SECONDS)
+                }
+            }
             directory.deleteRecursively()
         }
     }
+}
+
+fun main(args: Array<String>) {
+    require(args.size == 1) { "Expected the agent test directory" }
+    val directory = Path.of(args.single())
+    assertFailsWith<AgentInitializationException> {
+        AgentInjector(directory).inject(mapOf("fail" to true))
+    }
+    assertTrue(AgentInjector(directory).inject())
 }

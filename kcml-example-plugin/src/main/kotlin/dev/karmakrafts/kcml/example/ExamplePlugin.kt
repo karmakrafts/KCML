@@ -18,8 +18,13 @@ package dev.karmakrafts.kcml.example
 
 import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
-import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
+import dev.karmakrafts.kcml.api.plugin.Plugin
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
+import dev.karmakrafts.kcml.api.target.whenCompilingFor
 import dev.karmakrafts.kcml.example.js.ExampleJsCodeGenerationExtension
 import dev.karmakrafts.kcml.example.js.ExampleJsIntrinsicsExtension
 import dev.karmakrafts.kcml.example.js.ExampleLateJsExtension
@@ -43,20 +48,28 @@ class ExamplePlugin : CompilerPlugin {
             register(ExampleIrExtension())
             register(ExampleIrIntrinsicsExtension())
             // JVM
-            register(ExampleJvmCodeGenerationExtension())
-            register(ExampleJvmIntrinsicsExtension())
+            context.whenCompilingFor(JvmCompileTarget) {
+                register(ExampleJvmCodeGenerationExtension())
+                register(ExampleJvmIntrinsicsExtension())
+            }
             // JS
-            register(ExampleLateJsExtension())
-            register(ExampleJsCodeGenerationExtension())
-            register(ExampleJsIntrinsicsExtension())
+            context.whenCompilingFor(JsCompileTarget) {
+                register(ExampleLateJsExtension())
+                register(ExampleJsCodeGenerationExtension())
+                register(ExampleJsIntrinsicsExtension())
+            }
             // LLVM
-            register(ExampleLateNativeExtension())
-            register(ExampleNativeCodeGenerationExtension())
-            register(ExampleNativeIntrinsicsExtension())
+            context.whenCompilingFor(NativeCompileTarget) {
+                register(ExampleLateNativeExtension())
+                register(ExampleNativeCodeGenerationExtension())
+                register(ExampleNativeIntrinsicsExtension())
+            }
             // WASM
-            register(ExampleLateWasmExtension())
-            register(ExampleWasmCodeGenerationExtension())
-            register(ExampleWasmIntrinsicsExtension())
+            context.whenCompilingFor(WasmCompileTarget) {
+                register(ExampleLateWasmExtension())
+                register(ExampleWasmCodeGenerationExtension())
+                register(ExampleWasmIntrinsicsExtension())
+            }
         }
     }
 }
