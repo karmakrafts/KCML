@@ -24,8 +24,8 @@ import kotlin.reflect.KProperty
  * Each property read invokes [getter] and each write invokes [setter]; no value is cached by the delegate.
  *
  * @param T non-null property value type.
- * @property getter callback used to read the property value.
- * @property setter callback used to write the property value.
+ * @param getter callback invoked to read the property value.
+ * @param setter callback invoked with the new property value when it is written.
  */
 public data class MutableDelegate<T : Any>( // @formatter:off
     @PublishedApi internal val getter: () -> T,

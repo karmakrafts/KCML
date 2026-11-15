@@ -22,15 +22,22 @@ import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.util.Locale.getDefault
 
-// TODO: add documentation
+/**
+ * Whether this member's JVM modifier flags include `public`.
+ *
+ * This checks only the member's modifier flags and does not guarantee that the member is accessible through
+ * reflection; access can also be restricted by its declaring type or JVM module boundaries.
+ */
 public inline val Member.isPubliclyAccessible: Boolean
     get() = modifiers and Modifier.PUBLIC == Modifier.PUBLIC
 
 /**
- * Provides helpers for reading fields and properties through Java reflection.
+ * Provides helpers for constructing instances and reading fields and Java-style getter methods through Java
+ * reflection.
  *
- * Lookups are limited to members declared by the selected class or supertype; access to non-public members
- * depends on JVM reflection access restrictions.
+ * Lookups are limited to members declared by the selected class or supertype. Non-public members are made
+ * accessible only for the duration of an operation, when the JVM permits it; a public modifier alone does not
+ * guarantee reflective access.
  */
 @DelicateKcmlApi
 public object ReflectionUtils {
@@ -55,7 +62,25 @@ public object ReflectionUtils {
         } as? Constructor<T>
     }
 
-    // TODO: add documentation
+    /**
+     * Constructs an instance of [T] using a declared constructor that matches [args].
+     *
+     * A constructor matches when its parameter count equals the number of arguments and each non-null argument's
+     * runtime type is assignable to the corresponding parameter type. A `null` argument matches any parameter
+     * during lookup, but cannot be passed to a primitive parameter. If multiple constructors match, the first one
+     * in the class's declared-constructor order is used. When the selected constructor does not have the `public`
+     * modifier, this function attempts to make it accessible for invocation and restores its previous
+     * accessibility afterward.
+     *
+     * @param T type to construct.
+     * @param args arguments passed to the matching constructor.
+     * @return the constructed instance.
+     * @throws IllegalArgumentException if no declared constructor matches [args] or an argument cannot be passed
+     * to the selected constructor.
+     * @throws InstantiationException if the selected constructor cannot create an instance.
+     * @throws IllegalAccessException if the JVM does not permit access to the constructor.
+     * @throws java.lang.reflect.InvocationTargetException if the constructor throws an exception.
+     */
     public inline fun <reified T> new(vararg args: Any?): T {
         val constructor = requireNotNull(findConstructor<T>(*args)) {
             "Could not find constructor matching arguments ${args.joinToString()}"

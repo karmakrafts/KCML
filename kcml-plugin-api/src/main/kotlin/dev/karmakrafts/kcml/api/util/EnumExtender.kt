@@ -39,12 +39,21 @@ import java.lang.reflect.Array as ReflectArray
 @DelicateKcmlApi
 public object EnumExtender {
     /**
-     * Define a new enum value for the enum type [E] with the given
-     * [name] and [args].
+     * Defines and registers a new constant in enum type [E] with the given [name] and [args].
      *
-     * @param name The name of the new enum constant to add.
-     * @param args The arguments to pass to the enum constructor.
-     * @return The newly created enum constant.
+     * The enum type is initialized before the constant is created. Constructor selection uses the supplied argument
+     * count and runtime types, matching boxed values to primitive parameters and allowing `null` only for reference
+     * parameters. If several constructors match, the unique most-specific constructor is used; an ambiguous match
+     * is rejected. The new constant is added to the runtime values array and the reflection and Kotlin enum-entry
+     * caches when present. Existing references or snapshots of enum values and compiled enum dispatch code are not
+     * updated.
+     *
+     * @param E enum type to extend.
+     * @param name non-empty name for the new enum constant; it must not already be in use.
+     * @param args arguments passed to the enum constructor, excluding the generated name and ordinal parameters.
+     * @return the newly created enum constant.
+     * @throws IllegalArgumentException if [name] is empty or already used, or no unique matching constructor exists.
+     * @throws IllegalAccessException if JVM access restrictions prevent access to the enum constructor.
      */
     public inline fun <reified E : Enum<E>> define( // @formatter:off
         name: String,
