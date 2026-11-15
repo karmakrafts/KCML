@@ -103,7 +103,8 @@ class KCMLAgentMixinTest {
         bridge: Path,
         plugins: List<Path>,
         loadedClasses: Array<Class<*>> = emptyArray(),
-        retransformed: MutableList<Class<*>> = ArrayList()
+        retransformed: MutableList<Class<*>> = ArrayList(),
+        transformerRegistrations: MutableList<Pair<ClassFileTransformer, Boolean>>? = null
     ): ClassFileTransformer {
         var transformer: ClassFileTransformer? = null
         val instrumentation = Proxy.newProxyInstance(
@@ -111,7 +112,11 @@ class KCMLAgentMixinTest {
         ) { _, method, args ->
             when (method.name) {
                 "appendToBootstrapClassLoaderSearch" -> (args[0] as JarFile).close()
-                "addTransformer" -> transformer = args[0] as ClassFileTransformer
+                "addTransformer" -> {
+                    val registeredTransformer = args[0] as ClassFileTransformer
+                    transformer = registeredTransformer
+                    transformerRegistrations?.add(registeredTransformer to (args[1] as Boolean))
+                }
                 "isRetransformClassesSupported", "isModifiableClass" -> return@newProxyInstance true
                 "getAllLoadedClasses" -> return@newProxyInstance loadedClasses
                 "retransformClasses" -> retransformed += (args[0] as Array<*>).filterIsInstance<Class<*>>()
@@ -191,9 +196,16 @@ class KCMLAgentMixinTest {
             "loader.jar", createMixin("example/LoadedMixin", target.name.replace('.', '/'), true)
         )
         val retransformed = ArrayList<Class<*>>()
+        val transformerRegistrations = ArrayList<Pair<ClassFileTransformer, Boolean>>()
         startAgent(
-            loader, directory.createBridge(), emptyList(), arrayOf(String::class.java, target), retransformed
+            loader,
+            directory.createBridge(),
+            emptyList(),
+            arrayOf(String::class.java, target),
+            retransformed,
+            transformerRegistrations
         )
         assertEquals(listOf<Class<*>>(target), retransformed)
+        assertEquals(listOf(false, true), transformerRegistrations.map { (_, canRetransform) -> canRetransform })
     }
 }

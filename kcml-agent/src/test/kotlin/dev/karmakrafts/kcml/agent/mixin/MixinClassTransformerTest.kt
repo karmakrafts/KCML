@@ -41,13 +41,19 @@ class MixinClassTransformerTest {
         visitEnd()
     }.toByteArray()
 
-    private fun withLoader(test: (MixinLoader, Path, ByteArray) -> Unit) {
+    private fun withLoader(rewriteAccess: Int? = null, test: (MixinLoader, Path, ByteArray) -> Unit) {
         val directory = Files.createTempDirectory(Path.of("build"), "mixin-transformer-test-")
         try {
             val mixin = createClass("example/Mixin") {
                 visitAnnotation(Types.Mixin.indirectMixin.descriptor, false).apply {
                     visit("target", "example.Target")
                     visitEnd()
+                }
+                rewriteAccess?.let { access ->
+                    visitAnnotation(Types.Mixin.rewriteAccess.descriptor, false).apply {
+                        visit("value", access)
+                        visitEnd()
+                    }
                 }
                 visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "inject", "()V", null, null).apply {
                     visitAnnotation(Types.Mixin.inject.descriptor, false).apply {
@@ -147,5 +153,67 @@ class MixinClassTransformerTest {
             fun define(): Class<*> = defineClass("example.Target", transformed, 0, transformed.size)
         }.define()
         assertEquals(2, targetClass.getMethod("value").invoke(null))
+    }
+
+    @Test
+    fun `does not rewrite class modifiers during retransformation`() = withLoader(
+        Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL
+    ) { loader, _, _ ->
+        val target = createClass("example/Target") {
+            visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "result", "I", null, null).visitEnd()
+            visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "value", "()I", null, null).apply {
+                visitCode()
+                visitFieldInsn(Opcodes.GETSTATIC, "example/Target", "result", "I")
+                visitInsn(Opcodes.IRETURN)
+                visitMaxs(1, 0)
+                visitEnd()
+            }
+        }
+        val transformer = MixinClassTransformer(NoopLogger, loader, null)
+
+        val transformed = transformer.transform(null, null, "example/Target", String::class.java, null, target)
+        val node = ClassNode().apply { ClassReader(transformed).accept(this, 0) }
+        val targetClass = object : ClassLoader(javaClass.classLoader) {
+            fun define(): Class<*> = defineClass("example.Target", transformed, 0, transformed.size)
+        }.define()
+
+        assertEquals(2, targetClass.getMethod("value").invoke(null))
+        assertEquals(Opcodes.ACC_PUBLIC, node.access)
+    }
+
+    @Test
+    fun `load time access changes persist while mixin injections remain retransformable`() = withLoader(
+        Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL
+    ) { loader, _, _ ->
+        val target = createClass("example/Target") {
+            visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "result", "I", null, null).visitEnd()
+            visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "value", "()I", null, null).apply {
+                visitCode()
+                visitFieldInsn(Opcodes.GETSTATIC, "example/Target", "result", "I")
+                visitInsn(Opcodes.IRETURN)
+                visitMaxs(1, 0)
+                visitEnd()
+            }
+        }
+        val loadTimeTransformer = MixinClassTransformer(NoopLogger, loader, null, retransformable = false)
+        val retransformableTransformer = MixinClassTransformer(NoopLogger, loader, null, retransformable = true)
+        val loadTimeOutput = loadTimeTransformer.transform(null, null, "example/Target", null, null, target)
+        val initialOutput = retransformableTransformer.transform(null, null, "example/Target", null, null, loadTimeOutput)
+        val retransformedOutput = retransformableTransformer.transform(
+            null, null, "example/Target", String::class.java, null, loadTimeOutput
+        )
+
+        assertEquals(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, ClassNode().apply {
+            ClassReader(loadTimeOutput).accept(this, 0)
+        }.access)
+        for (classfile in listOf(initialOutput, retransformedOutput)) {
+            val node = ClassNode().apply { ClassReader(classfile).accept(this, 0) }
+            val targetClass = object : ClassLoader(javaClass.classLoader) {
+                fun define(): Class<*> = defineClass("example.Target", classfile, 0, classfile.size)
+            }.define()
+
+            assertEquals(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, node.access)
+            assertEquals(2, targetClass.getMethod("value").invoke(null))
+        }
     }
 }

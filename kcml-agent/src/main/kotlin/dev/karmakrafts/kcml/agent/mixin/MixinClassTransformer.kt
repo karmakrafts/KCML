@@ -40,7 +40,8 @@ internal class MixinClassTransformer( // @formatter:off
     private val logger: Logger,
     private val loader: MixinLoader,
     private val dumpPath: Path?,
-    private val compilerClassLoaderInjector: Consumer<ClassLoader>? = null
+    private val compilerClassLoaderInjector: Consumer<ClassLoader>? = null,
+    private val retransformable: Boolean = true
 ) : ClassFileTransformer { // @formatter:on
     companion object {
         private val packageBlacklist: List<String> = listOf( // @formatter:off
@@ -108,7 +109,7 @@ internal class MixinClassTransformer( // @formatter:off
             var wasChanged = false
             for (mixin in this.loader.mixins) {
                 try {
-                    wasChanged = wasChanged or mixin.apply(classNode)
+                    wasChanged = wasChanged or mixin.apply(classNode, retransformable)
                 } catch (error: Throwable) {
                     logger.error(error) { "Mixin ${mixin.mixinClass.dottedName} failed to apply" }
                 }

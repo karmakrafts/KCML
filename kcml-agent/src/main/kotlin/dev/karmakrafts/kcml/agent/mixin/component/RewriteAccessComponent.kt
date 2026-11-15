@@ -26,6 +26,8 @@ import org.objectweb.asm.tree.ClassNode
 internal class RewriteAccessComponent(
     private val mixinClass: ClassNode
 ) : AbstractMixinComponent() {
+    override val retransformable: Boolean = false
+
     // TODO: extend RewriteAccess support to fields, properties and functions
     override fun apply(context: ComponentContext): Boolean {
         // @formatter:off

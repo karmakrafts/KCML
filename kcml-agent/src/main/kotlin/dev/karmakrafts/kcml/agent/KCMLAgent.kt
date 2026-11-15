@@ -136,6 +136,9 @@ object KCMLAgent {
         val dumpPath = if (dumpClasses) rawDumpPath?.let(::Path) else null
         val canRetransform = instrumentation.isRetransformClassesSupported
         instrumentation.addTransformer(
+            MixinClassTransformer(logger, loader, null, retransformable = false), false
+        )
+        instrumentation.addTransformer(
             MixinClassTransformer(logger, loader, dumpPath, compilerClassLoaderInjector), canRetransform
         )
         if (canRetransform) {

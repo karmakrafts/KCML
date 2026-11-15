@@ -78,16 +78,17 @@ internal data class Mixin( // @formatter:off
         this += sortedComponents
     }
 
-    fun apply(classNode: ClassNode): Boolean {
+    fun apply(classNode: ClassNode, retransformable: Boolean = true): Boolean {
         if (classNode.name != target.internalName) return false
+        val selectedComponents = components.filter { component -> component.retransformable == retransformable }
         var wasChanged = false
-        for (component in components) {
+        for (component in selectedComponents) {
             wasChanged = wasChanged or component.apply(
                 ComponentContext( // @formatter:off
                     targetClass = classNode,
                     loader = loader,
                     logger = logger,
-                    otherComponents = components - component
+                    otherComponents = selectedComponents - component
                 ) // @formatter:on
             )
         }
