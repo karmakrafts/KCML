@@ -16,13 +16,23 @@
 
 package dev.karmakrafts.kcml.api.mixin
 
-// TODO: add documentation
+/**
+ * Replaces the access flags of a mixin's target class.
+ *
+ * The replacement takes effect when the target class is loaded and cannot change access flags on classes
+ * that were already loaded when the agent attached.
+ *
+ * @property value replacement JVM class access flags; these replace, rather than merge with, the target's existing
+ * access flags. Defaults to [RETAIN_ACCESS].
+ */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.CLASS)
 public annotation class RewriteAccess(
     public val value: Int = RETAIN_ACCESS
 ) {
+    /** Contains constants used by [RewriteAccess]. */
     public companion object {
+        /** Sentinel value used as the default for [RewriteAccess.value] to indicate that access should be retained. */
         public const val RETAIN_ACCESS: Int = -1
     }
 }
