@@ -27,6 +27,9 @@ public interface NativeCompileTarget : CompileTarget {
     override val type: CompileTargetType
         get() = Type
 
-    /** Konan platform target selected for native code generation. */
+    /**
+     * Konan platform target selected for native code generation.
+     * When implementing a custom compile target, use [KonanTargets.create] to create a fitting custom target.
+     */
     public val konanTarget: KonanTarget
 }

@@ -18,8 +18,10 @@ package dev.karmakrafts.kcml.api.target
 
 import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.util.EnumExtender
+import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.konan.target.KonanTarget
 
 // TODO: add documentation
 @Suppress("NOTHING_TO_INLINE")
@@ -39,4 +41,9 @@ public object KonanTargets {
     public inline fun createArchitecture(
         name: String, bitness: Int
     ): Architecture = EnumExtender.define(name, bitness)
+
+    // TODO: add documentation
+    public inline fun create(
+        name: String, family: Family, architecture: Architecture
+    ): KonanTarget = ReflectionUtils.new(name, family, architecture)
 }

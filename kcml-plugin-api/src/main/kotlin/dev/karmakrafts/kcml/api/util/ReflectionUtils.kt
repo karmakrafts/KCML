@@ -17,8 +17,14 @@
 package dev.karmakrafts.kcml.api.util
 
 import dev.karmakrafts.kcml.api.DelicateKcmlApi
+import java.lang.reflect.Constructor
+import java.lang.reflect.Member
 import java.lang.reflect.Modifier
 import java.util.Locale.getDefault
+
+// TODO: add documentation
+public inline val Member.isPubliclyAccessible: Boolean
+    get() = modifiers and Modifier.PUBLIC == Modifier.PUBLIC
 
 /**
  * Provides helpers for reading fields and properties through Java reflection.
@@ -28,6 +34,42 @@ import java.util.Locale.getDefault
  */
 @DelicateKcmlApi
 public object ReflectionUtils {
+    @PublishedApi
+    @Suppress("UNCHECKED_CAST")
+    internal inline fun <reified T> findConstructor(vararg args: Any?): Constructor<T>? {
+        return T::class.java.declaredConstructors.find { constructor ->
+            val params = constructor.parameters
+            if (params.size != args.size) return@find false
+            var matchedCount = 0
+            for (paramIndex in params.indices) {
+                val argument = args[paramIndex]
+                if (argument == null) {
+                    matchedCount++
+                    continue // Null-args are always a wildcard match
+                }
+                val paramType = params[paramIndex].type
+                if (!paramType.isAssignableFrom(argument::class.java)) continue
+                matchedCount++
+            }
+            matchedCount == params.size
+        } as? Constructor<T>
+    }
+
+    // TODO: add documentation
+    public inline fun <reified T> new(vararg args: Any?): T {
+        val constructor = requireNotNull(findConstructor<T>(*args)) {
+            "Could not find constructor matching arguments ${args.joinToString()}"
+        }
+        val isAccessible = constructor.isPubliclyAccessible
+        return try {
+            if (!isAccessible) constructor.isAccessible = true
+            constructor.newInstance(*args)
+        }
+        finally {
+            constructor.isAccessible = isAccessible
+        }
+    }
+
     /**
      * Reads the declared field named [name] from [instance], or from [C] when [instance] is `null`.
      *
@@ -46,11 +88,14 @@ public object ReflectionUtils {
     public inline fun <reified C : Any, reified T> getField(name: String, instance: Any? = null): T {
         val type = instance?.javaClass ?: C::class.java
         val field = type.getDeclaredField(name)
-        val isAccessible = field.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
-        if (!isAccessible) field.isAccessible = true
-        val value = field.get(instance) as T
-        if (!isAccessible) field.isAccessible = false
-        return value
+        val isAccessible = field.isPubliclyAccessible
+        return try {
+            if (!isAccessible) field.isAccessible = true
+            field.get(instance) as T
+        }
+        finally {
+            field.isAccessible = isAccessible
+        }
     }
 
     @PublishedApi
@@ -94,11 +139,14 @@ public object ReflectionUtils {
         val superType = findSuperClass(type, superClassName) ?: findSuperInterface(type, superClassName)
         ?: error("Could not find super class '$superClassName' in hierarchy of $type")
         val field = superType.getDeclaredField(name)
-        val isAccessible = field.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
-        if (!isAccessible) field.isAccessible = true
-        val value = field.get(instance) as T
-        if (!isAccessible) field.isAccessible = false
-        return value
+        val isAccessible = field.isPubliclyAccessible
+        return try {
+            if (!isAccessible) field.isAccessible = true
+            field.get(instance) as T
+        }
+        finally {
+            field.isAccessible = isAccessible
+        }
     }
 
     /**
@@ -131,11 +179,14 @@ public object ReflectionUtils {
                 }
             }"
         }
-        val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
-        if (!isAccessible) method.isAccessible = true
-        val value = method.invoke(instance) as T
-        if (!isAccessible) method.isAccessible = false
-        return value
+        val isAccessible = method.isPubliclyAccessible
+        return try {
+            if (!isAccessible) method.isAccessible = true
+            method.invoke(instance) as T
+        }
+        finally {
+            method.isAccessible = isAccessible
+        }
     }
 
     /**
@@ -176,10 +227,13 @@ public object ReflectionUtils {
                 }
             }"
         }
-        val isAccessible = method.modifiers and Modifier.PUBLIC == Modifier.PUBLIC
-        if (!isAccessible) method.isAccessible = true
-        val value = method.invoke(instance) as T
-        if (!isAccessible) method.isAccessible = false
-        return value
+        val isAccessible = method.isPubliclyAccessible
+        return try {
+            if (!isAccessible) method.isAccessible = true
+            method.invoke(instance) as T
+        }
+        finally {
+            method.isAccessible = isAccessible
+        }
     }
 }

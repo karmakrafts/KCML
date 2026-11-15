@@ -61,7 +61,7 @@ public object EnumExtender {
         require(enumType.isEnum) { "${enumType.name} is not an enum type" }
         require(name.isNotEmpty()) { "Enum constant names must not be empty" }
 
-        // This initializes the enum before reading its generated values field.
+        // This initializes the enum before reading its generated values field
         checkNotNull(enumType.enumConstants) { "Could not initialize enum type ${enumType.name}" }
         val valuesField = findValuesField(enumType)
         val unsafe = UnsafeUtils.unsafe
