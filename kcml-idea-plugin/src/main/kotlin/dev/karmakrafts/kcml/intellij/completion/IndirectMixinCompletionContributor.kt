@@ -23,8 +23,10 @@ import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.PlainPrefixMatcher
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.ProcessingContext
 import dev.karmakrafts.kcml.intellij.util.ClassNameUtils
 
@@ -42,16 +44,24 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                         ) ?: return
                         val matcher = PlainPrefixMatcher(prefix.replace('/', '.'))
                         val scopedResult = result.withPrefixMatcher(matcher)
+                        val file = parameters.originalFile
+                        val module = ModuleUtilCore.findModuleForPsiElement(file)
+                        val scope = module?.let {
+                            GlobalSearchScope.union(
+                                arrayOf(GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(it), file.resolveScope)
+                            )
+                        } ?: file.resolveScope
                         for (candidate in ClassNameUtils.findCandidates(
-                            parameters.position.project, parameters.originalFile.resolveScope
+                            parameters.position.project, scope
                         )) {
                             ProgressManager.checkCanceled()
-                            if (!matcher.prefixMatches(candidate)) continue
-                            scopedResult.addElement(
-                                LookupElementBuilder.create(candidate).withInsertHandler(
-                                    StringContentInsertHandler(isRawString, contentStart)
-                                )
-                            )
+                            val lookupNames = ClassNameUtils.lookupNames(candidate)
+                            if (lookupNames.none(matcher::prefixMatches)) continue
+                            var lookupElement = LookupElementBuilder.create(candidate)
+                            for (lookupName in lookupNames) {
+                                lookupElement = lookupElement.withLookupString(lookupName)
+                            }
+                            scopedResult.addElement(lookupElement.withInsertHandler(StringContentInsertHandler(isRawString, contentStart)))
                         }
                     }
                 })

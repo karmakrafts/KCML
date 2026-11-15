@@ -30,6 +30,19 @@ import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 
 internal object ClassNameUtils {
+    fun lookupNames(binaryName: String): Set<String> {
+        val className = binaryName.substringAfterLast('.')
+        val names = linkedSetOf(binaryName, className, className.replace('$', '.'))
+        var index = className.indexOf('$')
+        while (index >= 0) {
+            val nestedName = className.substring(index + 1)
+            names.add(nestedName)
+            names.add(nestedName.replace('$', '.'))
+            index = className.indexOf('$', index + 1)
+        }
+        return names
+    }
+
     fun findCandidates(project: Project, scope: GlobalSearchScope): Set<String> {
         val candidates = LinkedHashSet<String>()
         val shortNamesCache = PsiShortNamesCache.getInstance(project)

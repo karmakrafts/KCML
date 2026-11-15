@@ -21,7 +21,9 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.lang.Language
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.roots.OrderRootType
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import org.jetbrains.org.objectweb.asm.ClassWriter
 import org.jetbrains.org.objectweb.asm.Opcodes
@@ -70,6 +72,85 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         myFixture.lookup.currentItem = variants.first { it.lookupString == "completion.targets.Container\$Secret" }
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
         assertTrue(file.text, file.text.contains("\"completion.targets.Container\\\$Secret\""))
+    }
+
+    fun testCompletesBasicCompletionForPartialTypeName() {
+        addIndirectMixinAnnotation()
+        myFixture.addFileToProject("completion/targets/Targets.kt", "package completion.targets; class Hidden; class HiddenOther")
+        myFixture.configureByText(
+            "Mixin.kt", """
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+
+                @IndirectMixin("Hid<caret>")
+                class Example
+            """.trimIndent()
+        )
+
+        val variants = myFixture.completeBasic().orEmpty()
+        assertTrue(variants.joinToString { it.lookupString }, variants.any { it.lookupString == "completion.targets.Hidden" })
+    }
+
+    fun testSmartCompletionForPartialNestedTypeNameReplacesWholeContent() {
+        addIndirectMixinAnnotation()
+        myFixture.addFileToProject(
+            "completion/Outer.java", """
+                package completion;
+                public class Outer {
+                    private static class Secret {}
+                    private static class Second {}
+                }
+            """.trimIndent()
+        )
+        val file = myFixture.configureByText(
+            "Mixin.kt", """
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+
+                @IndirectMixin("Secret<caret>OldSuffix")
+                class Example
+            """.trimIndent()
+        )
+
+        val variants = myFixture.complete(CompletionType.SMART).orEmpty()
+        val secret = "completion.Outer\$Secret"
+        assertTrue(variants.joinToString { it.lookupString }, variants.any { it.lookupString == secret })
+        myFixture.lookup.currentItem = variants.first { it.lookupString == secret }
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        assertTrue(file.text, file.text.contains("@IndirectMixin(\"completion.Outer\\\$Secret\")"))
+        assertFalse(file.text.contains("OldSuffix"))
+    }
+
+    fun testCompletesProvidedLibraryUsingCompiledAnnotation() {
+        val library = createProvidedLibrary()
+        try {
+            WriteCommandAction.runWriteCommandAction(project) {
+                ModuleRootModificationUtil.updateModel(myFixture.module) { rootModel ->
+                    val moduleLibrary = rootModel.moduleLibraryTable.createLibrary("provided-completion-library")
+                    val libraryModel = moduleLibrary.modifiableModel
+                    libraryModel.addRoot("jar://${library.toAbsolutePath()}!/", OrderRootType.CLASSES)
+                    libraryModel.commit()
+                    rootModel.addLibraryEntry(moduleLibrary).scope = DependencyScope.PROVIDED
+                }
+            }
+            val file = myFixture.configureByText(
+                "Mixin.kt", """
+                    @dev.karmakrafts.kcml.api.mixin.IndirectMixin("<caret>")
+                    class Example
+                """.trimIndent()
+            )
+            assertNotNull(
+                com.intellij.psi.JavaPsiFacade.getInstance(project).findClass(
+                    "dev.karmakrafts.kcml.api.mixin.IndirectMixin", file.resolveScope
+                )
+            )
+
+            val variants = myFixture.completeBasic().orEmpty()
+            assertTrue(variants.joinToString { it.lookupString }, variants.any { it.lookupString == "completion.provided.ProvidedTarget" })
+            assertTrue(variants.any { it.lookupString == "completion.provided.ProvidedOuter\$1" })
+            assertTrue(variants.any { it.lookupString == "completion.provided.ProvidedOuter\$PrivateNested" })
+        }
+        finally {
+            library.parent.toFile().deleteRecursively()
+        }
     }
 
     fun testCompletesAnonymousLibraryClassFile() {
@@ -221,5 +302,76 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             }
         }
         return jar
+    }
+
+    private fun createProvidedLibrary(): Path {
+        val directory = Files.createTempDirectory(Path.of("build"), "kcml-provided-completion-library-")
+        val jar = directory.resolve("library.jar")
+        JarOutputStream(Files.newOutputStream(jar)).use { output ->
+            writeClass(output, "dev/karmakrafts/kcml/api/mixin/IndirectMixin") { classWriter ->
+                classWriter.visit(
+                    Opcodes.V21,
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT or Opcodes.ACC_ANNOTATION,
+                    "dev/karmakrafts/kcml/api/mixin/IndirectMixin",
+                    null,
+                    "java/lang/Object",
+                    arrayOf("java/lang/annotation/Annotation")
+                )
+                classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT, "target", "()Ljava/lang/String;", null, null)
+                    .visitEnd()
+                val priority = classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT, "priority", "()I", null, null)
+                priority.visitAnnotationDefault().apply {
+                    visit(null, 0)
+                    visitEnd()
+                }
+                priority.visitEnd()
+            }
+            writeClass(output, "completion/provided/ProvidedTarget") { classWriter ->
+                classWriter.visit(
+                    Opcodes.V21, Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER, "completion/provided/ProvidedTarget", null,
+                    "java/lang/Object", null
+                )
+            }
+            writeClass(output, "completion/provided/ProvidedOuter") { classWriter ->
+                classWriter.visit(
+                    Opcodes.V21, Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER, "completion/provided/ProvidedOuter", null,
+                    "java/lang/Object", null
+                )
+                classWriter.visitInnerClass(
+                    "completion/provided/ProvidedOuter\$PrivateNested",
+                    "completion/provided/ProvidedOuter",
+                    "PrivateNested",
+                    Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC
+                )
+            }
+            writeClass(output, "completion/provided/ProvidedOuter\$1") { classWriter ->
+                classWriter.visit(
+                    Opcodes.V21, Opcodes.ACC_SUPER or Opcodes.ACC_SYNTHETIC, "completion/provided/ProvidedOuter\$1", null,
+                    "java/lang/Object", null
+                )
+            }
+            writeClass(output, "completion/provided/ProvidedOuter\$PrivateNested") { classWriter ->
+                classWriter.visit(
+                    Opcodes.V21, Opcodes.ACC_SUPER, "completion/provided/ProvidedOuter\$PrivateNested", null,
+                    "java/lang/Object", null
+                )
+                classWriter.visitInnerClass(
+                    "completion/provided/ProvidedOuter\$PrivateNested",
+                    "completion/provided/ProvidedOuter",
+                    "PrivateNested",
+                    Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC
+                )
+            }
+        }
+        return jar
+    }
+
+    private fun writeClass(output: JarOutputStream, internalName: String, configure: (ClassWriter) -> Unit) {
+        val classWriter = ClassWriter(0)
+        configure(classWriter)
+        classWriter.visitEnd()
+        output.putNextEntry(JarEntry("$internalName.class"))
+        output.write(classWriter.toByteArray())
+        output.closeEntry()
     }
 }

@@ -38,10 +38,11 @@ dependencies {
     testImplementation(libs.kotlin.test)
 
     intellijPlatform {
-        create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
-        bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') + "org.jetbrains.kotlin" })
-        plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
-        bundledModules(providers.gradleProperty("platformBundledModules").map { it.split(',') })
+        intellijIdea(libs.versions.intelliJVersion)
+        bundledPlugin("com.intellij.java")
+        bundledPlugin("org.jetbrains.kotlin")
+        plugin("org.jetbrains.kotlin-toolchain", libs.versions.intelliJKotlinToolchain.get())
+        plugin("com.jetbrains.kmm", libs.versions.intelliJKotlinMultiplatform.get())
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
