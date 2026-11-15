@@ -17,6 +17,7 @@ ow2asm = "9.11.1" # https://gitlab.ow2.org/asm/asm/-/tags
 shadow = "9.6.1" # https://github.com/GradleUp/shadow
 kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/releases
 annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
+intelliJPlatform = "2.20.1" # https://github.com/JetBrains/intellij-platform-gradle-plugin/releases
 
 [libraries]
 
@@ -53,3 +54,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 dokka = { id = "org.jetbrains.dokka", version.ref = "dokka" }
 karmaConventions = { id = "dev.karmakrafts.conventions.karma-conventions", version.ref = "karmaConventions" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+intelliJPlatform = { id = "org.jetbrains.intellij.platform", version.ref = "intelliJPlatform" }
