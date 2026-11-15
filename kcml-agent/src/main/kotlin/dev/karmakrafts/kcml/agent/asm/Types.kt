@@ -38,6 +38,7 @@ internal object Types {
         val returnContext: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ReturnContext")
         val capture: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Capture")
         val constantTable: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ConstantTable")
+        val rewriteAccess: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/RewriteAccess")
 
         val getThis: Type = Type.getMethodType(any)
         val returnFromTarget: Type = Type.getMethodType(Type.VOID_TYPE, any)

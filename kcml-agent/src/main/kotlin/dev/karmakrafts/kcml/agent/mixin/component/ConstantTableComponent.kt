@@ -20,13 +20,16 @@ import dev.karmakrafts.kcml.agent.asm.Types
 import dev.karmakrafts.kcml.agent.asm.previousInstruction
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnList
 import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodInsnNode
 
 @DependsOn(InjectComponent::class)
-internal class ConstantTableComponent : AbstractMixinComponent() {
+internal class ConstantTableComponent(
+    private val mixinClass: ClassNode
+) : AbstractMixinComponent() {
     companion object {
         private val getterDescriptors: Map<String, String> = mapOf(
             "getString" to Types.Mixin.getStringConstant.descriptor,

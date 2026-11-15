@@ -58,9 +58,9 @@ internal data class Mixin( // @formatter:off
             for (component in this@sortComponents) {
                 componentVertices += component to addVertex()
             }
-            for ((component, componentVertex) in componentVertices) {
+            for ([component, componentVertex] in componentVertices) {
                 for (dependencyType in component.dependencies) {
-                    for ((dependency, dependencyVertex) in componentVertices) {
+                    for ([dependency, dependencyVertex] in componentVertices) {
                         if (dependency::class == dependencyType) {
                             addArc(dependencyVertex arcTo componentVertex)
                         }
@@ -70,7 +70,7 @@ internal data class Mixin( // @formatter:off
         }
         val sortedComponents = ArrayList<MixinComponent>(size)
         for (vertex in graph.topologicalSort()) {
-            sortedComponents += componentVertices.first { (_, componentVertex) ->
+            sortedComponents += componentVertices.first { [_, componentVertex] ->
                 componentVertex == vertex
             }.first
         }

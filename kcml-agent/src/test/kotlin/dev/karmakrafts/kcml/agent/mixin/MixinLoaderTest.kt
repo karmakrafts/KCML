@@ -169,7 +169,7 @@ class MixinLoaderTest {
         val loader = MixinLoader(NoopLogger)
         loader.components.registerComponent { mixinClass ->
             bridge.putConstant(mixinClass.name, mixinClass.name)
-            ConstantTableComponent()
+            ConstantTableComponent(mixinClass)
         }
         val builtin = directory.createJar(
             "loader.jar", createMixin("example/Builtin", Types.Mixin.indirectMixin, "example.Target")
@@ -232,9 +232,9 @@ class MixinLoaderTest {
         val enclosingSource = PluginMixinSource("enclosing")
         bridge.mixinSource = enclosingSource
         val loader = MixinLoader(NoopLogger)
-        loader.components.registerComponent {
+        loader.components.registerComponent { mixinClass ->
             assertEquals(BuiltinMixinSource, bridge.mixinSource)
-            ConstantTableComponent()
+            ConstantTableComponent(mixinClass)
         }
         val jar = directory.createJar(
             "loader.jar", createMixin("example/Builtin", Types.Mixin.indirectMixin, "example.Target")
