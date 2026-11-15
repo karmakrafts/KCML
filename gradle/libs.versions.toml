@@ -20,8 +20,12 @@ annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
 
 intelliJPlatform = "2.20.1" # https://github.com/JetBrains/intellij-platform-gradle-plugin/releases
 intelliJVersion = "2026.2.5"
-intelliJKotlinToolchain = "262.9437.306"
-intelliJKotlinMultiplatform = "262.12573.28-IJ" # https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform/versions/stable/1219637
+intelliJKotlinToolchain = "262.11879.139" # https://plugins.jetbrains.com/plugin/31850-kotlin-toolchain/versions
+intelliJKotlinMultiplatform = "262.12573.28-IJ" # https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform/versions
+intelliJAndroid = "262.12573.28" # https://plugins.jetbrains.com/plugin/22989-android/versions
+intelliJAndroidDesignTools = "262.10968.63" # https://plugins.jetbrains.com/plugin/22990-android-design-tools/versions
+intelliJJetpackCompose = "262.10968.63" # https://plugins.jetbrains.com/plugin/18409-jetpack-compose/versions
+intelliJNativeDebugging = "262.11879.100" # https://plugins.jetbrains.com/plugin/12775-native-debugging-support/versions
 
 [libraries]
 

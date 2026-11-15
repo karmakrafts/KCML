@@ -41,8 +41,12 @@ dependencies {
         intellijIdea(libs.versions.intelliJVersion)
         bundledPlugin("com.intellij.java")
         bundledPlugin("org.jetbrains.kotlin")
+        plugin("org.jetbrains.android", libs.versions.intelliJAndroid.get())
+        plugin("com.android.tools.design", libs.versions.intelliJAndroidDesignTools.get())
         plugin("org.jetbrains.kotlin-toolchain", libs.versions.intelliJKotlinToolchain.get())
         plugin("com.jetbrains.kmm", libs.versions.intelliJKotlinMultiplatform.get())
+        plugin("androidx.compose.plugins.idea", libs.versions.intelliJJetpackCompose.get())
+        plugin("com.intellij.nativeDebug", libs.versions.intelliJNativeDebugging.get())
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
