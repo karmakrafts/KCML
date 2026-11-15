@@ -35,11 +35,14 @@ repositories {
 }
 
 dependencies {
+    testImplementation(libs.kotlin.test)
+
     intellijPlatform {
         create(providers.gradleProperty("platformType"), providers.gradleProperty("platformVersion"))
-        bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') })
+        bundledPlugins(providers.gradleProperty("platformBundledPlugins").map { it.split(',') + "org.jetbrains.kotlin" })
         plugins(providers.gradleProperty("platformPlugins").map { it.split(',') })
         bundledModules(providers.gradleProperty("platformBundledModules").map { it.split(',') })
+        testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }
 }
