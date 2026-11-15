@@ -18,8 +18,13 @@ package dev.karmakrafts.kcml.api.target
 
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
-// TODO: document this
+/** Creates a [CompileTarget] using the active compiler configuration. */
 public fun interface CompileTargetFactory {
-    // TODO: document this
+    /**
+     * Creates the target represented by this factory.
+     *
+     * @param config compiler configuration used to create the target.
+     * @return the target created for [config].
+     */
     public operator fun invoke(config: CompilerConfiguration): CompileTarget
 }

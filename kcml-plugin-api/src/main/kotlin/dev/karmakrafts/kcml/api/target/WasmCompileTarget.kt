@@ -18,10 +18,13 @@ package dev.karmakrafts.kcml.api.target
 
 /** Describes a Kotlin/WebAssembly compilation target. */
 public interface WasmCompileTarget : CompileTarget {
+    /** Type descriptor for WebAssembly compilation targets. */
     public companion object Type : CompileTargetType {
+        /** Alias used to select a WebAssembly compilation target. */
         override val aliases: Set<String> = setOf("wasm")
     }
 
+    /** The WebAssembly compilation target type. */
     override val type: CompileTargetType
         get() = Type
 }

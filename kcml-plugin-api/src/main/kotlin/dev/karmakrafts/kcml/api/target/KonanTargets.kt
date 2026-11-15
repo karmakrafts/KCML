@@ -23,11 +23,22 @@ import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
-// TODO: add documentation
+/** Utilities for defining custom Kotlin/Native families, architectures, and targets. */
 @Suppress("NOTHING_TO_INLINE")
 @OptIn(DelicateKcmlApi::class)
 public object KonanTargets {
-    // TODO: add documentation
+    /**
+     * Defines and registers a new Kotlin/Native [Family] enum value.
+     *
+     * @param name non-empty, unique name for the family enum value.
+     * @param exeSuffix suffix used for executable files in this family.
+     * @param dynamicPrefix prefix used for dynamic library files in this family.
+     * @param dynamicSuffix suffix used for dynamic library files in this family.
+     * @param staticPrefix prefix used for static library files in this family.
+     * @param staticSuffix suffix used for static library files in this family.
+     * @return the newly registered family value.
+     * @throws IllegalArgumentException if [name] is empty or already used by a family value.
+     */
     public inline fun createFamily(
         name: String,
         exeSuffix: String,
@@ -37,12 +48,27 @@ public object KonanTargets {
         staticSuffix: String
     ): Family = EnumExtender.define(name, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix)
 
-    // TODO: add documentation
+    /**
+     * Defines and registers a new Kotlin/Native [Architecture] enum value.
+     *
+     * @param name non-empty, unique name for the architecture enum value.
+     * @param bitness number of bits in the architecture.
+     * @return the newly registered architecture value.
+     * @throws IllegalArgumentException if [name] is empty or already used by an architecture value.
+     */
     public inline fun createArchitecture(
         name: String, bitness: Int
     ): Architecture = EnumExtender.define(name, bitness)
 
-    // TODO: add documentation
+    /**
+     * Creates a [KonanTarget] instance from its name, family, and architecture. Unlike [createFamily] and
+     * [createArchitecture], this creates a target instance rather than registering a new enum value.
+     *
+     * @param name name identifying the target.
+     * @param family platform family for the target.
+     * @param architecture architecture for the target.
+     * @return the constructed target.
+     */
     public inline fun create(
         name: String, family: Family, architecture: Architecture
     ): KonanTarget = ReflectionUtils.new(name, family, architecture)

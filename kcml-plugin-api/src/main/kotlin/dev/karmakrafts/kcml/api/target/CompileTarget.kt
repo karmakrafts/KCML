@@ -24,6 +24,6 @@ public sealed interface CompileTarget {
     /** Compiler-defined name that uniquely identifies this target. */
     public val name: String
 
-    // TODO: document this
+    /** Type descriptor that identifies the platform category of this target. */
     public val type: CompileTargetType
 }

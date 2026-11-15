@@ -20,10 +20,13 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 
 /** Describes a Kotlin/Native compilation target. */
 public interface NativeCompileTarget : CompileTarget {
+    /** Type descriptor for Kotlin/Native compilation targets. */
     public companion object Type : CompileTargetType {
+        /** Alias used to select a Kotlin/Native compilation target. */
         override val aliases: Set<String> = setOf("native")
     }
 
+    /** The Kotlin/Native compilation target type. */
     override val type: CompileTargetType
         get() = Type
 

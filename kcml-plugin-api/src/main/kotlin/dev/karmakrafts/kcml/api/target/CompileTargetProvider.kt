@@ -19,18 +19,18 @@ package dev.karmakrafts.kcml.api.target
 import kotlin.contracts.InvocationKind
 import kotlin.contracts.contract
 
+/** Provides information about the platform target of the active compilation. */
 public interface CompileTargetProvider {
     /** Platform target of the active compilation. */
     public val compileTarget: CompileTarget
 }
 
 /**
- * Only execute the given block of code if the current target matches one of the given
- * targets.
- * This may be used to register target specific extensions and run target specific code.
+ * Executes [block] only when the current target's type matches one of [types].
+ * Use this to register target-specific extensions or run target-specific code.
  *
- * @param types The compilation target(s) to run the given block of code for.
- * @param block The block of code to execute when the context matches one of the given targets.
+ * @param types compilation target types for which to execute [block].
+ * @param block code to execute when the current target matches one of [types].
  */
 public inline fun CompileTargetProvider.whenCompilingFor(vararg types: CompileTargetType, block: () -> Unit) {
     contract {
@@ -41,12 +41,14 @@ public inline fun CompileTargetProvider.whenCompilingFor(vararg types: CompileTa
 }
 
 /**
- * Only execute the given block of code if the current target matches one of the given
- * targets.
- * This may be used to register target specific extensions and run target specific code.
+ * Returns the result of [block] only when the current target's type matches one of [types].
+ * Otherwise, returns [default]. Use this to register target-specific extensions or run target-specific code.
  *
- * @param types The compilation target(s) to run the given block of code for.
- * @param block The block of code to execute when the context matches one of the given targets.
+ * @param R type returned by [block] and used for [default].
+ * @param default value to return when the current target does not match any of [types].
+ * @param types compilation target types for which to execute [block].
+ * @param block code to execute when the current target matches one of [types].
+ * @return the result of [block] when a type matches, or [default] otherwise.
  */
 public inline fun <reified R> CompileTargetProvider.whenCompilingFor(
     default: R, vararg types: CompileTargetType, block: () -> R

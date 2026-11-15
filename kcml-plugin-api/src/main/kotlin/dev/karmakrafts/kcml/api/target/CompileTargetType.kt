@@ -18,11 +18,17 @@ package dev.karmakrafts.kcml.api.target
 
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
-// TODO: add documentation
+/** Describes a category of compilation targets and how it is selected from compiler configuration. */
 public interface CompileTargetType {
-    // TODO: add documentation
+    /** Names accepted to select this type from compiler configuration. */
     public val aliases: Set<String>
 
-    // TODO: add documentation
+    /**
+     * Determines whether this type can be selected for [config]. The default implementation accepts every
+     * configuration.
+     *
+     * @param config compiler configuration used to determine whether this type is applicable.
+     * @return `true` if this type is eligible for the configuration, otherwise `false`.
+     */
     public fun isSelected(config: CompilerConfiguration): Boolean = true
 }

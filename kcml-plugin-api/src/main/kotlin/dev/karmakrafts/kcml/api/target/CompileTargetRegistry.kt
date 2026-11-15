@@ -18,29 +18,61 @@ package dev.karmakrafts.kcml.api.target
 
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
-// TODO: document this
+/** Registry of factories for creating compilation targets. */
 public interface CompileTargetRegistry {
 
-    // TODO: document this
+    /** Factories currently registered for each compilation target type. */
     public val factories: Map<CompileTargetType, CompileTargetFactory>
 
-    // TODO: document this
+    /**
+     * Registers a factory for [type].
+     *
+     * @param type type handled by [factory].
+     * @param factory factory used to create targets of [type].
+     * @throws IllegalArgumentException if [type] is already registered.
+     */
     public fun register(type: CompileTargetType, factory: CompileTargetFactory)
 
-    // TODO: document this
+    /**
+     * Removes the factory registered for [target].
+     *
+     * @param target type whose factory should be removed.
+     * @throws IllegalArgumentException if [target] is not registered.
+     */
     public fun unregister(target: CompileTargetType)
 
-    // TODO: document this
+    /**
+     * Creates a target by invoking the factory registered for [type].
+     *
+     * @param type type of target to create.
+     * @param config compiler configuration passed to the factory.
+     * @return the target created by the registered factory.
+     * @throws IllegalArgumentException if no factory is registered for [type].
+     */
     public fun createTarget(type: CompileTargetType, config: CompilerConfiguration): CompileTarget
 
-    // TODO: document this
+    /**
+     * Selects a registered target type whose alias matches the resolved target name and whose selection predicate
+     * accepts [config], then creates a target using its factory. If more than one type matches, the first match from
+     * the registry is used.
+     *
+     * @param config compiler configuration used to select and create the target.
+     * @return the target created by the selected factory.
+     * @throws IllegalArgumentException if the configuration does not specify a target name.
+     * @throws NoSuchElementException if no registered target type matches the configured name and configuration.
+     */
     public fun createTarget(config: CompilerConfiguration): CompileTarget
 }
 
-// TODO: document this
+/** The types for which this registry currently has factories. */
 public inline val CompileTargetRegistry.types: Set<CompileTargetType>
     get() = factories.keys
 
-// TODO: document this
+/**
+ * Removes the factory for [target]'s type from this registry.
+ *
+ * @param target target whose type's factory should be removed.
+ * @throws IllegalArgumentException if [target]'s type is not registered.
+ */
 @Suppress("NOTHING_TO_INLINE")
 public inline fun CompileTargetRegistry.unregister(target: CompileTarget): Unit = unregister(target.type)
