@@ -19,7 +19,6 @@ import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.kapt)
     java
 }
 
@@ -36,6 +35,4 @@ kotlin {
 
 dependencies {
     implementation(projects.kcmlPluginApi)
-    compileOnly(libs.autoService.annotations)
-    kapt(libs.autoService.processor)
 }

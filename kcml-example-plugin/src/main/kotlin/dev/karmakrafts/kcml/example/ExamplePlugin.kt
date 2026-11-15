@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.example
 
-import com.google.auto.service.AutoService
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
@@ -38,7 +37,6 @@ import dev.karmakrafts.kcml.example.wasm.ExampleWasmCodeGenerationExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
 
 @Suppress("UNUSED")
-@AutoService(CompilerPlugin::class)
 @Plugin("example")
 class ExamplePlugin : CompilerPlugin {
     override fun init(context: InitializationContext) {

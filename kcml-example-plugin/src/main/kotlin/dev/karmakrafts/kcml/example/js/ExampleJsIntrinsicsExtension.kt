@@ -51,7 +51,8 @@ internal class ExampleJsIntrinsicsExtension : AbstractExtension(), JsIntrinsicsE
         val arguments = call.arguments.filterNotNull().map { argument -> generateExpression(argument) }
         val expressions = if (call.symbol.owner.name.asString() == "jsTransformedIntrinsic") {
             arguments
-        } else arguments + JsIntLiteral(44)
+        }
+        else arguments + JsIntLiteral(44)
         return expressions.reduce { left, right -> JsBinaryOperation(JsBinaryOperator.COMMA, left, right) }
     }
 }

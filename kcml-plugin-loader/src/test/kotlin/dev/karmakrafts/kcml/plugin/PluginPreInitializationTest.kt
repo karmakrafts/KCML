@@ -119,9 +119,12 @@ class PluginPreInitializationTest {
     ) {
         val directory = Files.createTempDirectory(Path.of("build"), "plugin-options-")
         try {
-            val service = directory.resolve("META-INF/services/${CompilerPlugin::class.java.name}")
-            Files.createDirectories(service.parent)
-            Files.writeString(service, plugins.joinToString("\n") { it.name })
+            for (plugin in plugins) {
+                val classResource = plugin.name.replace('.', '/') + ".class"
+                val classFile = directory.resolve(classResource)
+                Files.createDirectories(classFile.parent)
+                plugin.getResourceAsStream("/$classResource")!!.use { Files.copy(it, classFile) }
+            }
             val arguments = K2JVMCompilerArguments().apply {
                 pluginClasspaths = arrayOf(directory.toString())
                 pluginOptions = options

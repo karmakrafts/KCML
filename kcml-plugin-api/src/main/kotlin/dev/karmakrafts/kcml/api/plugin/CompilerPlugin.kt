@@ -20,7 +20,8 @@ import dev.karmakrafts.kcml.api.ipm.IPM
 import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
 
 /**
- * Entry point for a KCML compiler plugin discovered through Java's [java.util.ServiceLoader].
+ * Entry point for a KCML compiler plugin discovered by scanning plugin classpaths for [Plugin].
+ * Implementations must have an accessible no-argument constructor.
  *
  * KCML orders discovered plugins by their declared dependencies, calls [preInit] to register their
  * CLI options, and processes option values before calling [init]. Initialization completes before

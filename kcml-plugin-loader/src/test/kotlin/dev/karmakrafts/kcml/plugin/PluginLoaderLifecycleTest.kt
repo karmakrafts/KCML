@@ -145,7 +145,6 @@ class PluginLoaderLifecycleTest {
         JarOutputStream(Files.newOutputStream(path)).use { archive ->
             for ([entry, bytes] in mapOf(
                 "$name.class" to writer.toByteArray(),
-                "META-INF/services/${CompilerPlugin::class.java.name}" to name.replace('/', '.').toByteArray(),
                 "reloadable_plugin.json" to """{"id":"reloadable_plugin"}""".toByteArray()
             )) {
                 archive.putNextEntry(JarEntry(entry))
@@ -179,9 +178,10 @@ class PluginLoaderLifecycleTest {
     fun `new compiler invocations reload plugins and clear removed plugins`() {
         val directory = Files.createTempDirectory(Path.of("build"), "plugin-lifecycle-")
         try {
-            val service = directory.resolve("META-INF/services/${CompilerPlugin::class.java.name}")
-            Files.createDirectories(service.parent)
-            Files.writeString(service, LifecycleTestPlugin::class.java.name)
+            val classFile = directory.resolve(LifecycleTestPlugin::class.java.name.replace('.', '/') + ".class")
+            Files.createDirectories(classFile.parent)
+            LifecycleTestPlugin::class.java.getResourceAsStream("/${LifecycleTestPlugin::class.java.name.replace('.', '/')}.class")!!
+                .use { Files.copy(it, classFile) }
             val urls = listOf(directory.toUri().toURL())
             val compiler = K2JVMCompiler()
 

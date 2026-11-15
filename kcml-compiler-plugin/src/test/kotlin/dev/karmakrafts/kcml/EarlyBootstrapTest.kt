@@ -108,8 +108,11 @@ class EarlyBootstrapTest {
             }
             val plugin = directory.resolve("plugin.jar")
             JarOutputStream(Files.newOutputStream(plugin)).use { archive ->
-                archive.putNextEntry(JarEntry("META-INF/services/${CompilerPlugin::class.java.name}"))
-                archive.write(EarlyOptionsTestPlugin::class.java.name.toByteArray())
+                val classEntry = EarlyOptionsTestPlugin::class.java.name.replace('.', '/') + ".class"
+                archive.putNextEntry(JarEntry(classEntry))
+                EarlyOptionsTestPlugin::class.java.classLoader.getResourceAsStream(classEntry)!!.use { input ->
+                    input.copyTo(archive)
+                }
                 archive.closeEntry()
             }
             ServerSocket(0, 2, InetAddress.getLoopbackAddress()).use { server ->

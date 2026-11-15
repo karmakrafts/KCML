@@ -57,9 +57,9 @@ import org.jetbrains.kotlin.compiler.plugin.parseLegacyPluginOption
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
+import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
-import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
@@ -212,7 +212,20 @@ object PluginLoaderImpl : PluginLoader {
         val parentClassLoader = this::class.java.classLoader
         val classLoader = URLClassLoader(urls.toTypedArray(), parentClassLoader)
         pluginClassLoader = classLoader
-        return ServiceLoader.load(CompilerPlugin::class.java, classLoader).toList()
+        return PluginClassScanner.scan(urls).mapNotNull { className ->
+            try {
+                val pluginClass = classLoader.loadClass(className)
+                if (!CompilerPlugin::class.java.isAssignableFrom(pluginClass)) {
+                    logger.warn("Annotated class '$className' does not implement CompilerPlugin, skipping load")
+                    return@mapNotNull null
+                }
+                if (Modifier.isAbstract(pluginClass.modifiers) || pluginClass.isInterface) return@mapNotNull null
+                pluginClass.asSubclass(CompilerPlugin::class.java).getDeclaredConstructor().newInstance()
+            } catch (error: Throwable) {
+                logger.warn("Could not load plugin candidate '$className', skipping load", error)
+                null
+            }
+        }
     }
 
     // Used for regular direct compiler invocations

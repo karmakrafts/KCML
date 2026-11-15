@@ -53,7 +53,8 @@ internal class ExampleJsCodeGenerationExtension : AbstractExtension(), JsCodeGen
             is IrConst -> return JsIntLiteral(45)
             is IrReturn -> {
                 if ((element.value as? IrConst)?.value == 0x4B434D4E) return JsReturn(JsIntLiteral(47))
-                element.value = IrConstImpl.int(element.value.startOffset, element.value.endOffset, element.value.type, 46)
+                element.value =
+                    IrConstImpl.int(element.value.startOffset, element.value.endOffset, element.value.type, 46)
             }
 
             is IrVariable -> element.initializer = IrConstImpl.int(
