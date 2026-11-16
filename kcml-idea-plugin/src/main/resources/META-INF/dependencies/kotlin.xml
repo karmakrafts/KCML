@@ -20,6 +20,8 @@
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.PluginLineMarkerProvider"/>
+        <codeInsight.lineMarkerProvider language="kotlin"
+                                        implementationClass="dev.karmakrafts.kcml.intellij.gutter.InjectLineMarkerProvider"/>
         <completion.contributor language="kotlin" order="first"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionContributor"/>
         <typedHandler implementation="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionTypedHandler"
