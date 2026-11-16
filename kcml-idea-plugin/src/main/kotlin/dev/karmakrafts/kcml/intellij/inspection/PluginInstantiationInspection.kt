@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -59,14 +60,19 @@ class PluginInstantiationInspection : LocalInspectionTool() {
 
             private fun checkCall(call: KtCallElement) {
                 val callee = call.calleeExpression ?: return
-                checkReference((callee as? KtConstructorCalleeExpression)?.constructorReferenceExpression ?: callee)
+                checkReference(
+                    (callee as? KtConstructorCalleeExpression)?.constructorReferenceExpression ?: callee, call
+                )
             }
 
-            private fun checkReference(reference: PsiElement) {
+            private fun checkReference(reference: PsiElement, highlight: PsiElement = reference) {
                 val target = reference.references.firstNotNullOfOrNull { it.resolve() } ?: return
                 if (!isPluginConstructor(target, mutableSetOf())) return
                 holder.registerProblem(
-                    reference, "Plugin classes must not be instantiated", ProblemHighlightType.GENERIC_ERROR_OR_WARNING
+                    highlight,
+                    "Plugin classes must not be instantiated",
+                    ProblemHighlightType.GENERIC_ERROR_OR_WARNING,
+                    TextRange(0, highlight.textLength)
                 )
             }
         }

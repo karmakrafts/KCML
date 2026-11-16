@@ -16,8 +16,13 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
+import com.intellij.codeInspection.InspectionManager
+import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.util.TextRange
+import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.kotlin.psi.KtCallExpression
 
 class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
     override fun setUp() {
@@ -30,9 +35,9 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
             @Plugin("annotated") class Annotated
             class Implementation : CompilerPlugin
             @Plugin("both") class Both : CompilerPlugin
-            val annotated = <warning descr="Plugin classes must not be instantiated">Annotated</warning>()
-            val implementation = <warning descr="Plugin classes must not be instantiated">Implementation</warning>()
-            val both = <warning descr="Plugin classes must not be instantiated">Both</warning>()
+            val annotated = <warning descr="Plugin classes must not be instantiated">Annotated()</warning>
+            val implementation = <warning descr="Plugin classes must not be instantiated">Implementation()</warning>
+            val both = <warning descr="Plugin classes must not be instantiated">Both()</warning>
         """.trimIndent()
     )
 
@@ -40,8 +45,8 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
         """
             interface Extension : CompilerPlugin
             open class Base : Extension
-            class Derived : <warning descr="Plugin classes must not be instantiated">Base</warning>()
-            val derived = <warning descr="Plugin classes must not be instantiated">Derived</warning>()
+            class Derived : <warning descr="Plugin classes must not be instantiated">Base()</warning>
+            val derived = <warning descr="Plugin classes must not be instantiated">Derived()</warning>
         """.trimIndent()
     )
 
@@ -54,23 +59,23 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
             typealias Alias = Example
             typealias AliasChain = Alias
             typealias ImplementationAlias = Implementation
-            val qualified = sample.<warning descr="Plugin classes must not be instantiated">Example</warning>()
-            val alias = <warning descr="Plugin classes must not be instantiated">Alias</warning>()
-            val chain = <warning descr="Plugin classes must not be instantiated">AliasChain</warning>()
-            val implementation = <warning descr="Plugin classes must not be instantiated">ImplementationAlias</warning>()
+            val qualified = sample.<warning descr="Plugin classes must not be instantiated">Example()</warning>
+            val alias = <warning descr="Plugin classes must not be instantiated">Alias()</warning>
+            val chain = <warning descr="Plugin classes must not be instantiated">AliasChain()</warning>
+            val implementation = <warning descr="Plugin classes must not be instantiated">ImplementationAlias()</warning>
         """.trimIndent()
     )
 
     fun testSecondaryConstructorsAndDelegation() = check(
         """
             @Plugin("base") open class Base(val value: Int) : CompilerPlugin {
-                constructor() : <warning descr="Plugin classes must not be instantiated">this</warning>(0)
+                constructor() : <warning descr="Plugin classes must not be instantiated">this(0)</warning>
             }
             class Derived : Base {
-                constructor() : <warning descr="Plugin classes must not be instantiated">super</warning>(1)
+                constructor() : <warning descr="Plugin classes must not be instantiated">super(1)</warning>
             }
-            val base = <warning descr="Plugin classes must not be instantiated">Base</warning>()
-            val secondary = <warning descr="Plugin classes must not be instantiated">Derived</warning>()
+            val base = <warning descr="Plugin classes must not be instantiated">Base()</warning>
+            val secondary = <warning descr="Plugin classes must not be instantiated">Derived()</warning>
         """.trimIndent()
     )
 
@@ -85,14 +90,48 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
         """.trimIndent()
     )
 
+    fun testConstructorCallHighlightRanges() = check(
+        """
+            @Plugin("example") class Example<T>(val value: T, val action: () -> Unit)
+            fun generic(value: List<Int>) = <warning descr="Plugin classes must not be instantiated">Example<List<Int>>(value = value, action = {})</warning>.value
+            val nested = <warning descr="Plugin classes must not be instantiated">Example(value = <warning descr="Plugin classes must not be instantiated">Example(1) {}</warning>) {}</warning>
+            val multiline = <warning descr="Plugin classes must not be instantiated">Example(
+                value = 1,
+                action = {}
+            )</warning>
+        """.trimIndent()
+    )
+
+    fun testExplicitConstructorCallRangesIncludeParentheses() {
+        check(
+            """
+                @Plugin("example") class Example(val value: Int = 0)
+                val empty = <warning descr="Plugin classes must not be instantiated">Example()</warning>
+                val positional = <warning descr="Plugin classes must not be instantiated">Example(1)</warning>
+                val named = <warning descr="Plugin classes must not be instantiated">Example(value = 2)</warning>
+            """.trimIndent()
+        )
+        for (isOnTheFly in listOf(true, false)) {
+            val holder = ProblemsHolder(InspectionManager.getInstance(project), myFixture.file, isOnTheFly)
+            val visitor = PluginInstantiationInspection().buildVisitor(holder, isOnTheFly)
+            PsiTreeUtil.collectElementsOfType(myFixture.file, KtCallExpression::class.java).forEach {
+                it.accept(visitor)
+            }
+            assertEquals(3, holder.results.size)
+            for (problem in holder.results) {
+                assertEquals(TextRange(0, problem.psiElement.textLength), problem.textRangeInElement)
+            }
+        }
+    }
+
     fun testNestedInnerAndGenericClasses() = check(
         """
             class Outer {
                 @Plugin("nested") class Nested<T>(val value: T)
                 inner class Inner : CompilerPlugin
             }
-            val nested = Outer.<warning descr="Plugin classes must not be instantiated">Nested</warning>(1)
-            val inner = Outer().<warning descr="Plugin classes must not be instantiated">Inner</warning>()
+            val nested = Outer.<warning descr="Plugin classes must not be instantiated">Nested(1)</warning>
+            val inner = Outer().<warning descr="Plugin classes must not be instantiated">Inner()</warning>
         """.trimIndent()
     )
 
@@ -107,7 +146,7 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
         check(
             """
                 import other.Example as Aliased
-                val example = <warning descr="Plugin classes must not be instantiated">Aliased</warning> {}
+                val example = <warning descr="Plugin classes must not be instantiated">Aliased {}</warning>
                 val reference = ::<warning descr="Plugin classes must not be instantiated">Aliased</warning>
             """.trimIndent()
         )
@@ -116,8 +155,8 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
     fun testSuperclassAndAnonymousObjectCalls() = check(
         """
             @Plugin("base") open class Base
-            class Derived : <warning descr="Plugin classes must not be instantiated">Base</warning>()
-            val anonymous = object : <warning descr="Plugin classes must not be instantiated">Base</warning>() {}
+            class Derived : <warning descr="Plugin classes must not be instantiated">Base()</warning>
+            val anonymous = object : <warning descr="Plugin classes must not be instantiated">Base()</warning> {}
         """.trimIndent()
     )
 
@@ -168,11 +207,11 @@ class PluginInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 """
                     import dev.karmakrafts.kcml.intellij.inspection.CompiledAnnotatedPlugin
                     import dev.karmakrafts.kcml.intellij.inspection.CompiledPluginImplementation
-                    val annotated = <warning descr="Plugin classes must not be instantiated">CompiledAnnotatedPlugin</warning>()
-                    val implementation = <warning descr="Plugin classes must not be instantiated">CompiledPluginImplementation</warning>()
+                    val annotated = <warning descr="Plugin classes must not be instantiated">CompiledAnnotatedPlugin()</warning>
+                    val implementation = <warning descr="Plugin classes must not be instantiated">CompiledPluginImplementation()</warning>
                     val reference = ::<warning descr="Plugin classes must not be instantiated">CompiledAnnotatedPlugin</warning>
-                    class Derived : <warning descr="Plugin classes must not be instantiated">CompiledPluginImplementation</warning>()
-                    val derived = <warning descr="Plugin classes must not be instantiated">Derived</warning>()
+                    class Derived : <warning descr="Plugin classes must not be instantiated">CompiledPluginImplementation()</warning>
+                    val derived = <warning descr="Plugin classes must not be instantiated">Derived()</warning>
                 """.trimIndent(), false
             )
         }

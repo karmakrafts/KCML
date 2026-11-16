@@ -16,13 +16,43 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
+import com.intellij.codeInspection.InspectionManager
+import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.util.TextRange
+import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.kotlin.psi.KtCallExpression
 
 class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
     override fun setUp() {
         super.setUp()
         myFixture.enableInspections(MixinInstantiationInspection())
+    }
+
+    fun testExplicitConstructorCallRangesIncludeParentheses() {
+        check(
+            """
+                @DirectMixin(Any::class) class Direct(val value: Int = 0)
+                @IndirectMixin("Target") class Indirect(val value: Int = 0)
+                val empty = <warning descr="Mixin classes must not be instantiated">Direct()</warning>
+                val positional = <warning descr="Mixin classes must not be instantiated">Direct(1)</warning>
+                val named = <warning descr="Mixin classes must not be instantiated">Direct(value = 2)</warning>
+                val indirect = <warning descr="Mixin classes must not be instantiated">Indirect()</warning>
+            """.trimIndent()
+        )
+        for (isOnTheFly in listOf(true, false)) {
+            val holder = ProblemsHolder(InspectionManager.getInstance(project), myFixture.file, isOnTheFly)
+            val visitor = MixinInstantiationInspection().buildVisitor(holder, isOnTheFly)
+            PsiTreeUtil.collectElementsOfType(myFixture.file, KtCallExpression::class.java).forEach {
+                it.accept(visitor)
+            }
+            assertEquals(4, holder.results.size)
+            for (problem in holder.results) {
+                assertTrue(problem.psiElement is KtCallExpression)
+                assertEquals(TextRange(0, problem.psiElement.textLength), problem.textRangeInElement)
+            }
+        }
     }
 
     fun testPrimaryAndSecondaryConstructors() = check(
@@ -32,9 +62,9 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 constructor(value: Int)
                 constructor(value: String)
             }
-            val direct = <warning descr="Mixin classes must not be instantiated">Direct</warning>()
-            val indirect = <warning descr="Mixin classes must not be instantiated">Indirect</warning>(1)
-            val secondary = <warning descr="Mixin classes must not be instantiated">Indirect</warning>("value")
+            val direct = <warning descr="Mixin classes must not be instantiated">Direct()</warning>
+            val indirect = <warning descr="Mixin classes must not be instantiated">Indirect(1)</warning>
+            val secondary = <warning descr="Mixin classes must not be instantiated">Indirect("value")</warning>
         """.trimIndent()
     )
 
@@ -44,9 +74,21 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
             @Mixin(Any::class) class Example
             typealias Alias = Example
             typealias AliasChain = Alias
-            val direct = sample.<warning descr="Mixin classes must not be instantiated">Example</warning>()
-            val alias = <warning descr="Mixin classes must not be instantiated">Alias</warning>()
-            val chain = <warning descr="Mixin classes must not be instantiated">AliasChain</warning>()
+            val direct = sample.<warning descr="Mixin classes must not be instantiated">Example()</warning>
+            val alias = <warning descr="Mixin classes must not be instantiated">Alias()</warning>
+            val chain = <warning descr="Mixin classes must not be instantiated">AliasChain()</warning>
+        """.trimIndent()
+    )
+
+    fun testConstructorCallHighlightRanges() = check(
+        """
+            @DirectMixin(Any::class) class Example<T>(val value: T, val action: () -> Unit)
+            fun generic(value: List<Int>) = <warning descr="Mixin classes must not be instantiated">Example<List<Int>>(value = value, action = {})</warning>.value
+            val nested = <warning descr="Mixin classes must not be instantiated">Example(value = <warning descr="Mixin classes must not be instantiated">Example(1) {}</warning>) {}</warning>
+            val multiline = <warning descr="Mixin classes must not be instantiated">Example(
+                value = 1,
+                action = {}
+            )</warning>
         """.trimIndent()
     )
 
@@ -56,8 +98,8 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 @IndirectMixin("Target") class Nested<T>(val value: T)
                 @DirectMixin(Any::class) inner class Inner
             }
-            val nested = Outer.<warning descr="Mixin classes must not be instantiated">Nested</warning>(1)
-            val inner = Outer().<warning descr="Mixin classes must not be instantiated">Inner</warning>()
+            val nested = Outer.<warning descr="Mixin classes must not be instantiated">Nested(1)</warning>
+            val inner = Outer().<warning descr="Mixin classes must not be instantiated">Inner()</warning>
         """.trimIndent()
     )
 
@@ -83,7 +125,7 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
         check(
             """
                 import other.Example as Aliased
-                val example = <warning descr="Mixin classes must not be instantiated">Aliased</warning> {}
+                val example = <warning descr="Mixin classes must not be instantiated">Aliased {}</warning>
                 val reference = ::<warning descr="Mixin classes must not be instantiated">Aliased</warning>
             """.trimIndent()
         )
@@ -92,18 +134,18 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
     fun testSuperclassAndAnonymousObjectCalls() = check(
         """
             @DirectMixin(Any::class) open class Base
-            class Derived : <warning descr="Mixin classes must not be instantiated">Base</warning>()
-            val anonymous = object : <warning descr="Mixin classes must not be instantiated">Base</warning>() {}
+            class Derived : <warning descr="Mixin classes must not be instantiated">Base()</warning>
+            val anonymous = object : <warning descr="Mixin classes must not be instantiated">Base()</warning> {}
         """.trimIndent()
     )
 
     fun testConstructorDelegation() = check(
         """
             @IndirectMixin("Target") open class Base(val value: Int) {
-                constructor() : <warning descr="Mixin classes must not be instantiated">this</warning>(0)
+                constructor() : <warning descr="Mixin classes must not be instantiated">this(0)</warning>
             }
             class Derived : Base {
-                constructor() : <warning descr="Mixin classes must not be instantiated">super</warning>(1)
+                constructor() : <warning descr="Mixin classes must not be instantiated">super(1)</warning>
             }
         """.trimIndent()
     )
@@ -152,8 +194,8 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 """
                     @DirectMixin(Any::class) class Direct
                     @IndirectMixin("Target") class Indirect
-                    val direct = <warning descr="Mixin classes must not be instantiated">Direct</warning>()
-                    val indirect = <warning descr="Mixin classes must not be instantiated">Indirect</warning>()
+                    val direct = <warning descr="Mixin classes must not be instantiated">Direct()</warning>
+                    val indirect = <warning descr="Mixin classes must not be instantiated">Indirect()</warning>
                 """.trimIndent(), false
             )
         }
@@ -170,10 +212,10 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 """
                     import dev.karmakrafts.kcml.intellij.inspection.CompiledDirectMixin
                     import dev.karmakrafts.kcml.intellij.inspection.CompiledIndirectMixin
-                    val direct = <warning descr="Mixin classes must not be instantiated">CompiledDirectMixin</warning>()
-                    val indirect = <warning descr="Mixin classes must not be instantiated">CompiledIndirectMixin</warning>()
+                    val direct = <warning descr="Mixin classes must not be instantiated">CompiledDirectMixin()</warning>
+                    val indirect = <warning descr="Mixin classes must not be instantiated">CompiledIndirectMixin()</warning>
                     val reference = ::<warning descr="Mixin classes must not be instantiated">CompiledDirectMixin</warning>
-                    class Derived : <warning descr="Mixin classes must not be instantiated">CompiledIndirectMixin</warning>()
+                    class Derived : <warning descr="Mixin classes must not be instantiated">CompiledIndirectMixin()</warning>
                 """.trimIndent(), false
             )
         }
