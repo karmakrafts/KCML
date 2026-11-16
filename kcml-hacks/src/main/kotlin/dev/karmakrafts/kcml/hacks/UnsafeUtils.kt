@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.util
+package dev.karmakrafts.kcml.hacks
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import sun.misc.Unsafe
 
 /**
@@ -24,7 +23,7 @@ import sun.misc.Unsafe
  *
  * Operations performed through [unsafe] can bypass normal JVM safety guarantees and should be used with care.
  */
-@DelicateKcmlApi
+@DiscouragedKcmlApi
 public object UnsafeUtils {
     /**
      * The lazily initialized JVM [Unsafe] instance, obtained through reflective access to `theUnsafe`.

@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.util
+package dev.karmakrafts.kcml.hacks
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -63,11 +62,11 @@ private enum class EnumExtenderThrowing(val value: String) {
     }
 }
 
-@OptIn(DelicateKcmlApi::class)
+@OptIn(DiscouragedKcmlApi::class)
 class EnumExtenderTest {
     @Test
     fun `defines constants with sequential ordinals and refreshes enum caches`() {
-        EnumExtenderBasic.values()
+        EnumExtenderBasic.entries
         EnumExtenderBasic.valueOf("FIRST")
         EnumExtenderBasic::class.java.enumConstants
         EnumExtenderBasic.entries
@@ -77,7 +76,7 @@ class EnumExtenderTest {
 
         assertEquals(2, third.ordinal)
         assertEquals(3, fourth.ordinal)
-        assertSame(third, EnumExtenderBasic.values()[2])
+        assertSame(third, EnumExtenderBasic.entries[2])
         assertSame(fourth, EnumExtenderBasic.valueOf("FOURTH"))
         assertSame(fourth, EnumExtenderBasic::class.java.enumConstants.last())
         assertSame(fourth, EnumExtenderBasic.entries.last())
@@ -87,7 +86,7 @@ class EnumExtenderTest {
     fun `supports empty enums primitive arguments reference arguments and null`() {
         val empty = EnumExtender.define<EnumExtenderEmpty>("FIRST")
         assertEquals(0, empty.ordinal)
-        assertSame(empty, EnumExtenderEmpty.values().single())
+        assertSame(empty, EnumExtenderEmpty.entries.single())
         assertSame(empty, EnumExtenderEmpty.valueOf("FIRST"))
         assertSame(empty, EnumExtenderEmpty.entries.single())
 
@@ -127,10 +126,10 @@ class EnumExtenderTest {
         assertFailsWith<IllegalArgumentException> {
             EnumExtender.define<EnumExtenderInvalidArguments>("INVALID", "not an integer")
         }
-        assertEquals(3, EnumExtenderDuplicate.values().size)
-        assertEquals(0, EnumExtenderEmpty.values().size)
-        assertEquals(1, EnumExtenderAmbiguous.values().size)
-        assertEquals(1, EnumExtenderInvalidArguments.values().size)
+        assertEquals(3, EnumExtenderDuplicate.entries.size)
+        assertEquals(0, EnumExtenderEmpty.entries.size)
+        assertEquals(1, EnumExtenderAmbiguous.entries.size)
+        assertEquals(1, EnumExtenderInvalidArguments.entries.size)
     }
 
     @Test
@@ -139,7 +138,7 @@ class EnumExtenderTest {
             EnumExtender.define<EnumExtenderThrowing>("THROW", "throw")
         }
 
-        assertEquals(1, EnumExtenderThrowing.values().size)
+        assertEquals(1, EnumExtenderThrowing.entries.size)
         assertSame(EnumExtenderThrowing.EXISTING, EnumExtenderThrowing.valueOf("EXISTING"))
     }
 }

@@ -20,14 +20,18 @@ import dev.karmakrafts.kcml.gradle.api.KCMLGradleSupportPlugin
 import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.testfixtures.ProjectBuilder
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class OptionsSupportPlugin : KCMLGradleSupportPlugin {
@@ -40,6 +44,91 @@ class OptionsSupportPlugin : KCMLGradleSupportPlugin {
 }
 
 class KCMLCompilerOptionsTest {
+    @Test
+    fun `JVM project custom target DSL selects existing target lazily`() {
+        val directory = Files.createTempDirectory(Path.of("build"), "jvm-target-dsl-").toAbsolutePath()
+        try {
+            val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+            project.pluginManager.apply("org.jetbrains.kotlin.jvm")
+            project.pluginManager.apply(KCMLGradlePlugin::class.java)
+            val kotlin = project.extensions.getByType(KotlinJvmProjectExtension::class.java)
+            val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
+            val options = kotlin.target.compilations.associate { it.name to bootstrap.applyToCompilation(it) }
+            options.values.forEach { assertEquals("jvm", it.get().single { it.key == "compileTarget" }.value) }
+            val target = kotlin.customJvmTarget("example_jvm") {
+                compilerOptions.moduleName.set("custom_module")
+            }
+            assertSame(kotlin.target, target)
+            options.forEach { (compilation, provider) ->
+                assertEquals("example_jvm", provider.get().single { it.key == "compileTarget" }.value)
+                val moduleName = if (compilation == "main") "custom_module" else "custom_module_$compilation"
+                assertEquals(moduleName, provider.get().single { it.key == "moduleName" }.value)
+            }
+            kotlin.customJvmTarget("another_jvm")
+            options.values.forEach { assertEquals("another_jvm", it.get().single { it.key == "compileTarget" }.value) }
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget(" ") }
+        }
+        finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    @OptIn(ExperimentalWasmDsl::class)
+    fun `multiplatform custom target DSL creates targets without replacing builtins`() {
+        val directory = Files.createTempDirectory(Path.of("build"), "multiplatform-target-dsl-").toAbsolutePath()
+        try {
+            val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+            project.pluginManager.apply("org.jetbrains.kotlin.multiplatform")
+            project.pluginManager.apply(KCMLGradlePlugin::class.java)
+            val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+            val targets = with(kotlin) {
+                mapOf(
+                    jvm() to "jvm",
+                    js { nodejs() } to "js",
+                    wasmJs { nodejs() } to "wasm",
+                    wasmWasi { wasmtime() } to "wasm",
+                    linuxX64() to "native",
+                    customJvmTarget("example_jvm") {
+                        compilerOptions.moduleName.set("custom_jvm")
+                    } to "example_jvm",
+                    customJsTarget("example_js") { nodejs() } to "example_js",
+                    customWasmTarget("example_wasm") { nodejs() } to "example_wasm",
+                    customWasmTarget("example_wasi", wasmWasi("customWasi")) {
+                        wasmtime()
+                    } to "example_wasi",
+                    customNativeTarget("example_host") to "example_host",
+                    customNativeTarget("example_native", mingwX64("customMingw")) to "example_native"
+                )
+            }
+            val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
+            targets.forEach { (target, alias) ->
+                assertSame(target, kotlin.targets.getByName(target.name))
+                assertTrue(target.compilations.any { it.name == "main" })
+                assertTrue(target.compilations.any { it.name == "test" })
+                target.compilations.forEach { compilation ->
+                    val options = bootstrap.applyToCompilation(compilation).get()
+                    assertEquals(alias, options.single { it.key == "compileTarget" }.value, target.name)
+                    if (target is KotlinNativeTarget) {
+                        assertEquals(target.konanTarget.name, options.single { it.key == "konanTarget" }.value)
+                    }
+                }
+            }
+            val jvm = kotlin.jvm()
+            val options = bootstrap.applyToCompilation(jvm.compilations.getByName("main"))
+            assertEquals("jvm", options.get().single { it.key == "compileTarget" }.value)
+            assertSame(jvm, kotlin.customJvmTarget("late_jvm", jvm))
+            assertEquals("late_jvm", options.get().single { it.key == "compileTarget" }.value)
+            val extension = project.extensions.getByType(KCMLExtension::class.java)
+            extension.compileTargetAliases.put("jvm", "legacy_jvm")
+            assertEquals("late_jvm", options.get().single { it.key == "compileTarget" }.value)
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget("wrong_family", kotlin.linuxX64()) }
+        }
+        finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
     @Test
     fun `bootstrap and contributed options use separate processors`() {
         val directory = Files.createTempDirectory(Path.of("build"), "compiler-options-").toAbsolutePath()

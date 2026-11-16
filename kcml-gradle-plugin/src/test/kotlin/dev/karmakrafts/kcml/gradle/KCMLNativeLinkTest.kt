@@ -57,8 +57,13 @@ class KCMLNativeLinkTest {
         checkLinkOptions(emptyMap())
     }
 
+    @Test
+    fun `native links preserve Kotlin DSL target selections`() {
+        checkLinkOptions(mapOf("native" to "example_native"), useTargetDsl = true)
+    }
+
     @OptIn(InternalKotlinGradlePluginApi::class)
-    private fun checkLinkOptions(aliases: Map<String, String>) {
+    private fun checkLinkOptions(aliases: Map<String, String>, useTargetDsl: Boolean = false) {
         val directory = Files.createTempDirectory(Path.of("build"), "native-link-options-test-").toAbsolutePath()
         try {
             val runtimePlugin = Files.createFile(directory.resolve("runtime-plugin.jar"))
@@ -91,7 +96,10 @@ class KCMLNativeLinkTest {
             (project as ProjectInternal).evaluate()
             targets.flatMap { it.binaries }.forEach { it.linkTaskProvider.get() }
             val extension = project.extensions.getByType(KCMLExtension::class.java)
-            extension.compileTargetAliases.set(aliases)
+            if (useTargetDsl) {
+                targets.forEach { kotlin.customNativeTarget(aliases.getValue("native"), it) }
+            }
+            else extension.compileTargetAliases.set(aliases)
             project.extensions.extraProperties["linkTestValue"] = "late"
             targets.forEach { target ->
                 target.compilations.forEach { compilation ->
@@ -132,7 +140,10 @@ class KCMLNativeLinkTest {
                     val prepareCache = link.taskDependencies.getDependencies(link)
                         .filterIsInstance<KCMLPrepareNativeCacheTask>()
                         .single()
-                    assertEquals(aliases, prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
+                    assertEquals(if (useTargetDsl) emptyMap() else aliases,
+                        prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
+                    assertEquals(if (useTargetDsl) targets.associate { it.name to aliases.getValue("native") }
+                        else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
                     targets.forEach { cacheTarget ->
                         assertEquals(
                             listOf("linkTestContext=${cacheTarget.name}:${binary.compilation.name}:late"),

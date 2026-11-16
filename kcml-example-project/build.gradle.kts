@@ -23,7 +23,13 @@ import dev.karmakrafts.conventions.kotlin.withNodeJs
 import dev.karmakrafts.conventions.kotlin.withWasmWasi
 import dev.karmakrafts.conventions.kotlin.withWasmtime
 import dev.karmakrafts.conventions.kotlin.withWeb
+import dev.karmakrafts.kcml.gradle.customJsTarget
+import dev.karmakrafts.kcml.gradle.customJvmTarget
+import dev.karmakrafts.kcml.gradle.customNativeTarget
+import dev.karmakrafts.kcml.gradle.customWasmTarget
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -33,15 +39,6 @@ plugins {
 
 kcml {
     agentLogging = true
-    compileTargetAliases.putAll(
-        mapOf(
-            "jvm" to "example_jvm",
-            "android" to "example_android",
-            "js" to "example_js",
-            "wasm" to "example_wasm",
-            "native" to "example_native"
-        )
-    )
 }
 
 kotlin {
@@ -57,6 +54,18 @@ kotlin {
         @OptIn(ExperimentalWasmDsl::class) //
         withWasmtime()
     }
+
+    customJvmTarget("example_jvm", jvm())
+    targets.filter { it.platformType == KotlinPlatformType.androidJvm }.forEach {
+        customJvmTarget("example_android", it)
+    }
+    customJsTarget("example_js", js())
+    customWasmTarget("example_wasm", wasmJs())
+    @OptIn(ExperimentalWasmDsl::class) customWasmTarget("example_wasm", wasmWasi())
+    targets.withType<KotlinNativeTarget>().toList().forEach {
+        customNativeTarget("example_native", it)
+    }
+
     applyDefaultHierarchyTemplate()
     sourceSets {
         commonTest {

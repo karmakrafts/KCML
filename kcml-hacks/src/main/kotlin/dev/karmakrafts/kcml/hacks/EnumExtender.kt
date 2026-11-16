@@ -16,9 +16,8 @@
 
 @file:Suppress("PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 
-package dev.karmakrafts.kcml.api.util
+package dev.karmakrafts.kcml.hacks
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import java.lang.invoke.MethodHandles
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field
@@ -36,7 +35,7 @@ import java.lang.reflect.Array as ReflectArray
 /**
  * Allows creating new enum constants for an already existing enum type at runtime.
  */
-@DelicateKcmlApi
+@DiscouragedKcmlApi
 public object EnumExtender {
     /**
      * Defines and registers a new constant in enum type [E] with the given [name] and [args].

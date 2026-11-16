@@ -17,15 +17,16 @@
 package dev.karmakrafts.kcml.api.target
 
 import dev.karmakrafts.kcml.api.DelicateKcmlApi
-import dev.karmakrafts.kcml.api.util.EnumExtender
 import dev.karmakrafts.kcml.api.util.ReflectionUtils
+import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
+import dev.karmakrafts.kcml.hacks.EnumExtender
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 /** Utilities for defining custom Kotlin/Native families, architectures, and targets. */
+@OptIn(DiscouragedKcmlApi::class, DelicateKcmlApi::class)
 @Suppress("NOTHING_TO_INLINE")
-@OptIn(DelicateKcmlApi::class)
 public object KonanTargets {
     /**
      * Defines and registers a new Kotlin/Native [Family] enum value.

@@ -129,6 +129,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         prepare.cacheDirectory.set(task.rootCacheDirectory)
                         prepare.markerFile.set(project.layout.buildDirectory.file("kcml_js_cache/${task.name}.marker"))
                         prepare.inputs.property("kcmlCompileTargetAliases", extension.compileTargetAliases)
+                        prepare.inputs.property("kcmlCustomCompileTargets", extension.customCompileTargets)
                     }
                     task.dependsOn(prepareCache)
                     task.inputs.files(plugins, runtime)
@@ -163,6 +164,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                 task.cacheDirectory.set(project.layout.buildDirectory.dir("kotlin-native-ic-cache/${binary.name}"))
                                 task.markerFile.set(project.layout.buildDirectory.file("kcml_native_cache/${binary.name}.marker"))
                                 task.inputs.property("kcmlCompileTargetAliases", extension.compileTargetAliases)
+                                task.inputs.property("kcmlCustomCompileTargets", extension.customCompileTargets)
                             }
                         }
                         val contributedOptions = applyToCompilation(binary.compilation)
@@ -334,9 +336,10 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 it.file.toPath().absolutePathString()
             }
             val moduleName = getModuleName(kotlinCompilation)
-            val compileTarget = getCompileTarget(kotlinCompilation)?.let { alias ->
-                extension.compileTargetAliases.get()[alias] ?: alias
-            }
+            val compileTarget = extension.customCompileTargets.get()[kotlinCompilation.target.name]
+                ?: getCompileTarget(kotlinCompilation)?.let { alias ->
+                    extension.compileTargetAliases.get()[alias] ?: alias
+                }
             buildList {
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))

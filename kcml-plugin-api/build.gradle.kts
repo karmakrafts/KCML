@@ -51,6 +51,7 @@ dependencies {
     api(libs.semver)
     api(libs.ow2.asm.core)
     api(projects.kcmlMixinBridge)
+    api(projects.kcmlHacks)
 
     testImplementation(libs.kotlin.test)
 }

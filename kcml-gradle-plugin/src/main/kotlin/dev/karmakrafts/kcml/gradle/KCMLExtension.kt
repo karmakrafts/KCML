@@ -48,6 +48,9 @@ abstract class KCMLExtension @Inject internal constructor( // @formatter:off
     val compileTargetAliases: MapProperty<String, String> =
         objects.mapProperty(String::class.java, String::class.java).convention(emptyMap())
 
+    internal val customCompileTargets: MapProperty<String, String> =
+        objects.mapProperty(String::class.java, String::class.java).convention(emptyMap())
+
     /**
      * The inclusive lower bound of the port range used for agent communication.
      *

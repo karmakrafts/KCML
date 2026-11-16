@@ -58,8 +58,13 @@ class KCMLJsLinkTest {
         checkLinkOptions(emptyMap())
     }
 
+    @Test
+    fun `JS and Wasm links preserve Kotlin DSL target selections`() {
+        checkLinkOptions(mapOf("js" to "example_js", "wasm" to "example_wasm"), useTargetDsl = true)
+    }
+
     @OptIn(ExperimentalWasmDsl::class)
-    private fun checkLinkOptions(aliases: Map<String, String>) {
+    private fun checkLinkOptions(aliases: Map<String, String>, useTargetDsl: Boolean = false) {
         val directory = Files.createTempDirectory(Path.of("build"), "js-link-options-test-").toAbsolutePath()
         try {
             val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
@@ -85,7 +90,13 @@ class KCMLJsLinkTest {
             assertTrue(binaries.any { it.compilation.name == "test" })
             binaries.forEach { it.linkTask.get() }
             val extension = project.extensions.getByType(KCMLExtension::class.java)
-            extension.compileTargetAliases.set(aliases)
+            if (useTargetDsl) {
+                targets.forEach { target ->
+                    if (target.name == "js") kotlin.customJsTarget(aliases.getValue("js"), target)
+                    else kotlin.customWasmTarget(aliases.getValue("wasm"), target)
+                }
+            }
+            else extension.compileTargetAliases.set(aliases)
             project.extensions.extraProperties["linkTestValue"] = "late"
             targets.forEach { target ->
                 target.compilations.forEach { compilation ->
@@ -118,7 +129,10 @@ class KCMLJsLinkTest {
                 assertTrue(arguments.none { it.startsWith("${bootstrap}konanTarget=") }, link.name)
                 val prepareCache =
                     link.taskDependencies.getDependencies(link).filterIsInstance<KCMLPrepareJsCacheTask>().single()
-                assertEquals(aliases, prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
+                assertEquals(if (useTargetDsl) emptyMap() else aliases,
+                    prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
+                assertEquals(if (useTargetDsl) targets.associate { it.name to aliases.getValue(if (it.name == "js") "js" else "wasm") }
+                    else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
                 assertEquals(
                     listOf("linkTestContext=${target.name}:${compilation.name}:late"),
                     prepareCache.inputs.properties["kcmlPluginOptions"],
