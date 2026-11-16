@@ -25,9 +25,9 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal class StringContentInsertHandler(private val content: StringTemplateContent) : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
-        val (_, isRawString, contentStart, interpolationPrefixLength) = content
+        val (prefix, isRawString, contentStart, interpolationPrefixLength) = content
         val insertedText =
-            if (isRawString) item.lookupString.replace("$", "$".repeat(interpolationPrefixLength) + "{'${'$'}'}")
+            if (isRawString) item.lookupString.replace("$", "$".repeat(interpolationPrefixLength) + "{'$'}")
             else item.lookupString.replace("$", "\\$")
         context.commitDocument()
         val expression = PsiTreeUtil.getParentOfType(

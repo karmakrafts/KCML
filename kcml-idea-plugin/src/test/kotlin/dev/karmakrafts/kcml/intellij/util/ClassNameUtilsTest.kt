@@ -59,22 +59,28 @@ class ClassNameUtilsTest : LightJavaCodeInsightFixtureTestCase() {
             addLibrary("First")
             myFixture.configureByText("Mixin.kt", "val target = \"completion.library.<caret>\"")
             val scope = GlobalSearchScope.allScope(project)
-            val initial = ClassNameUtils.findLibraryCandidates(project, scope)
+            val initial = ClassIndex.findLibraryCandidates(project, scope)
             assertTrue("Missing initial library class", "completion.library.First" in initial)
+            assertFalse(
+                "Library candidates must respect the requested scope",
+                "completion.library.First" in ClassIndex.findLibraryCandidates(
+                    project, GlobalSearchScope.projectScope(project)
+                )
+            )
 
             val editOffset = myFixture.caretOffset
             WriteCommandAction.runWriteCommandAction(project) {
                 myFixture.editor.document.insertString(editOffset, "F")
             }
-            assertSame(initial, ClassNameUtils.findLibraryCandidates(project, scope))
+            assertSame(initial, ClassIndex.findLibraryCandidates(project, scope))
 
             WriteCommandAction.runWriteCommandAction(project) {
                 myFixture.editor.document.deleteString(editOffset, editOffset + 1)
             }
-            assertSame(initial, ClassNameUtils.findLibraryCandidates(project, scope))
+            assertSame(initial, ClassIndex.findLibraryCandidates(project, scope))
 
             addLibrary("Second")
-            val updated = ClassNameUtils.findLibraryCandidates(project, scope)
+            val updated = ClassIndex.findLibraryCandidates(project, scope)
             assertNotSame(initial, updated)
             assertTrue("Lost initial library class", "completion.library.First" in updated)
             assertTrue("Missing newly indexed library class", "completion.library.Second" in updated)
@@ -129,7 +135,7 @@ class ClassNameUtilsTest : LightJavaCodeInsightFixtureTestCase() {
                 }, testRootDisposable
             )
 
-        val candidates = ClassNameUtils.findCandidates(project, GlobalSearchScope.allScope(project)).toSet()
+        val candidates = ClassIndex.findCandidates(project, GlobalSearchScope.allScope(project)).toSet()
         assertTrue(
             candidates.toString(), candidates.containsAll(
                 listOf(

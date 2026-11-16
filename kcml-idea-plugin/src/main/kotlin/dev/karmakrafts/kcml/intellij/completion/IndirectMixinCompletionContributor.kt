@@ -22,16 +22,18 @@ import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.PlainPrefixMatcher
+import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.codeInsight.lookup.LookupElementPresentation
+import com.intellij.codeInsight.lookup.LookupElementRenderer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.patterns.PlatformPatterns
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.ProcessingContext
+import dev.karmakrafts.kcml.intellij.util.ClassIndex
 import dev.karmakrafts.kcml.intellij.util.ClassNameUtils
-import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 
 class IndirectMixinCompletionContributor : CompletionContributor() {
     init {
@@ -60,7 +62,7 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                             )
                         } ?: file.resolveScope
                         // Find all applicable candidates in the given scope
-                        for (candidate in ClassNameUtils.findCandidates(
+                        for (candidate in ClassIndex.findCandidates(
                             parameters.position.project, scope
                         )) {
                             ProgressManager.checkCanceled()
@@ -68,11 +70,17 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                             val lookupNames = ClassNameUtils.lookupNames(candidate)
                             if (lookupNames.none(matcher::prefixMatches)) continue
                             val project = parameters.position.project
-                            val qualifiedName = candidate.replace('$', '.')
-                            val declaration = KotlinFullClassNameIndex[qualifiedName, project, scope].firstOrNull()
-                                ?: JavaPsiFacade.getInstance(project).findClass(qualifiedName, scope)
                             var lookupElement = LookupElementBuilder.create(candidate)
-                                .withIcon(declaration?.getIcon(0) ?: AllIcons.Nodes.Class)
+                                .withIcon(AllIcons.Nodes.Class)
+                                .withExpensiveRenderer(object : LookupElementRenderer<LookupElement>() {
+                                    override fun renderElement(
+                                        element: LookupElement, presentation: LookupElementPresentation
+                                    ) {
+                                        presentation.itemText = candidate
+                                        presentation.icon = ClassIndex.findClass(project, scope, candidate)?.getIcon(0)
+                                            ?: AllIcons.Nodes.Class
+                                    }
+                                })
                             for (lookupName in lookupNames) {
                                 lookupElement = lookupElement.withLookupString(lookupName)
                             }

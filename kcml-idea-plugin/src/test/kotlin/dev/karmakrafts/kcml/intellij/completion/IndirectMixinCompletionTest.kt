@@ -20,7 +20,10 @@ import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementPresentation
+import com.intellij.codeInsight.lookup.LookupElementRenderer
+import com.intellij.icons.AllIcons
 import com.intellij.lang.Language
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.DependencyScope
@@ -39,6 +42,16 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
 class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
+    private fun render(item: LookupElement): LookupElementPresentation {
+        val presentation = LookupElementPresentation()
+        item.renderElement(presentation)
+        assertEquals(AllIcons.Nodes.Class, presentation.icon)
+        assertNotNull("Declaration icons should be resolved lazily", item.expensiveRenderer)
+        @Suppress("UNCHECKED_CAST") val renderer = item.expensiveRenderer as LookupElementRenderer<LookupElement>
+        renderer.renderElement(item, presentation)
+        return presentation
+    }
+
     fun testSmartCompletionShowsKotlinDeclarationIcons() {
         addIndirectMixinAnnotation()
         val targets = myFixture.addFileToProject(
@@ -68,8 +81,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         for (declaration in declarations + outer.declarations.filterIsInstance<KtClassOrObject>()) {
             val name = if (declaration.parent == outer.body) "TargetOuter\$${declaration.name}" else declaration.name
             val item = variants.single { it.lookupString == "completion.icons.$name" }
-            val presentation = LookupElementPresentation()
-            item.renderElement(presentation)
+            val presentation = render(item)
             assertNotNull(item.lookupString, presentation.icon)
             assertEquals(item.lookupString, declaration.getIcon(0), presentation.icon)
         }
@@ -104,8 +116,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         for (declaration in listOf(outer) + outer.innerClasses) {
             val name = if (declaration == outer) declaration.name else "TargetOuter\$${declaration.name}"
             val item = variants.single { it.lookupString == "completion.icons.$name" }
-            val presentation = LookupElementPresentation()
-            item.renderElement(presentation)
+            val presentation = render(item)
             assertNotNull(item.lookupString, presentation.icon)
             assertEquals(item.lookupString, declaration.getIcon(0), presentation.icon)
         }

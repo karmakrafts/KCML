@@ -22,7 +22,6 @@ import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
-import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -54,12 +53,7 @@ internal fun KtAnnotationEntry.resolveMixinTarget(): PsiElement? {
 
         is KtStringTemplateExpression -> {
             val className = expression.literalValue()?.replace('/', '.') ?: return null
-            val sourceName = className.replace('$', '.')
-            KotlinFullClassNameIndex[sourceName, project, resolveScope].firstOrNull() ?: JavaPsiFacade.getInstance(
-                project
-            ).let {
-                it.findClass(className, resolveScope) ?: it.findClass(sourceName, resolveScope)
-            }
+            ClassIndex.findClass(project, resolveScope, className)
         }
 
         else -> null

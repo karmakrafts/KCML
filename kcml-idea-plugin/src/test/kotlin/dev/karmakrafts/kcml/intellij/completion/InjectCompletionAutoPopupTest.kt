@@ -156,8 +156,7 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
                     lookup.currentItem = items.first()
                     myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
                     assertTrue(
-                        myFixture.file.text,
-                        "@Inject(name = \"overloaded\", descriptor = \"(" in myFixture.file.text
+                        myFixture.file.text, "@Inject(name = \"overloaded\", descriptor = \"(" in myFixture.file.text
                     )
                 }
                 else lookup.hide()
