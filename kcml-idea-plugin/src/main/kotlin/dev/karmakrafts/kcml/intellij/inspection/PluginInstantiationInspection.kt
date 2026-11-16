@@ -83,8 +83,7 @@ class PluginInstantiationInspection : LocalInspectionTool() {
             } == true
 
             is PsiClass -> target.hasAnnotation(TypeNames.PLUGIN) || InheritanceUtil.isInheritor(
-                target,
-                TypeNames.COMPILER_PLUGIN
+                target, TypeNames.COMPILER_PLUGIN
             )
 
             is KtTypeAlias -> {

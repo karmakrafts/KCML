@@ -20,14 +20,18 @@
                          displayName="KCML plugin annotation and interface mismatch"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.PluginDeclarationInspection"/>
-        <localInspection language="kotlin" shortName="KcmlMixinInstantiation"
-                         displayName="KCML mixin instantiation"
-                         groupName="KCML" enabledByDefault="true" level="WARNING"
-                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinInstantiationInspection"/>
         <localInspection language="kotlin" shortName="KcmlPluginInstantiation"
                          displayName="KCML plugin instantiation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.PluginInstantiationInspection"/>
+        <localInspection language="kotlin" shortName="KcmlMixinInstantiation"
+                         displayName="KCML mixin instantiation"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinInstantiationInspection"/>
+        <localInspection language="kotlin" shortName="KcmlThisAwareImplementation"
+                         displayName="KCML mixin ThisAware implementation"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.ThisAwareImplementationInspection"/>
 
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
