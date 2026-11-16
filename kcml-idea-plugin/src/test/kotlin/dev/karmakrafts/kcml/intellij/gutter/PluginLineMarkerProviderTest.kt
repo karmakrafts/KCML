@@ -16,11 +16,160 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
+import com.intellij.codeInsight.daemon.LineMarkerInfo
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.IconLoader
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.testFramework.PsiTestUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.jps.model.java.JavaResourceRootType
+import org.jetbrains.kotlin.psi.KtClassOrObject
 
 class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
+
+    fun testNavigatesToMetadata() {
+        addAnnotation()
+        val target = addResource("META-INF/example.json")
+        val marker = configureMarker("@Plugin(\"example\") class <caret>Example")
+        assertNotNull(marker.createGutterRenderer()!!.clickAction)
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+    }
+
+    fun testNamedIdOnAliasedAnnotationNavigatesToMetadata() {
+        addAnnotation()
+        val target = addResource("META-INF/example.json")
+        val marker = configureMarker(
+            "import dev.karmakrafts.kcml.api.plugin.Plugin as CompilerPlugin\n" + "@CompilerPlugin(id = \"example\") object <caret>Example"
+        )
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+    }
+
+    fun testMissingMetadataHasNoNavigation() {
+        addAnnotation()
+        val marker = configureMarker("@Plugin(\"example\") class <caret>Example")
+        assertNull(marker.navigationHandler)
+        assertNull(marker.createGutterRenderer()!!.clickAction)
+    }
+
+    fun testMetadataAtResourceRootHasNoNavigation() {
+        addAnnotation()
+        addResource("example.json")
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testMetadataInNestedMetaInfHasNoNavigation() {
+        addAnnotation()
+        addResource("nested/META-INF/example.json")
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testMetadataOutsideResourceRootHasNoNavigation() {
+        addAnnotation()
+        myFixture.addFileToProject("META-INF/example.json", "{}")
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testDifferentPluginMetadataHasNoNavigation() {
+        addAnnotation()
+        addResource("META-INF/other.json")
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testInterpolatedIdHasNoNavigation() {
+        addAnnotation()
+        addResource("META-INF/example.json")
+        assertNull(configureMarker("@Plugin(\"${'$'}id\") class <caret>Example").navigationHandler)
+    }
+
+    fun testDirectoryWithMetadataNameHasNoNavigation() {
+        addAnnotation()
+        addResource("META-INF/example.json/child.json")
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testIdCannotEscapeMetaInf() {
+        addAnnotation()
+        addResource("example.json")
+        assertNull(configureMarker("@Plugin(\"../example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testProductionPluginCannotNavigateToTestResources() {
+        addAnnotation()
+        val target = myFixture.addFileToProject("testResources/META-INF/example.json", "{}")
+        PsiTestUtil.addSourceRoot(module, target.virtualFile.parent.parent, JavaResourceRootType.TEST_RESOURCE)
+        assertNull(configureMarker("@Plugin(\"example\") class <caret>Example").navigationHandler)
+    }
+
+    fun testTestPluginNavigatesToTestResources() {
+        addAnnotation()
+        val target = myFixture.addFileToProject("testResources/META-INF/example.json", "{}")
+        PsiTestUtil.addSourceRoot(module, target.virtualFile.parent.parent, JavaResourceRootType.TEST_RESOURCE)
+        val source = myFixture.addFileToProject(
+            "testSources/Example.kt",
+            "import dev.karmakrafts.kcml.api.plugin.Plugin\n@Plugin(\"example\") class Example"
+        )
+        PsiTestUtil.addSourceRoot(module, source.virtualFile.parent, true)
+        myFixture.configureFromExistingVirtualFile(source.virtualFile)
+        val marker = collectMarker()
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+    }
+
+    fun testNavigationReadsCurrentId() {
+        addAnnotation()
+        addResource("META-INF/example.json")
+        val target = myFixture.addFileToProject("resources/META-INF/other.json", "{}")
+        val marker = configureMarker("@Plugin(\"example\") class <caret>Example")
+        replaceId("example", "other")
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+    }
+
+    fun testNavigationAvailabilityRefreshesAfterEditingId() {
+        addAnnotation()
+        addResource("META-INF/example.json")
+        val missing = configureMarker("@Plugin(\"missing\") class <caret>Example").createGutterRenderer()!!
+        assertNull(missing.clickAction)
+        replaceId("missing", "example")
+        val resolved = collectMarker().createGutterRenderer()!!
+        assertNotNull(resolved.clickAction)
+        assertFalse(missing == resolved)
+        replaceId("example", "missing")
+        val missingAgain = collectMarker().createGutterRenderer()!!
+        assertNull(missingAgain.clickAction)
+        assertFalse(resolved == missingAgain)
+    }
+
+    private fun addResource(path: String) = myFixture.addFileToProject("resources/$path", "{}").also {
+        PsiTestUtil.addSourceRoot(module, myFixture.findFileInTempDir("resources"), JavaResourceRootType.RESOURCE)
+    }
+
+    private fun configureMarker(text: String): LineMarkerInfo<PsiElement> {
+        myFixture.configureByText("Plugin.kt", "import dev.karmakrafts.kcml.api.plugin.*\n$text")
+        return collectMarker()
+    }
+
+    private fun collectMarker(): LineMarkerInfo<PsiElement> {
+        val declaration = PsiTreeUtil.findChildOfType(myFixture.file, KtClassOrObject::class.java)!!
+        val result = mutableListOf<LineMarkerInfo<*>>()
+        PluginLineMarkerProvider().collectSlowLineMarkers(listOf<PsiElement>(declaration.nameIdentifier!!), result)
+        @Suppress("UNCHECKED_CAST") return result.single() as LineMarkerInfo<PsiElement>
+    }
+
+    private fun replaceId(old: String, new: String) {
+        WriteCommandAction.runWriteCommandAction(project) {
+            val document = myFixture.editor.document
+            val start = document.text.indexOf("\"$old\"") + 1
+            document.replaceString(start, start + old.length, new)
+        }
+        PsiDocumentManager.getInstance(project).commitAllDocuments()
+    }
 
     fun testPluginClass() {
         addAnnotation()
