@@ -36,7 +36,10 @@ repositories {
 
 dependencies {
     testImplementation(libs.kotlin.test)
-    testImplementation(projects.kcmlPluginApi)
+    testImplementation(projects.kcmlPluginApi) {
+        // Fixtures only need the annotations; compiler and serialization dependencies conflict with the IDE.
+        isTransitive = false
+    }
 
     intellijPlatform {
         intellijIdea(libs.versions.intelliJVersion)
