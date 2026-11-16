@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.intellij.util
 
 internal object TypeNames {
     const val PLUGIN: String = "dev.karmakrafts.kcml.api.plugin.Plugin"
+    const val COMPILER_PLUGIN: String = "dev.karmakrafts.kcml.api.plugin.CompilerPlugin"
 
     const val DIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.DirectMixin"
     const val INDIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.IndirectMixin"

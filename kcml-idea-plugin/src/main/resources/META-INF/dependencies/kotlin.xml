@@ -16,6 +16,10 @@
 
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
+        <localInspection language="kotlin" shortName="KcmlPluginDeclaration"
+                         displayName="KCML plugin annotation and interface mismatch"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.PluginDeclarationInspection"/>
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
         <codeInsight.lineMarkerProvider language="kotlin"
