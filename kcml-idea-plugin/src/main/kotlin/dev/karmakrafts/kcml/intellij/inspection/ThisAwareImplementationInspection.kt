@@ -36,7 +36,7 @@ import org.jetbrains.kotlin.psi.KtVisitorVoid
 class ThisAwareImplementationInspection : LocalInspectionTool() {
     override fun getID(): @NonNls String = "KCML_THIS_AWARE_IMPLEMENTATION"
 
-    override fun getShortName(): @NonNls String = "KcmlThisAwareImplementation"
+    override fun getShortName(): @NonNls String = "KcmlMixinThisAwareImplementation"
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor =
         object : KtVisitorVoid() {
@@ -65,8 +65,7 @@ class ThisAwareImplementationInspection : LocalInspectionTool() {
         return when (target) {
             is KtClassOrObject -> target.toLightClass()?.let { isThisAware(it, visited) } == true
             is PsiClass -> target.qualifiedName == TypeNames.THIS_AWARE || InheritanceUtil.isInheritor(
-                target,
-                TypeNames.THIS_AWARE
+                target, TypeNames.THIS_AWARE
             )
 
             is KtTypeAlias -> {

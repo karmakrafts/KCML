@@ -28,7 +28,7 @@
                          displayName="KCML mixin instantiation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinInstantiationInspection"/>
-        <localInspection language="kotlin" shortName="KcmlThisAwareImplementation"
+        <localInspection language="kotlin" shortName="KcmlMixinThisAwareImplementation"
                          displayName="KCML mixin ThisAware implementation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.ThisAwareImplementationInspection"/>
