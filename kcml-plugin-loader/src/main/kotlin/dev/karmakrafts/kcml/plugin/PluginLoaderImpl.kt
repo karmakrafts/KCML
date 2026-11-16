@@ -302,7 +302,7 @@ object PluginLoaderImpl : PluginLoader {
         loadMetadata(candidates)
         sortedPlugins.putAll(sortPlugins())
         // Log plugin load order for debugging purposes
-        val sortedNames = sortedPlugins.keys.map(::getMetadata).joinToString(transform = PluginMetadata::nameOrId)
+        val sortedNames = sortedPlugins.keys.joinToString { pluginId -> findMetadata(pluginId)?.nameOrId ?: pluginId }
         logger.info("Sorted plugins into load order: $sortedNames")
         try {
             for ([pluginId, plugin] in sortedPlugins) {
