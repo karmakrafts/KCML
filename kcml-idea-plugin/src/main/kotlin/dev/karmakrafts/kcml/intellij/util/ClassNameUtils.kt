@@ -19,17 +19,32 @@ package dev.karmakrafts.kcml.intellij.util
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.openapi.roots.ProjectRootModificationTracker
+import com.intellij.openapi.util.Key
+import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VfsUtilCore
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiClass
+import com.intellij.psi.impl.java.stubs.index.JavaStubIndexKeys
 import com.intellij.psi.search.FilenameIndex
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.search.PsiShortNamesCache
+import com.intellij.psi.stubs.StubIndex
+import com.intellij.psi.util.CachedValue
+import com.intellij.psi.util.CachedValueProvider
+import com.intellij.psi.util.CachedValuesManager
+import com.intellij.util.indexing.FileBasedIndex
+import com.intellij.util.indexing.IdFilter
 import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 import org.jetbrains.kotlin.psi.KtClassBody
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
+import java.util.concurrent.ConcurrentHashMap
 
 internal object ClassNameUtils {
+    private val libraryCandidatesKey = Key.create<CachedValue<ConcurrentHashMap<GlobalSearchScope, List<String>>>>(
+        "kcml.indirectMixin.libraryCandidates"
+    )
+
     fun lookupNames(binaryName: String): Set<String> {
         val className = binaryName.substringAfterLast('.')
         val names = linkedSetOf(binaryName, className, className.replace('$', '.'))
@@ -43,35 +58,62 @@ internal object ClassNameUtils {
         return names
     }
 
-    fun findCandidates(project: Project, scope: GlobalSearchScope): Set<String> {
-        val candidates = LinkedHashSet<String>()
-        val shortNamesCache = PsiShortNamesCache.getInstance(project)
-        for (shortName in shortNamesCache.allClassNames) {
+    fun findCandidates(project: Project, scope: GlobalSearchScope): Sequence<String> = sequence {
+        val sourceScope = scope.intersectWith(GlobalSearchScope.projectScope(project))
+        val sourceFiles = IdFilter.getProjectIdFilter(project, false)
+        val stubIndex = StubIndex.getInstance()
+        val shortNames = buildList<String> {
+            stubIndex.processAllKeys(JavaStubIndexKeys.CLASS_SHORT_NAMES, { add(it) }, sourceScope, sourceFiles)
+        }
+        for (shortName in shortNames) {
             ProgressManager.checkCanceled()
-            for (psiClass in shortNamesCache.getClassesByName(shortName, scope)) {
-                psiClass.jvmBinaryName()?.let(candidates::add)
+            for (psiClass in StubIndex.getElements(
+                JavaStubIndexKeys.CLASS_SHORT_NAMES, shortName, project, sourceScope, PsiClass::class.java
+            )) {
+                psiClass.jvmBinaryName()?.let { yield(it) }
             }
         }
 
         val kotlinClassIndex = KotlinFullClassNameIndex
-        for (className in kotlinClassIndex.getAllKeys(project)) {
+        val kotlinClassNames = buildList<String> {
+            kotlinClassIndex.processAllKeys(sourceScope, sourceFiles) { add(it) }
+        }
+        for (className in kotlinClassNames) {
             ProgressManager.checkCanceled()
-            for (declaration in kotlinClassIndex[className, project, scope]) {
-                declaration.jvmBinaryName()?.let(candidates::add)
+            for (declaration in kotlinClassIndex[className, project, sourceScope]) {
+                declaration.jvmBinaryName()?.let { yield(it) }
             }
         }
 
-        val projectFileIndex = ProjectFileIndex.getInstance(project)
-        for (classFile in FilenameIndex.getAllFilesByExt(project, "class", scope)) {
+        for (binaryName in findLibraryCandidates(project, scope)) {
             ProgressManager.checkCanceled()
-            val classRoot = projectFileIndex.getClassRootForFile(classFile) ?: continue
-            val relativePath = VfsUtilCore.getRelativePath(classFile, classRoot, '/') ?: continue
-            if (!relativePath.endsWith(".class") || relativePath.startsWith("META-INF/versions/")) continue
-            val binaryName = relativePath.removeSuffix(".class").replace('/', '.')
-            if (classFile.nameWithoutExtension in setOf("module-info", "package-info")) continue
-            candidates.add(binaryName)
+            yield(binaryName)
         }
-        return candidates
+    }.distinct()
+
+    fun findLibraryCandidates(project: Project, scope: GlobalSearchScope): List<String> {
+        val cache = CachedValuesManager.getManager(project).getCachedValue(project, libraryCandidatesKey, {
+            CachedValueProvider.Result.create(
+                ConcurrentHashMap<GlobalSearchScope, List<String>>(),
+                ProjectRootModificationTracker.getInstance(project),
+                VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS,
+                ModificationTracker {
+                    FileBasedIndex.getInstance().getIndexModificationStamp(FilenameIndex.NAME, project)
+                })
+        }, false)
+        return cache.computeIfAbsent(scope) {
+            val projectFileIndex = ProjectFileIndex.getInstance(project)
+            buildList {
+                for (classFile in FilenameIndex.getAllFilesByExt(project, "class", scope)) {
+                    ProgressManager.checkCanceled()
+                    val classRoot = projectFileIndex.getClassRootForFile(classFile) ?: continue
+                    val relativePath = VfsUtilCore.getRelativePath(classFile, classRoot, '/') ?: continue
+                    if (!relativePath.endsWith(".class") || relativePath.startsWith("META-INF/versions/")) continue
+                    if (classFile.nameWithoutExtension in setOf("module-info", "package-info")) continue
+                    add(relativePath.removeSuffix(".class").replace('/', '.'))
+                }
+            }
+        }
     }
 
     private fun PsiClass.jvmBinaryName(): String? {

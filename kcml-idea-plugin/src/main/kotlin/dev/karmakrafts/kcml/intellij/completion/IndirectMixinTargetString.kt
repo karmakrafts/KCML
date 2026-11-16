@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
+import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
@@ -32,6 +33,29 @@ import org.jetbrains.kotlin.psi.KtValueArgumentList
 internal data class IndirectMixinTargetString(val prefix: String, val isRawString: Boolean, val contentStart: Int) {
     companion object {
         fun find(position: PsiElement, offset: Int): IndirectMixinTargetString? {
+            val expression = targetExpression(position) ?: return null
+            val text = expression.text
+            val isRawString = text.startsWith("\"\"\"")
+            val delimiterLength = if (isRawString) 3 else 1
+            val contentStart = expression.textRange.startOffset + delimiterLength
+            if (offset < contentStart || offset > expression.textRange.endOffset - delimiterLength) return null
+            var prefix = expression.containingFile.text.substring(
+                contentStart, offset.coerceAtMost(expression.textRange.endOffset)
+            )
+            if (!isRawString) {
+                prefix = prefix.replace("\\$", "$").replace("\\\\", "\\")
+            }
+            return IndirectMixinTargetString(prefix, isRawString, contentStart)
+        }
+
+        fun isTargetString(position: PsiElement): Boolean = targetExpression(position) != null
+
+        fun isTargetStringAt(file: PsiFile, offset: Int): Boolean {
+            val position = file.findElementAt(offset) ?: return false
+            return isTargetString(position)
+        }
+
+        private fun targetExpression(position: PsiElement): KtStringTemplateExpression? {
             val expression =
                 PsiTreeUtil.getParentOfType(position, KtStringTemplateExpression::class.java, false) ?: return null
             if (expression.entries.any { it !is KtLiteralStringTemplateEntry && it !is KtEscapeStringTemplateEntry }) return null
@@ -49,19 +73,7 @@ internal data class IndirectMixinTargetString(val prefix: String, val isRawStrin
             val annotation =
                 PsiTreeUtil.getParentOfType(argumentList, KtAnnotationEntry::class.java, false) ?: return null
             if (annotation.qualifiedName() != TypeNames.INDIRECT_MIXIN) return null
-
-            val text = expression.text
-            val isRawString = text.startsWith("\"\"\"")
-            val delimiterLength = if (isRawString) 3 else 1
-            val contentStart = expression.textRange.startOffset + delimiterLength
-            if (offset < contentStart || offset > expression.textRange.endOffset - delimiterLength) return null
-            var prefix = expression.containingFile.text.substring(
-                contentStart, offset.coerceAtMost(expression.textRange.endOffset)
-            )
-            if (!isRawString) {
-                prefix = prefix.replace("\\$", "$").replace("\\\\", "\\")
-            }
-            return IndirectMixinTargetString(prefix, isRawString, contentStart)
+            return expression
         }
     }
 }

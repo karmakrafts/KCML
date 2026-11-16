@@ -18,5 +18,9 @@
     <extensions defaultExtensionNs="com.intellij">
         <completion.contributor language="kotlin" order="first"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionContributor"/>
+        <typedHandler implementation="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionTypedHandler"
+                      order="first"/>
+        <completion.confidence language="kotlin" order="first"
+                               implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionConfidence"/>
     </extensions>
 </idea-plugin>

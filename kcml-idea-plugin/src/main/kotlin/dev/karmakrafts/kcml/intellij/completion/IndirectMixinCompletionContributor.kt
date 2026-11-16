@@ -38,30 +38,44 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                     override fun addCompletions(
                         parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet
                     ) {
+                        // Only complete target strings, using PSI without completion's dummy text
                         val position = parameters.originalFile.findElementAt(parameters.offset) ?: return
                         (val prefix, val isRawString, val contentStart) = IndirectMixinTargetString.find(
                             position, parameters.offset
                         ) ?: return
+                        // Accept slash-separated JVM names as well as dotted names
                         val matcher = PlainPrefixMatcher(prefix.replace('/', '.'))
                         val scopedResult = result.withPrefixMatcher(matcher)
                         val file = parameters.originalFile
                         val module = ModuleUtilCore.findModuleForPsiElement(file)
+                        // Include module dependencies alongside the file's resolve scope
                         val scope = module?.let {
                             GlobalSearchScope.union(
-                                arrayOf(GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(it), file.resolveScope)
+                                arrayOf(
+                                    GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(it), file.resolveScope
+                                )
                             )
                         } ?: file.resolveScope
+                        // Find all applicable candidates in the given scope
                         for (candidate in ClassNameUtils.findCandidates(
                             parameters.position.project, scope
                         )) {
                             ProgressManager.checkCanceled()
+                            // Match qualified, short, and nested-class name variants
                             val lookupNames = ClassNameUtils.lookupNames(candidate)
                             if (lookupNames.none(matcher::prefixMatches)) continue
                             var lookupElement = LookupElementBuilder.create(candidate)
                             for (lookupName in lookupNames) {
                                 lookupElement = lookupElement.withLookupString(lookupName)
                             }
-                            scopedResult.addElement(lookupElement.withInsertHandler(StringContentInsertHandler(isRawString, contentStart)))
+                            scopedResult.addElement(
+                                lookupElement.withInsertHandler(
+                                    // Preserve string boundaries and raw-string handling on insertion
+                                    StringContentInsertHandler(
+                                        isRawString, contentStart
+                                    )
+                                )
+                            )
                         }
                     }
                 })

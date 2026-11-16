@@ -53,6 +53,12 @@ dependencies {
 }
 
 tasks {
+    test {
+        classpath = classpath.filter {
+            it.name != "kotlinc.kotlin-compiler-cli.jar" || !it.path.contains("/kmm-plugin/")
+        }
+    }
+
     runIde {
         // Automatically enable native wayland support when the host is using Wayland
         if (System.getenv("XDG_SESSION_TYPE") == "wayland") {
