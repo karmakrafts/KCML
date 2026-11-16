@@ -78,8 +78,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     fun testCompletesBasicCompletionForPartialTypeName() {
         addIndirectMixinAnnotation()
         myFixture.addFileToProject(
-            "completion/targets/Targets.kt",
-            "package completion.targets; class Hidden; class HiddenOther"
+            "completion/targets/Targets.kt", "package completion.targets; class Hidden; class HiddenOther"
         )
         myFixture.configureByText(
             "Mixin.kt", """
@@ -367,11 +366,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                     arrayOf("java/lang/annotation/Annotation")
                 )
                 classWriter.visitMethod(
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT,
-                    "target",
-                    "()Ljava/lang/String;",
-                    null,
-                    null
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT, "target", "()Ljava/lang/String;", null, null
                 ).visitEnd()
                 val priority =
                     classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT, "priority", "()I", null, null)

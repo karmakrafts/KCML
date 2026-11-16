@@ -17,5 +17,6 @@
 package dev.karmakrafts.kcml.intellij.util
 
 internal object TypeNames {
+    const val DIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.DirectMixin"
     const val INDIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.IndirectMixin"
 }

@@ -147,8 +147,7 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
                 tester.typeWithPauses("g")
                 runInEdtAndWait {
                     assertFalse(
-                        text,
-                        tester.lookup?.items.orEmpty().any { "completion.targets.Target" in it.allLookupStrings })
+                        text, tester.lookup?.items.orEmpty().any { "completion.targets.Target" in it.allLookupStrings })
                     tester.lookup?.hide()
                 }
             }

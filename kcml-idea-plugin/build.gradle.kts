@@ -36,6 +36,7 @@ repositories {
 
 dependencies {
     testImplementation(libs.kotlin.test)
+    testImplementation(projects.kcmlPluginApi)
 
     intellijPlatform {
         intellijIdea(libs.versions.intelliJVersion)
