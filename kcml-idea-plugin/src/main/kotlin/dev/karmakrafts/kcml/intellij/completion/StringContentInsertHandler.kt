@@ -23,11 +23,12 @@ import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal class StringContentInsertHandler(
-    private val isRawString: Boolean, private val contentStart: Int
+    private val isRawString: Boolean, private val contentStart: Int, private val interpolationPrefixLength: Int
 ) : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
         val insertedText =
-            if (isRawString) item.lookupString.replace("$", $$"${'$'}") else item.lookupString.replace("$", "\\$")
+            if (isRawString) item.lookupString.replace("$", "$".repeat(interpolationPrefixLength) + "{'${'$'}'}")
+            else item.lookupString.replace("$", "\\$")
         context.commitDocument()
         val expression = PsiTreeUtil.getParentOfType(
             context.file.findElementAt(contentStart), KtStringTemplateExpression::class.java, false

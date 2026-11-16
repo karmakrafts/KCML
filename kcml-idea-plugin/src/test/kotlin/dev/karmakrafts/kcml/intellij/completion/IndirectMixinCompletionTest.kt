@@ -228,7 +228,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                 """.trimIndent()
             )
             assertNotNull(
-                com.intellij.psi.JavaPsiFacade.getInstance(project).findClass(
+                JavaPsiFacade.getInstance(project).findClass(
                     "dev.karmakrafts.kcml.api.mixin.IndirectMixin", file.resolveScope
                 )
             )
@@ -327,7 +327,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             """.trimIndent()
         )
         assertNotNull(
-            com.intellij.psi.JavaPsiFacade.getInstance(project).findClass("completion.Outer.Secret", file.resolveScope)
+            JavaPsiFacade.getInstance(project).findClass("completion.Outer.Secret", file.resolveScope)
         )
         val variants = myFixture.complete(CompletionType.SMART).orEmpty()
         val secret = "completion.Outer\$Secret"
@@ -337,6 +337,54 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(file.text, file.text.contains("${quotes}completion.Outer\${'$'}Secret$quotes"))
         assertFalse(file.text.contains("OldSuffix"))
         assertFalse(file.text.contains("import "))
+    }
+
+    fun testRawStringCompletionAfterLiteralDollar() {
+        assertRawNestedCompletion("", "Outer${'$'}{'${'$'}'}Se", "${'$'}{'${'$'}'}")
+    }
+
+    fun testMultiDollarRawStringCompletion() {
+        assertRawNestedCompletion("$$", "Outer${'$'}Se", "${'$'}${'$'}{'${'$'}'}")
+    }
+
+    fun testTripleDollarRawStringCompletion() {
+        assertRawNestedCompletion("$$$", "Outer${'$'}Se", "${'$'}${'$'}${'$'}{'${'$'}'}")
+    }
+
+    fun testBasicCompletionInMultiDollarRawString() {
+        assertRawNestedCompletion("$$", "Out", "${'$'}${'$'}{'${'$'}'}", CompletionType.BASIC)
+    }
+
+    private fun assertRawNestedCompletion(
+        dollars: String, prefix: String, escapedDollar: String, completionType: CompletionType = CompletionType.SMART
+    ) {
+        addIndirectMixinAnnotation()
+        myFixture.addFileToProject(
+            "completion/Outer.kt", "package completion; class Outer { class Secret; object Second }"
+        )
+        val quotes = "\"\"\""
+        val file = myFixture.configureByText(
+            "Mixin.kt", """
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+                @IndirectMixin(target = $dollars${quotes}completion.$prefix<caret>OldSuffix$quotes)
+                class Example
+            """.trimIndent()
+        )
+        assertTrue(file.text, IndirectMixinTargetString.isTargetStringAt(file, myFixture.caretOffset))
+        assertTrue(file.text, IndirectMixinCompletionTypedHandler().shouldShowPopup('e', file, myFixture.caretOffset))
+        val variants = myFixture.complete(completionType).orEmpty()
+        val secret = "completion.Outer\$Secret"
+        assertTrue(variants.joinToString { it.lookupString }, variants.any { it.lookupString == secret })
+        myFixture.lookup.currentItem = variants.first { it.lookupString == secret }
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        assertTrue(
+            file.text,
+            file.text.contains("target = $dollars${quotes}completion.Outer${escapedDollar}Secret$quotes)")
+        )
+        assertFalse(file.text.contains("OldSuffix"))
+        val end = file.text.indexOf("Secret") + "Secret".length
+        assertEquals(end, myFixture.caretOffset)
+        assertEquals(secret, IndirectMixinTargetString.find(file.findElementAt(end)!!, end)?.prefix)
     }
 
     fun testEmptyStringOffersAllClasses() {
@@ -358,7 +406,9 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         myFixture.addFileToProject("completion/Hidden.kt", "package completion; class Hidden; class HiddenOther")
         for (text in listOf(
             "annotation class IndirectMixin(val target: String); @IndirectMixin(\"completion.Hid<caret>\") class Example",
-            "@dev.karmakrafts.kcml.api.mixin.IndirectMixin(\"completion.Hid<caret>\${value}\") class Example"
+            "@dev.karmakrafts.kcml.api.mixin.IndirectMixin(\"completion.Hid<caret>\${value}\") class Example",
+            "@dev.karmakrafts.kcml.api.mixin.IndirectMixin(\"\"\"completion.Hid<caret>\${value}\"\"\") class Example",
+            "@dev.karmakrafts.kcml.api.mixin.IndirectMixin(\$\$\"\"\"completion.Hid<caret>\$\${value}\"\"\") class Example"
         )) {
             myFixture.configureByText("Unrelated.kt", text)
             assertFalse(myFixture.completeBasic().orEmpty().any { it.lookupString == "completion.Hidden" })

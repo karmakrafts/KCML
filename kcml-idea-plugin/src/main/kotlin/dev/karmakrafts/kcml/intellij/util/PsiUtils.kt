@@ -33,3 +33,14 @@ internal fun KtAnnotationEntry.isMixin(): Boolean {
     }
     return name == TypeNames.DIRECT_MIXIN || name == TypeNames.INDIRECT_MIXIN
 }
+
+internal fun KtAnnotationEntry.qualifiedName(): String? {
+    val resolved = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
+        ?: return null
+    return when (resolved) {
+        is PsiClass -> resolved.qualifiedName
+        is KtClassOrObject -> resolved.fqName?.asString()
+        is PsiMethod -> resolved.containingClass?.qualifiedName
+        else -> PsiTreeUtil.getParentOfType(resolved, KtClassOrObject::class.java)?.fqName?.asString()
+    }
+}

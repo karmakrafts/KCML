@@ -16,36 +16,44 @@
 
 package dev.karmakrafts.kcml.intellij.completion
 
-import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
+import dev.karmakrafts.kcml.intellij.util.qualifiedName
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
-import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtConstantExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
+import org.jetbrains.kotlin.psi.KtStringTemplateEntry
+import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import org.jetbrains.kotlin.psi.KtValueArgument
 import org.jetbrains.kotlin.psi.KtValueArgumentList
 
-internal data class IndirectMixinTargetString(val prefix: String, val isRawString: Boolean, val contentStart: Int) {
+internal data class IndirectMixinTargetString(
+    val prefix: String, val isRawString: Boolean, val contentStart: Int, val interpolationPrefixLength: Int
+) {
     companion object {
         fun find(position: PsiElement, offset: Int): IndirectMixinTargetString? {
             val expression = targetExpression(position) ?: return null
             val text = expression.text
-            val isRawString = text.startsWith("\"\"\"")
+            val dollarCount = text.takeWhile { it == '$' }.length
+            val isRawString = text.startsWith("\"\"\"", dollarCount)
             val delimiterLength = if (isRawString) 3 else 1
-            val contentStart = expression.textRange.startOffset + delimiterLength
+            val contentStart = expression.textRange.startOffset + dollarCount + delimiterLength
             if (offset < contentStart || offset > expression.textRange.endOffset - delimiterLength) return null
-            var prefix = expression.containingFile.text.substring(
-                contentStart, offset.coerceAtMost(expression.textRange.endOffset)
-            )
-            if (!isRawString) {
-                prefix = prefix.replace("\\$", "$").replace("\\\\", "\\")
+            val prefix = buildString {
+                for (entry in expression.entries) {
+                    if (entry.textRange.startOffset >= offset) break
+                    if (entry.textRange.endOffset <= offset) append(entry.literalValue() ?: return null)
+                    else {
+                        if (entry !is KtLiteralStringTemplateEntry) return null
+                        append(entry.text.take(offset - entry.textRange.startOffset))
+                    }
+                }
             }
-            return IndirectMixinTargetString(prefix, isRawString, contentStart)
+            return IndirectMixinTargetString(prefix, isRawString, contentStart, dollarCount.coerceAtLeast(1))
         }
 
         fun isTargetString(position: PsiElement): Boolean = targetExpression(position) != null
@@ -58,7 +66,7 @@ internal data class IndirectMixinTargetString(val prefix: String, val isRawStrin
         private fun targetExpression(position: PsiElement): KtStringTemplateExpression? {
             val expression =
                 PsiTreeUtil.getParentOfType(position, KtStringTemplateExpression::class.java, false) ?: return null
-            if (expression.entries.any { it !is KtLiteralStringTemplateEntry && it !is KtEscapeStringTemplateEntry }) return null
+            if (expression.entries.any { it.literalValue() == null }) return null
             val argument = PsiTreeUtil.getParentOfType(expression, KtValueArgument::class.java, false) ?: return null
             if (argument.getArgumentExpression() != expression) return null
             val argumentList =
@@ -75,16 +83,13 @@ internal data class IndirectMixinTargetString(val prefix: String, val isRawStrin
             if (annotation.qualifiedName() != TypeNames.INDIRECT_MIXIN) return null
             return expression
         }
+
+        private fun KtStringTemplateEntry.literalValue(): String? = when (this) {
+            is KtLiteralStringTemplateEntry -> text
+            is KtEscapeStringTemplateEntry -> unescapedValue
+            is KtStringTemplateEntryWithExpression -> if ((expression as? KtConstantExpression)?.text == "'${'$'}'") "$" else null
+            else -> null
+        }
     }
 }
 
-private fun KtAnnotationEntry.qualifiedName(): String? {
-    val resolved = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
-        ?: return null
-    return when (resolved) {
-        is PsiClass -> resolved.qualifiedName
-        is KtClassOrObject -> resolved.fqName?.asString()
-        is PsiMethod -> resolved.containingClass?.qualifiedName
-        else -> PsiTreeUtil.getParentOfType(resolved, KtClassOrObject::class.java)?.fqName?.asString()
-    }
-}
