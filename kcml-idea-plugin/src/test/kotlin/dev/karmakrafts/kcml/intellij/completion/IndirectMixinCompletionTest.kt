@@ -378,8 +378,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         myFixture.lookup.currentItem = variants.first { it.lookupString == secret }
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
         assertTrue(
-            file.text,
-            file.text.contains("target = $dollars${quotes}completion.Outer${escapedDollar}Secret$quotes)")
+            file.text, file.text.contains("target = $dollars${quotes}completion.Outer${escapedDollar}Secret$quotes)")
         )
         assertFalse(file.text.contains("OldSuffix"))
         val end = file.text.indexOf("Secret") + "Secret".length
