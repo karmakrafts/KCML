@@ -16,6 +16,7 @@
 
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
+        <fileIconProvider implementation="dev.karmakrafts.kcml.intellij.icon.PluginConfigIconProvider"/>
         <localInspection language="kotlin" shortName="KcmlPluginDeclaration"
                          displayName="KCML plugin annotation and interface mismatch"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
