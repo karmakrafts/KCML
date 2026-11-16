@@ -24,11 +24,12 @@ import dev.karmakrafts.kcml.intellij.util.annotationStringArgument
 import dev.karmakrafts.kcml.intellij.util.contentAt
 
 internal object IndirectMixinTargetString {
-    fun find(position: PsiElement, offset: Int): StringTemplateContent? =
-        position.annotationStringArgument(TypeNames.INDIRECT_MIXIN, "target")?.expression?.contentAt(offset)
+    fun find(position: PsiElement, offset: Int): StringTemplateContent? = position.annotationStringArgument(
+        TypeNames.INDIRECT_MIXIN, "target", allowRawDollarNames = true
+    )?.expression?.contentAt(offset, allowRawDollarNames = true)
 
     fun isTargetString(position: PsiElement): Boolean =
-        position.annotationStringArgument(TypeNames.INDIRECT_MIXIN, "target") != null
+        position.annotationStringArgument(TypeNames.INDIRECT_MIXIN, "target", allowRawDollarNames = true) != null
 
     fun isTargetStringAt(file: PsiFile, offset: Int): Boolean =
         file.findElementAt(offset)?.let(::isTargetString) == true

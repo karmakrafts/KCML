@@ -345,25 +345,95 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(variants.joinToString { it.lookupString }, variants.any { it.lookupString == secret })
         myFixture.lookup.currentItem = variants.first { it.lookupString == secret }
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-        assertTrue(file.text, file.text.contains("${quotes}completion.Outer\${'$'}Secret$quotes"))
+        assertTrue(file.text, file.text.contains("${quotes}completion.Outer${'$'}Secret$quotes"))
         assertFalse(file.text.contains("OldSuffix"))
         assertFalse(file.text.contains("import "))
     }
 
     fun testRawStringCompletionAfterLiteralDollar() {
-        assertRawNestedCompletion("", "Outer${'$'}{'${'$'}'}Se", "${'$'}{'${'$'}'}")
+        assertRawNestedCompletion("", "Outer${'$'}{'${'$'}'}Se", "$")
+    }
+
+    fun testBasicCompletionInRawString() {
+        assertRawNestedCompletion("", "Out", "$", CompletionType.BASIC)
+    }
+
+    fun testRawStringCompletionAfterUnescapedDollar() {
+        assertRawNestedCompletion("", "Outer${'$'}Se", "$")
+    }
+
+    fun testBasicCompletionInRawStringAfterUnescapedDollar() {
+        assertRawNestedCompletion("", "Outer${'$'}Se", "$", CompletionType.BASIC)
+    }
+
+    fun testRawTargetCompletionDoesNotOfferEscapedFilePaths() {
+        addIndirectMixinAnnotation()
+        myFixture.addFileToProject(
+            "completion/Outer${'$'}Secret.kt", "package completion; class Outer { class Secret; class Second }"
+        )
+        myFixture.configureByText(
+            "Mixin.kt",
+            "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n" + "@IndirectMixin(\"\"\"completion/Out<caret>\"\"\") class Example"
+        )
+        val variants = myFixture.completeBasic().orEmpty()
+        val expected = setOf("completion.Outer", "completion.Outer${'$'}Secret", "completion.Outer${'$'}Second")
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        assertFalse(myFixture.file.text, "\\${'$'}" in myFixture.file.text)
+        assertFalse(myFixture.file.text, ".kt" in myFixture.file.text)
+        assertEquals(variants.joinToString { it.lookupString }, expected, variants.map { it.lookupString }.toSet())
     }
 
     fun testMultiDollarRawStringCompletion() {
-        assertRawNestedCompletion("$$", "Outer${'$'}Se", "${'$'}${'$'}{'${'$'}'}")
+        assertRawNestedCompletion("$$", "Outer${'$'}Se", "$")
     }
 
     fun testTripleDollarRawStringCompletion() {
-        assertRawNestedCompletion("$$$", "Outer${'$'}Se", "${'$'}${'$'}${'$'}{'${'$'}'}")
+        assertRawNestedCompletion("$$$", "Outer${'$'}Se", "$")
     }
 
     fun testBasicCompletionInMultiDollarRawString() {
-        assertRawNestedCompletion("$$", "Out", "${'$'}${'$'}{'${'$'}'}", CompletionType.BASIC)
+        assertRawNestedCompletion("$$", "Out", "$", CompletionType.BASIC)
+    }
+
+    fun testEditingExistingMultiDollarStringDoesNotEscapeDollars() {
+        assertEditingNestedTarget("$$", "\"", CompletionType.BASIC)
+    }
+
+    fun testSmartCompletionInExistingMultiDollarStringDoesNotEscapeDollars() {
+        assertEditingNestedTarget("$$$", "\"", CompletionType.SMART)
+    }
+
+    fun testEditingExistingRawStringDoesNotEscapeDollars() {
+        assertEditingNestedTarget("", "\"\"\"", CompletionType.BASIC)
+    }
+
+    fun testEditingExistingMultiDollarRawStringDoesNotEscapeDollars() {
+        assertEditingNestedTarget("$$", "\"\"\"", CompletionType.SMART)
+    }
+
+    fun testEditingExistingRegularStringStillEscapesDollars() {
+        assertEditingNestedTarget("", "\"", CompletionType.BASIC)
+    }
+
+    private fun assertEditingNestedTarget(dollars: String, quotes: String, completionType: CompletionType) {
+        addIndirectMixinAnnotation()
+        myFixture.addFileToProject(
+            "completion/Outer.kt", "package completion; class Outer { class Secret; class Second }"
+        )
+        val escapedDollar = if (dollars.isEmpty() && quotes.length == 1) "\\$" else "$"
+        val source =
+            "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n" + "@IndirectMixin(target = $dollars${quotes}completion.Out<caret>er${escapedDollar}Second$quotes) class Example"
+        myFixture.configureByText("Mixin.kt", source)
+        myFixture.type("e")
+        val variants = myFixture.complete(completionType).orEmpty()
+        val name = "completion.Outer${'$'}Secret"
+        val item = variants.single { it.lookupString == name }
+        myFixture.lookup.currentItem = item
+        myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+        if (escapedDollar == "$") assertFalse(myFixture.file.text, "\\$" in myFixture.file.text)
+        myFixture.checkResult(
+            "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n" + "@IndirectMixin(target = $dollars${quotes}completion.Outer${escapedDollar}Secret<caret>$quotes) class Example"
+        )
     }
 
     private fun assertRawNestedCompletion(

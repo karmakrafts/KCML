@@ -24,6 +24,7 @@ import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtConstantExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
+import org.jetbrains.kotlin.psi.KtSimpleNameStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtStringTemplateEntry
 import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
@@ -36,6 +37,9 @@ internal fun KtStringTemplateEntry.literalValue(): String? = when (this) {
     else -> null
 }
 
+private fun KtStringTemplateEntry.completionValue(allowRawDollarNames: Boolean): String? =
+    literalValue() ?: text.takeIf { allowRawDollarNames && this is KtSimpleNameStringTemplateEntry }
+
 internal fun KtStringTemplateExpression.literalValue(): String? = buildString {
     for (entry in entries) {
         ProgressManager.checkCanceled()
@@ -47,9 +51,12 @@ internal data class StringTemplateContent(
     val prefix: String, val isRawString: Boolean, val contentStart: Int, val interpolationPrefixLength: Int
 )
 
-internal fun KtStringTemplateExpression.contentAt(offset: Int): StringTemplateContent? {
+internal fun KtStringTemplateExpression.contentAt(
+    offset: Int, allowRawDollarNames: Boolean = false
+): StringTemplateContent? {
     val dollarCount = text.takeWhile { it == '$' }.length
     val isRawString = text.startsWith("\"\"\"", dollarCount)
+    val allowDollarNames = allowRawDollarNames && isRawString
     val delimiterLength = if (isRawString) 3 else 1
     val contentStart = textRange.startOffset + dollarCount + delimiterLength
     val closingLength = if (lastChild?.node?.elementType == KtTokens.CLOSING_QUOTE) delimiterLength else 0
@@ -58,10 +65,11 @@ internal fun KtStringTemplateExpression.contentAt(offset: Int): StringTemplateCo
         for (entry in entries) {
             ProgressManager.checkCanceled()
             if (entry.textRange.startOffset >= offset) break
-            if (entry.textRange.endOffset <= offset) append(entry.literalValue() ?: return null)
+            val value = entry.completionValue(allowDollarNames) ?: return null
+            if (entry.textRange.endOffset <= offset) append(value)
             else {
-                if (entry !is KtLiteralStringTemplateEntry) return null
-                append(entry.text.take(offset - entry.textRange.startOffset))
+                if (entry !is KtLiteralStringTemplateEntry && entry !is KtSimpleNameStringTemplateEntry) return null
+                append(value.take(offset - entry.textRange.startOffset))
             }
         }
     }
@@ -73,10 +81,11 @@ internal data class AnnotationStringArgument(
 )
 
 internal fun PsiElement.annotationStringArgument(
-    annotationName: String, vararg parameterNames: String
+    annotationName: String, vararg parameterNames: String, allowRawDollarNames: Boolean = false
 ): AnnotationStringArgument? {
     val expression = PsiTreeUtil.getParentOfType(this, KtStringTemplateExpression::class.java, false) ?: return null
-    if (expression.entries.any { it.literalValue() == null }) return null
+    val allowDollarNames = allowRawDollarNames && expression.text.trimStart('$').startsWith("\"\"\"")
+    if (expression.entries.any { it.completionValue(allowDollarNames) == null }) return null
     val argument = expression.parent as? KtValueArgument ?: return null
     val annotation = argument.parent?.parent as? KtAnnotationEntry ?: return null
     if (annotation.qualifiedName() != annotationName) return null

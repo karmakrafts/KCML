@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.ModuleRootModificationUtil
@@ -105,6 +106,66 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
             "import dev.karmakrafts.kcml.api.mixin.IndirectMixin as Mixin\n" + "@Mixin(priority = 1, target = \"\"\"completion/targets/Tar<caret>OldSuffix\"\"\") class Example",
             "g"
         )
+    }
+
+    fun testAcceptingNestedClassFromRawStringPopupDoesNotEscapeDollars() {
+        assertRawNestedCompletion("", "completion.targets.Tar", "g")
+    }
+
+    fun testAcceptingNestedClassFromMultiDollarRawStringPopupDoesNotEscapeDollars() {
+        assertRawNestedCompletion("$$", "completion.targets.Tar", "g")
+    }
+
+    fun testContinuingRawNestedClassCompletionAfterLiteralDollar() {
+        assertRawNestedCompletion("", "completion.targets.TargetOuter${'$'}Nes", "t")
+    }
+
+    fun testEditingExistingMultiDollarStringDoesNotEscapeDollars() {
+        assertRawNestedCompletion("$$", "completion.targets.Tar", "g", "\"", "getOuter${'$'}Nested")
+    }
+
+    fun testContinuingMultiDollarStringCompletionAfterLiteralDollar() {
+        assertRawNestedCompletion("$$", "completion.targets.TargetOuter${'$'}Nes", "t", "\"", "ed")
+    }
+
+    fun testEditingExistingRawStringDoesNotEscapeDollars() {
+        assertRawNestedCompletion("", "completion.targets.Tar", "g", suffix = "getOuter${'$'}Nested")
+    }
+
+    private fun assertRawNestedCompletion(
+        dollars: String, prefix: String, typed: String, quotes: String = "\"\"\"", suffix: String = ""
+    ) {
+        val tester = CompletionAutoPopupTester(myFixture)
+        tester.runWithAutoPopupEnabled {
+            runInEdtAndWait {
+                myFixture.addFileToProject(
+                    "completion/targets/Nested.kt",
+                    "package completion.targets; class TargetOuter { class Nested; class NestedOther }"
+                )
+                myFixture.configureByText(
+                    "Mixin.kt",
+                    "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n" + "@IndirectMixin($dollars$quotes$prefix<caret>$suffix$quotes) class Example"
+                )
+            }
+            tester.typeWithPauses(typed)
+            runInEdtAndWait {
+                val offset = myFixture.caretOffset
+                assertEquals(
+                    myFixture.file.text,
+                    prefix + typed,
+                    IndirectMixinTargetString.find(myFixture.file.findElementAt(offset)!!, offset)?.prefix
+                )
+                val lookup = tester.lookup
+                assertNotNull("Raw-string target completion should open", lookup)
+                val name = "completion.targets.TargetOuter${'$'}Nested"
+                val item = lookup!!.items.single { it.lookupString == name }
+                lookup.currentItem = item
+                myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+                myFixture.checkResult(
+                    "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n" + "@IndirectMixin($dollars$quotes$name<caret>$quotes) class Example"
+                )
+            }
+        }
     }
 
     fun testTypingPackageSeparatorShowsCompletionLookup() {

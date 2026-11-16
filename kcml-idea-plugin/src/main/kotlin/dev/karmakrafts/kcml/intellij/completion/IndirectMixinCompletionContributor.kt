@@ -48,6 +48,7 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                         val target = IndirectMixinTargetString.find(
                             position, parameters.offset
                         ) ?: return
+                        result.stopHere()
                         // Accept slash-separated JVM names as well as dotted names
                         val matcher = PlainPrefixMatcher(target.prefix.replace('/', '.'))
                         val scopedResult = result.withPrefixMatcher(matcher)
