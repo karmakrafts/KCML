@@ -16,14 +16,25 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
+import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
+import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiElement
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.util.PsiNavigateUtil
+import dev.karmakrafts.kcml.intellij.util.ClassIndex
 import dev.karmakrafts.kcml.intellij.util.TypeNames
+import dev.karmakrafts.kcml.intellij.util.argument
+import dev.karmakrafts.kcml.intellij.util.asPsiClass
+import dev.karmakrafts.kcml.intellij.util.literalValue
 import dev.karmakrafts.kcml.intellij.util.qualifiedName
+import dev.karmakrafts.kcml.intellij.util.resolveMixinTarget
+import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import javax.swing.Icon
 
 class InjectLineMarkerProvider : LineMarkerProvider {
@@ -36,16 +47,48 @@ class InjectLineMarkerProvider : LineMarkerProvider {
             val declaration = element.parent as? KtNamedFunction ?: continue
             if (declaration.nameIdentifier != element) continue
             if (declaration.annotationEntries.none { it.qualifiedName() == TypeNames.INJECT }) continue
-            result.add(
-                LineMarkerInfo(
-                    element,
-                    element.textRange,
-                    icon,
-                    { "KCML plugin" },
-                    null,
-                    GutterIconRenderer.Alignment.LEFT,
-                    { "KCML plugin" })
-            )
+            val target = declaration.resolveInjectionSite()
+            result.add(object : LineMarkerInfo<PsiElement>(
+                element,
+                element.textRange,
+                icon,
+                { "KCML plugin" },
+                target?.let {
+                    GutterIconNavigationHandler { _, source ->
+                        (source.parent as? KtNamedFunction)?.resolveInjectionSite()?.let {
+                            PsiNavigateUtil.navigate(it.navigationElement, true)
+                        }
+                    }
+                },
+                GutterIconRenderer.Alignment.LEFT,
+                { "KCML plugin" }) {
+                override fun createGutterRenderer(): GutterIconRenderer =
+                    object : LineMarkerGutterIconRenderer<PsiElement>(this) {
+                        override fun looksTheSameAs(renderer: LineMarkerGutterIconRenderer<*>): Boolean =
+                            super.looksTheSameAs(renderer) && isNavigateAction == renderer.isNavigateAction
+                    }
+            })
+        }
+    }
+
+    private fun KtNamedFunction.resolveInjectionSite(): PsiElement? {
+        return try {
+            val annotation = annotationEntries.firstOrNull { it.qualifiedName() == TypeNames.INJECT } ?: return null
+            val name =
+                (annotation.argument("name", 0)?.getArgumentExpression() as? KtStringTemplateExpression)?.literalValue()
+                    ?: return null
+            val descriptorArgument = annotation.argument("descriptor", 1)
+            val descriptor = if (descriptorArgument == null) ""
+            else {
+                (descriptorArgument.getArgumentExpression() as? KtStringTemplateExpression)?.literalValue()
+                    ?: return null
+            }
+            val mixin = PsiTreeUtil.getParentOfType(this, KtClassOrObject::class.java) ?: return null
+            val target =
+                mixin.annotationEntries.firstNotNullOfOrNull { it.resolveMixinTarget()?.asPsiClass() } ?: return null
+            ClassIndex.findMethod(target, name, descriptor)
+        } catch (_: IndexNotReadyException) {
+            null
         }
     }
 }

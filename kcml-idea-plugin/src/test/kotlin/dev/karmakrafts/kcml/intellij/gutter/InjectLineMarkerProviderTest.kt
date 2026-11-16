@@ -16,11 +16,155 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
+import com.intellij.codeInsight.daemon.LineMarkerInfo
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.IconLoader
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiElement
+import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.kotlin.psi.KtNamedFunction
 
 class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
+
+    fun testDirectMixinNavigatesToPrivateJavaMethod() {
+        addNavigationAnnotations()
+        val target = myFixture.addClass("package example; public class Target { private void target() {} }")
+        assertNavigation(
+            "@DirectMixin(example.Target::class)", "\"target\"", target.methods.single { !it.isConstructor })
+    }
+
+    fun testIndirectMixinNavigatesToKotlinFunction() {
+        addNavigationAnnotations()
+        val target = myFixture.addFileToProject(
+            "example/Target.kt", "package example\nclass Target { private fun target() {} }"
+        )
+        assertNavigation(
+            "@IndirectMixin(\"example/Target\")",
+            "\"target\"",
+            PsiTreeUtil.findChildOfType(target, KtNamedFunction::class.java)!!
+        )
+    }
+
+    fun testDescriptorSelectsExactOverload() {
+        addNavigationAnnotations()
+        val target = myFixture.addClass(
+            "package example; public class Target { void target() {} int target(int value) { return value; } }"
+        )
+        assertNavigation(
+            "@IndirectMixin(\"example.Target\")",
+            "descriptor = \"(I)I\", name = \"target\"",
+            target.methods.single { it.parameterList.parametersCount == 1 })
+    }
+
+    fun testEmptyDescriptorSelectsFirstOverload() {
+        addNavigationAnnotations()
+        val target = myFixture.addClass(
+            "package example; public class Target { void target() {} void target(int value) {} }"
+        )
+        assertNavigation(
+            "@DirectMixin(example.Target::class)", "\"target\", \"\"", target.methods.first { !it.isConstructor })
+    }
+
+    fun testNavigatesToInheritedPrivateMethod() {
+        addNavigationAnnotations()
+        val parent = myFixture.addClass("package example; public class Parent { private void target() {} }")
+        myFixture.addClass("package example; public class Target extends Parent {}")
+        assertNavigation(
+            "@DirectMixin(example.Target::class)", "\"target\"", parent.methods.single { !it.isConstructor })
+    }
+
+    fun testNavigatesToCompiledMethod() {
+        myFixture.withAnnotationLibrary(
+            "dev.karmakrafts.kcml.api.mixin.Inject", "dev.karmakrafts.kcml.api.mixin.IndirectMixin"
+        ) {
+            val marker = configureMarker(
+                """
+                    @IndirectMixin("dev/karmakrafts/kcml/api/mixin/Inject")
+                    class Example { @Inject("name", "()Ljava/lang/String;") fun <caret>inject() {} }
+                """.trimIndent()
+            )
+            val target = JavaPsiFacade.getInstance(project).findClass(
+                "dev.karmakrafts.kcml.api.mixin.Inject", GlobalSearchScope.allScope(project)
+            )!!
+            assertNavigation(marker, target.findMethodsByName("name", false).single())
+        }
+    }
+
+    fun testAliasedAnnotationsNavigateToNestedTarget() {
+        addNavigationAnnotations()
+        val target = myFixture.addClass(
+            "package example; public class Outer { public static class Nested { void target() {} } }"
+        )
+        val marker = configureMarker(
+            """
+                import dev.karmakrafts.kcml.api.mixin.Inject as Injection
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin as Mixin
+                @Mixin("example/Outer\${'$'}Nested")
+                class Example { @Injection("target") fun <caret>inject() {} }
+            """.trimIndent()
+        )
+        assertNavigation(marker, target.innerClasses.single().methods.single { !it.isConstructor })
+    }
+
+    fun testUnresolvedInjectionSitesHaveNoClickAction() {
+        addNavigationAnnotations()
+        myFixture.addClass("package example; public class Target { void target() {} }")
+        for (text in listOf(
+            "@Inject(\"target\") fun <caret>inject() {}",
+            "@IndirectMixin(\"example.Missing\") class Example { @Inject(\"target\") fun <caret>inject() {} }",
+            "@DirectMixin(example.Target::class) class Example { @Inject(\"missing\") fun <caret>inject() {} }",
+            "@DirectMixin(example.Target::class) class Example { @Inject(\"target\", \"(I)V\") fun <caret>inject() {} }"
+        )) {
+            val marker = configureMarker(text)
+            assertNull(text, marker.navigationHandler)
+            assertNull(text, marker.createGutterRenderer()!!.clickAction)
+        }
+    }
+
+    fun testClickResolvesCurrentInjectionName() {
+        addNavigationAnnotations()
+        val target = myFixture.addClass(
+            "package example; public class Target { void first() {} void second() {} }"
+        )
+        val marker = configureMarker(
+            "@DirectMixin(example.Target::class) class Example { @Inject(\"first\") fun <caret>inject() {} }"
+        )
+        replaceText("first", "second")
+        assertNavigation(marker, target.methods.single { it.name == "second" })
+    }
+
+    fun testNavigationBecomesAvailableAfterEditingName() {
+        addNavigationAnnotations()
+        myFixture.addClass("package example; public class Target { void target() {} }")
+        val unresolved = configureMarker(
+            "@DirectMixin(example.Target::class) class Example { @Inject(\"missing\") fun <caret>inject() {} }"
+        ).createGutterRenderer()!!
+        replaceText("missing", "target")
+        val resolved = collectMarker().createGutterRenderer()!!
+        assertNotNull(resolved.clickAction)
+        assertFalse(unresolved == resolved)
+    }
+
+    fun testNavigationDisappearsAfterEditingDescriptor() {
+        addNavigationAnnotations()
+        myFixture.addClass("package example; public class Target { void target() {} }")
+        val marker = configureMarker(
+            "@DirectMixin(example.Target::class) class Example { @Inject(\"target\", \"()V\") fun <caret>inject() {} }"
+        )
+        val resolved = marker.createGutterRenderer()!!
+        assertNotNull(resolved.clickAction)
+        replaceText("()V", "(I)V")
+        val unresolved = collectMarker().createGutterRenderer()!!
+        assertNull(unresolved.clickAction)
+        assertFalse(resolved == unresolved)
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        assertTrue(FileEditorManager.getInstance(project).selectedFiles.none { it.name == "Target.java" })
+    }
 
     fun testTopLevelFunction() {
         addAnnotation()
@@ -107,9 +251,56 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
         addAnnotationSource(
             "dev/karmakrafts/kcml/api/mixin/Inject.kt", """
                 package dev.karmakrafts.kcml.api.mixin
-                annotation class Inject(val name: String)
+                annotation class Inject(val name: String, val descriptor: String = "")
             """.trimIndent()
         )
+    }
+
+    private fun addNavigationAnnotations() {
+        addAnnotation()
+        addAnnotationSource(
+            "dev/karmakrafts/kcml/api/mixin/Mixins.kt", """
+                package dev.karmakrafts.kcml.api.mixin
+                annotation class DirectMixin(val target: kotlin.reflect.KClass<*>)
+                annotation class IndirectMixin(val target: String)
+            """.trimIndent()
+        )
+    }
+
+    private fun configureMarker(text: String): LineMarkerInfo<PsiElement> {
+        myFixture.configureByText("Injection.kt", "import dev.karmakrafts.kcml.api.mixin.*\n$text")
+        return collectMarker()
+    }
+
+    private fun collectMarker(): LineMarkerInfo<PsiElement> {
+        val declaration = PsiTreeUtil.getParentOfType(
+            myFixture.file.findElementAt(myFixture.caretOffset), KtNamedFunction::class.java
+        )!!
+        val markers = mutableListOf<LineMarkerInfo<*>>()
+        InjectLineMarkerProvider().collectSlowLineMarkers(listOf(declaration.nameIdentifier!!), markers)
+        @Suppress("UNCHECKED_CAST") return markers.single() as LineMarkerInfo<PsiElement>
+    }
+
+    private fun replaceText(old: String, new: String) {
+        val document = myFixture.editor.document
+        WriteCommandAction.runWriteCommandAction(project) {
+            val start = document.text.indexOf(old)
+            document.replaceString(start, start + old.length, new)
+            PsiDocumentManager.getInstance(project).commitDocument(document)
+        }
+    }
+
+    private fun assertNavigation(mixin: String, arguments: String, target: PsiElement) {
+        assertNavigation(configureMarker("$mixin class Example { @Inject($arguments) fun <caret>inject() {} }"), target)
+    }
+
+    private fun assertNavigation(marker: LineMarkerInfo<PsiElement>, target: PsiElement) {
+        assertNotNull("Injection marker should navigate to its target", marker.navigationHandler)
+        assertNotNull(marker.createGutterRenderer()!!.clickAction)
+        marker.navigationHandler!!.navigate(null, marker.element!!)
+        val manager = FileEditorManager.getInstance(project)
+        assertEquals(target.containingFile.virtualFile, manager.selectedFiles.single())
+        assertEquals(target.navigationElement.textOffset, manager.selectedTextEditor!!.caretModel.offset)
     }
 
     private fun assertMarkers(text: String, expected: Int) {

@@ -194,6 +194,12 @@ internal object ClassIndex {
         return methods.toList()
     }
 
+    fun findMethod(target: PsiClass, name: String, descriptor: String): PsiMethod? =
+        target.findMethodsByName(name, true).firstOrNull {
+            ProgressManager.checkCanceled()
+            !it.isConstructor && (descriptor.isEmpty() || it.descriptor(allowUnresolved = true) == descriptor)
+        }
+
     private fun readClass(file: VirtualFile): CompiledClass? = try {
         ProgressManager.checkCanceled()
         val reader = ClassReader(file.contentsToByteArray())
@@ -221,21 +227,27 @@ internal object ClassIndex {
         null
     }
 
-    private fun PsiMethod.descriptor(): String? = buildString {
+    private fun PsiMethod.descriptor(allowUnresolved: Boolean = false): String? = buildString {
         append('(')
         for (parameter in parameterList.parameters) {
             ProgressManager.checkCanceled()
-            append(parameter.type.descriptor() ?: return null)
+            append(parameter.type.descriptor(allowUnresolved) ?: return null)
         }
         append(')')
-        append(returnType?.descriptor() ?: return null)
+        append(returnType?.descriptor(allowUnresolved) ?: return null)
     }
 
-    private fun PsiType.descriptor(): String? {
+    private fun PsiType.descriptor(allowUnresolved: Boolean): String? {
         ProgressManager.checkCanceled()
         return when (val erased = TypeConversionUtil.erasure(this)) {
-            is PsiArrayType -> erased.componentType.descriptor()?.let { "[$it" }
-            is PsiClassType -> erased.resolve()?.binaryName()?.let { "L${it.replace('.', '/')};" }
+            is PsiArrayType -> erased.componentType.descriptor(allowUnresolved)?.let { "[$it" }
+            is PsiClassType -> {
+                val name = erased.resolve()?.binaryName() ?: erased.rawType().canonicalText.takeIf {
+                    allowUnresolved && '.' in it
+                } ?: return null
+                "L${name.replace('.', '/')};"
+            }
+
             is PsiPrimitiveType -> when (erased.canonicalText) {
                 "void" -> "V"
                 "boolean" -> "Z"
