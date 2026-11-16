@@ -23,13 +23,24 @@ import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
  * Entry point for a KCML compiler plugin discovered by scanning plugin classpaths for [Plugin].
  * Implementations must have an accessible no-argument constructor.
  *
- * KCML orders discovered plugins by their declared dependencies, calls [preInit] to register their
- * CLI options, and processes option values before calling [init]. Initialization completes before
- * KCML installs the Kotlin FIR and IR extension adapters. Implementations register the extensions
- * that should participate in this compilation through the supplied initialization context.
+ * KCML orders discovered plugins by their declared dependencies, calls [registerTargets] for all plugins,
+ * calls [preInit] to register their CLI options, and processes option values before calling [init].
+ * Initialization completes before KCML installs the Kotlin FIR and IR extension adapters. Implementations
+ * register the extensions that should participate in this compilation through the supplied initialization context.
  */
 public interface CompilerPlugin {
-    // TODO: document this
+    /**
+     * Registers compilation target factories before any plugin's [preInit] context is created.
+     *
+     * Called once per compilation in dependency order. The registry is scoped to the current
+     * compilation and already contains the built-in target factories. The default implementation
+     * registers no targets.
+     *
+     * The selected factory is invoked once, and its target is shared by the initialization contexts
+     * and backend adapters. Custom targets must implement the interface for the active Kotlin backend.
+     *
+     * @param registry registry used to realize targets for [preInit] and [init].
+     */
     public fun registerTargets(registry: CompileTargetRegistry): Unit = Unit
 
     /**

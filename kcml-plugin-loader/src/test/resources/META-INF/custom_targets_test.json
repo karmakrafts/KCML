@@ -1,0 +1,11 @@
+{
+    "id": "custom_targets_test",
+    "dependencies": [
+        {
+            "id": "options_test",
+            "required": true,
+            "order": "AFTER",
+            "version": null
+        }
+    ]
+}

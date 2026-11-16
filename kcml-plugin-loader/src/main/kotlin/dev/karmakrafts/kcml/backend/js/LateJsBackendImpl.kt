@@ -22,7 +22,7 @@ import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.JsCompileTarget
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.target.JsCompileTargetImpl
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 internal class LateJsBackendImpl(
     override val pluginId: String, override val context: JsIrBackendContext, override val loader: PluginLoader
 ) : LateJsBackend {
-    override val compileTarget: JsCompileTarget get() = JsCompileTargetImpl
+    override val compileTarget: JsCompileTarget by lazy { PluginLoaderImpl.getCompileTarget(config) as JsCompileTarget }
 
     @OptIn(MessageCollectorAccess::class)
     override val loggerFactory: LoggerFactory by lazy {

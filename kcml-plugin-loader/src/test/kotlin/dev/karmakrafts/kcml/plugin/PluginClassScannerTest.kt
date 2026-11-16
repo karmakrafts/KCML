@@ -41,29 +41,27 @@ class PluginClassScannerTest {
             val classes = linkedMapOf(
                 "sample/Plugin.class" to classBytes(
                     "sample/Plugin", Opcodes.ACC_PUBLIC, "Ldev/karmakrafts/kcml/api/plugin/Plugin;"
-                ),
-                "sample/AbstractPlugin.class" to classBytes(
-                    "sample/AbstractPlugin", Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT,
+                ), "sample/AbstractPlugin.class" to classBytes(
+                    "sample/AbstractPlugin",
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT,
                     "Ldev/karmakrafts/kcml/api/plugin/Plugin;"
-                ),
-                "sample/PluginInterface.class" to classBytes(
-                    "sample/PluginInterface", Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT or Opcodes.ACC_INTERFACE,
+                ), "sample/PluginInterface.class" to classBytes(
+                    "sample/PluginInterface",
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT or Opcodes.ACC_INTERFACE,
                     "Ldev/karmakrafts/kcml/api/plugin/Plugin;"
-                ),
-                "sample/OtherAnnotation.class" to classBytes(
+                ), "sample/OtherAnnotation.class" to classBytes(
                     "sample/OtherAnnotation", Opcodes.ACC_PUBLIC, "Ldev/karmakrafts/kcml/api/plugin/PluginExtra;"
-                ),
-                "sample/InvisiblePlugin.class" to classBytes(
-                    "sample/InvisiblePlugin", Opcodes.ACC_PUBLIC,
-                    "Ldev/karmakrafts/kcml/api/plugin/Plugin;", visible = false
-                ),
-                "sample/UnlinkablePlugin.class" to ClassWriter(0).run {
+                ), "sample/InvisiblePlugin.class" to classBytes(
+                    "sample/InvisiblePlugin",
+                    Opcodes.ACC_PUBLIC,
+                    "Ldev/karmakrafts/kcml/api/plugin/Plugin;",
+                    visible = false
+                ), "sample/UnlinkablePlugin.class" to ClassWriter(0).run {
                     visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "sample/UnlinkablePlugin", null, "missing/Parent", null)
                     visitAnnotation("Ldev/karmakrafts/kcml/api/plugin/Plugin;", true).visitEnd()
                     visitEnd()
                     toByteArray()
-                }
-            )
+                })
             for ((entry, bytes) in classes) {
                 val classFile = directory.resolve(entry)
                 Files.createDirectories(classFile.parent)
@@ -84,7 +82,8 @@ class PluginClassScannerTest {
 
             assertEquals(setOf("sample.Plugin", "sample.UnlinkablePlugin"), candidates.toSet())
             assertEquals(2, candidates.size)
-        } finally {
+        }
+        finally {
             directory.toFile().deleteRecursively()
         }
     }

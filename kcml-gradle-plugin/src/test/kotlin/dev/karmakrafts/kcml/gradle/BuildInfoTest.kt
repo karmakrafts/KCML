@@ -27,8 +27,9 @@ class BuildInfoTest {
             it.readText()
         }
         assertEquals("conflicting-version", conflictingVersion)
-        val componentVersion = BuildInfo::class.java
-            .getResourceAsStream("/dev/karmakrafts/kcml/gradle/kcml.version")!!.bufferedReader().use {
+        val componentVersion = BuildInfo::class.java.getResourceAsStream("/dev/karmakrafts/kcml/gradle/kcml.version")!!
+            .bufferedReader()
+            .use {
                 it.readText()
             }
         assertEquals(componentVersion, BuildInfo.version)

@@ -18,10 +18,12 @@ package dev.karmakrafts.kcml.plugin
 
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
+import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
 import org.jetbrains.kotlin.compiler.plugin.CommandLineProcessor
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.net.URLClassLoader
@@ -34,6 +36,8 @@ internal class CompilationState {
     val plugins: HashMap<String, CompilerPlugin> = HashMap()
     val metadata: HashMap<String, SerializablePluginMetadata> = HashMap()
     val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
+    val compileTargetRegistry: CompileTargetRegistryImpl = CompileTargetRegistryImpl()
+    var compileTarget: CompileTarget? = null
     val optionProcessors: ArrayList<CommandLineProcessor> = ArrayList()
     var commandLineProcessor: CommandLineProcessor? = null
     var arePluginsPreInitialized: Boolean = false

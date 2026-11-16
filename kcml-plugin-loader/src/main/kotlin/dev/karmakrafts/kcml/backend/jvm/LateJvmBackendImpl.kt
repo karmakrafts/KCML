@@ -22,8 +22,7 @@ import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
-import dev.karmakrafts.kcml.util.kcmlCompileTarget
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
@@ -31,7 +30,7 @@ import org.jetbrains.kotlin.config.messageCollector
 internal class LateJvmBackendImpl(
     override val pluginId: String, override val context: JvmBackendContext, override val loader: PluginLoader
 ) : LateJvmBackend {
-    override val compileTarget: JvmCompileTarget by lazy { JvmCompileTargetImpl(config.kcmlCompileTarget == "android") }
+    override val compileTarget: JvmCompileTarget by lazy { PluginLoaderImpl.getCompileTarget(config) as JvmCompileTarget }
 
     @OptIn(MessageCollectorAccess::class)
     override val loggerFactory: LoggerFactory by lazy {

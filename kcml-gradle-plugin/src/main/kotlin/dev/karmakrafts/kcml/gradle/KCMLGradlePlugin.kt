@@ -23,6 +23,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
 import org.gradle.api.tasks.ClasspathNormalizer
 import org.gradle.api.tasks.TaskProvider
+import org.jetbrains.kotlin.gradle.InternalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinJsCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
@@ -34,9 +35,12 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.targets.js.ir.JsIrBinary
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrLink
 import org.jetbrains.kotlin.gradle.targets.js.ir.KotlinJsIrTarget
+import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompilerPluginData
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
@@ -106,9 +110,11 @@ internal open class KCMLGradlePlugin @Inject constructor(
         logger.lifecycle("KCML attaches an agent to patch the compiler at runtime, this may cause warnings to appear")
     }
 
+    @OptIn(InternalKotlinGradlePluginApi::class)
     private fun configureTaskOptions(project: Project) {
         project.pluginManager.withPlugin(PluginIds.KOTLIN_MP) {
             project.afterEvaluate {
+                val extension = project.extensions.getByType(KCMLExtension::class.java)
                 // We need to load plugins during JS/WASM IR linking ourselves to get a bootstrap entrypoint
                 project.tasks.withType(KotlinJsIrLink::class.java) { task ->
                     project.logger.info("Configuring KCML task options for '${task.name}'")
@@ -122,6 +128,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         prepare.pluginClasspath.from(plugins, runtime)
                         prepare.cacheDirectory.set(task.rootCacheDirectory)
                         prepare.markerFile.set(project.layout.buildDirectory.file("kcml_js_cache/${task.name}.marker"))
+                        prepare.inputs.property("kcmlCompileTargetAliases", extension.compileTargetAliases)
                     }
                     task.dependsOn(prepareCache)
                     task.inputs.files(plugins, runtime)
@@ -129,6 +136,18 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         .withNormalizer(ClasspathNormalizer::class.java)
                 }
                 val kmpExtension = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+                // KGP forwards both subplugins' option providers to JS/Wasm binaries; don't add duplicate -P options.
+                kmpExtension.targets.filterIsInstance<KotlinJsIrTarget>().forEach { target ->
+                    target.compilations.forEach { compilation ->
+                        val options = applyToCompilation(compilation).map { options ->
+                            options.map { "${it.key}=${it.value}" }
+                        }
+                        compilation.binaries.withType(JsIrBinary::class.java).all { binary ->
+                            project.tasks.named("kcmlPrepareJsCache${binary.linkTask.name.replaceFirstChar { it.uppercase() }}")
+                                .configure { prepare -> prepare.inputs.property("kcmlPluginOptions", options) }
+                        }
+                    }
+                }
                 val nativeCacheTasks = HashMap<String, TaskProvider<KCMLPrepareNativeCacheTask>>()
                 kmpExtension.targets.filterIsInstance<KotlinNativeTarget>().forEach { target ->
                     target.binaries.forEach { binary ->
@@ -143,10 +162,38 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                 task.pluginClasspath.from(plugins, runtime)
                                 task.cacheDirectory.set(project.layout.buildDirectory.dir("kotlin-native-ic-cache/${binary.name}"))
                                 task.markerFile.set(project.layout.buildDirectory.file("kcml_native_cache/${binary.name}.marker"))
+                                task.inputs.property("kcmlCompileTargetAliases", extension.compileTargetAliases)
                             }
                         }
+                        val contributedOptions = applyToCompilation(binary.compilation)
+                        val options =
+                            bootstrapOptions(binary.compilation).zip(contributedOptions) { bootstrap, contributed ->
+                                CompilerPluginOptions().apply {
+                                    bootstrap.forEach { addPluginArgument("${BuildInfo.PLUGIN_ID}.bootstrap", it) }
+                                    contributed.forEach { addPluginArgument(BuildInfo.PLUGIN_ID, it) }
+                                }
+                            }
+                        prepareCache.configure { task ->
+                            task.inputs.property("kcmlPluginOptions${target.name}", contributedOptions.map { options ->
+                                options.map { "${it.key}=${it.value}" }
+                            })
+                        }
                         binary.linkTaskProvider.configure { task ->
+                            val existingData = task.kotlinPluginData
+                            val classpath = project.files(plugins, runtime)
+                            task.kotlinPluginData = options.map { linkOptions ->
+                                val previous = existingData?.orNull
+                                KotlinCompilerPluginData(
+                                    previous?.classpath?.plus(classpath) ?: classpath, CompilerPluginOptions().apply {
+                                        previous?.options?.let { addPluginArgument(it) }
+                                        addPluginArgument(linkOptions)
+                                    }, previous?.inputsOutputsState ?: KotlinCompilerPluginData.InputsOutputsState(
+                                        emptyMap(), emptySet(), emptySet()
+                                    )
+                                )
+                            }
                             task.dependsOn(prepareCache)
+                            task.inputs.property("kcmlPluginOptions", options.map { it.arguments })
                             task.inputs.files(plugins, runtime)
                                 .withPropertyName("kcmlPluginClasspath")
                                 .withNormalizer(ClasspathNormalizer::class.java)
@@ -280,14 +327,16 @@ internal open class KCMLGradlePlugin @Inject constructor(
 
     internal fun bootstrapOptions(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
-        val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
-            it.file.toPath().absolutePathString()
-        }
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
-        val moduleName = getModuleName(kotlinCompilation)
-        val compileTarget = getCompileTarget(kotlinCompilation)
         val konanTarget = getKonanTarget(kotlinCompilation)
         return providerFactory.provider {
+            val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
+                it.file.toPath().absolutePathString()
+            }
+            val moduleName = getModuleName(kotlinCompilation)
+            val compileTarget = getCompileTarget(kotlinCompilation)?.let { alias ->
+                extension.compileTargetAliases.get()[alias] ?: alias
+            }
             buildList {
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))

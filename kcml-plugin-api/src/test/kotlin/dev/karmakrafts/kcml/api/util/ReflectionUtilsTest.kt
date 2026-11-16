@@ -110,8 +110,7 @@ class ReflectionUtilsTest {
     @Test
     fun `constructs instances with zero multiple assignable and nullable arguments`() {
         assertEquals(
-            NoArgumentConstructorFixture::class.java,
-            ReflectionUtils.new<NoArgumentConstructorFixture>().javaClass
+            NoArgumentConstructorFixture::class.java, ReflectionUtils.new<NoArgumentConstructorFixture>().javaClass
         )
         assertEquals("value", ReflectionUtils.new<ConstructorFixture>("value", "suffix").text)
         assertEquals("suffix", ReflectionUtils.new<ConstructorFixture>("value", "suffix").suffix)
@@ -160,16 +159,14 @@ class ReflectionUtilsTest {
         val fixture = LeafFixture()
 
         assertEquals(
-            "root field",
-            ReflectionUtils.getSuperField<LeafFixture, String>("RootFixture", "rootField", fixture)
+            "root field", ReflectionUtils.getSuperField<LeafFixture, String>("RootFixture", "rootField", fixture)
         )
         assertEquals(
             "private root field",
             ReflectionUtils.getSuperField<LeafFixture, String>("RootFixture", "privateRootField", fixture)
         )
         assertEquals(
-            "static root field",
-            ReflectionUtils.getSuperField<LeafFixture, String>("RootFixture", "staticRootField")
+            "static root field", ReflectionUtils.getSuperField<LeafFixture, String>("RootFixture", "staticRootField")
         )
         assertEquals(
             "interface field",
@@ -193,8 +190,7 @@ class ReflectionUtilsTest {
 
         assertEquals("public property", ReflectionUtils.getProperty<PropertyFixture, String>("publicProperty", fixture))
         assertEquals(
-            "private property",
-            ReflectionUtils.getProperty<PropertyFixture, String>("privateProperty", fixture)
+            "private property", ReflectionUtils.getProperty<PropertyFixture, String>("privateProperty", fixture)
         )
         assertEquals("static property", ReflectionUtils.getProperty<PropertyFixture, String>("staticProperty"))
     }

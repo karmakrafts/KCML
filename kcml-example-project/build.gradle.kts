@@ -33,6 +33,15 @@ plugins {
 
 kcml {
     agentLogging = true
+    compileTargetAliases.putAll(
+        mapOf(
+            "jvm" to "example_jvm",
+            "android" to "example_android",
+            "js" to "example_js",
+            "wasm" to "example_wasm",
+            "native" to "example_native"
+        )
+    )
 }
 
 kotlin {

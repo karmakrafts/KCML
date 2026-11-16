@@ -19,51 +19,67 @@ package dev.karmakrafts.kcml.example
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import dev.karmakrafts.kcml.api.target.JsCompileTarget
-import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
-import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.api.target.whenCompilingFor
 import dev.karmakrafts.kcml.example.js.ExampleJsCodeGenerationExtension
+import dev.karmakrafts.kcml.example.js.ExampleJsCompileTarget
 import dev.karmakrafts.kcml.example.js.ExampleJsIntrinsicsExtension
 import dev.karmakrafts.kcml.example.js.ExampleLateJsExtension
 import dev.karmakrafts.kcml.example.jvm.ExampleJvmCodeGenerationExtension
+import dev.karmakrafts.kcml.example.jvm.ExampleJvmCompileTarget
 import dev.karmakrafts.kcml.example.jvm.ExampleJvmIntrinsicsExtension
 import dev.karmakrafts.kcml.example.llvm.ExampleLateNativeExtension
 import dev.karmakrafts.kcml.example.llvm.ExampleNativeCodeGenerationExtension
+import dev.karmakrafts.kcml.example.llvm.ExampleNativeCompileTarget
 import dev.karmakrafts.kcml.example.llvm.ExampleNativeIntrinsicsExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleLateWasmExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmCodeGenerationExtension
+import dev.karmakrafts.kcml.example.wasm.ExampleWasmCompileTarget
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
 
 @Suppress("UNUSED")
 @Plugin("example")
 class ExamplePlugin : CompilerPlugin {
+    override fun registerTargets(registry: CompileTargetRegistry) {
+        val nativeFactory = registry.factories.getValue(NativeCompileTarget)
+        registry.apply {
+            register(ExampleJvmCompileTarget) { ExampleJvmCompileTarget(false) }
+            register(ExampleJvmCompileTarget.AndroidType) { ExampleJvmCompileTarget(true) }
+            register(ExampleJsCompileTarget.Type) { ExampleJsCompileTarget }
+            register(ExampleWasmCompileTarget.Type) { ExampleWasmCompileTarget }
+            register(ExampleNativeCompileTarget) { config ->
+                ExampleNativeCompileTarget((nativeFactory(config) as NativeCompileTarget).konanTarget)
+            }
+        }
+    }
+
     override fun init(context: InitializationContext) {
         context.logger.info("Loading example plugin!")
         context.extensionRegistry.apply {
             register(ExampleFirExtension())
             register(ExampleIrExtension())
             register(ExampleIrIntrinsicsExtension())
+
             // JVM
-            context.whenCompilingFor(JvmCompileTarget) {
+            context.whenCompilingFor(ExampleJvmCompileTarget, ExampleJvmCompileTarget.AndroidType) {
                 register(ExampleJvmCodeGenerationExtension())
                 register(ExampleJvmIntrinsicsExtension())
             }
             // JS
-            context.whenCompilingFor(JsCompileTarget) {
+            context.whenCompilingFor(ExampleJsCompileTarget.Type) {
                 register(ExampleLateJsExtension())
                 register(ExampleJsCodeGenerationExtension())
                 register(ExampleJsIntrinsicsExtension())
             }
             // LLVM
-            context.whenCompilingFor(NativeCompileTarget) {
+            context.whenCompilingFor(ExampleNativeCompileTarget) {
                 register(ExampleLateNativeExtension())
                 register(ExampleNativeCodeGenerationExtension())
                 register(ExampleNativeIntrinsicsExtension())
             }
             // WASM
-            context.whenCompilingFor(WasmCompileTarget) {
+            context.whenCompilingFor(ExampleWasmCompileTarget.Type) {
                 register(ExampleLateWasmExtension())
                 register(ExampleWasmCodeGenerationExtension())
                 register(ExampleWasmIntrinsicsExtension())

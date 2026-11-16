@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.gradle
 import org.gradle.api.Project
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
 import javax.inject.Inject
 
@@ -36,6 +37,16 @@ abstract class KCMLExtension @Inject internal constructor( // @formatter:off
      * The default value is `false`.
      */
     val agentLogging: Property<Boolean> = objects.property(Boolean::class.java).convention(false)
+
+    /**
+     * Maps automatically selected platform aliases to custom compile target aliases.
+     *
+     * Keys are `common`, `jvm`, `android`, `js`, `wasm`, or `native`. Unmapped platforms keep their
+     * built-in aliases. For example, `compileTargetAliases.put("jvm", "example_jvm")` selects a
+     * plugin-provided JVM target without replacing the built-in factory.
+     */
+    val compileTargetAliases: MapProperty<String, String> =
+        objects.mapProperty(String::class.java, String::class.java).convention(emptyMap())
 
     /**
      * The inclusive lower bound of the port range used for agent communication.

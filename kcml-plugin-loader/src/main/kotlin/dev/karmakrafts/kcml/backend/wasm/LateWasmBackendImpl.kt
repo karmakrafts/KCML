@@ -20,9 +20,9 @@ import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
-import dev.karmakrafts.kcml.target.WasmCompileTargetImpl
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
@@ -36,7 +36,7 @@ internal class LateWasmBackendImpl(
     override val declarationContext: WasmDeclarationCodegenContext?,
     override val loader: PluginLoader
 ) : LateWasmBackend {
-    override val compileTarget: CompileTarget get() = WasmCompileTargetImpl
+    override val compileTarget: WasmCompileTarget by lazy { PluginLoaderImpl.getCompileTarget(config) as WasmCompileTarget }
 
     @OptIn(MessageCollectorAccess::class)
     override val loggerFactory: LoggerFactory by lazy {

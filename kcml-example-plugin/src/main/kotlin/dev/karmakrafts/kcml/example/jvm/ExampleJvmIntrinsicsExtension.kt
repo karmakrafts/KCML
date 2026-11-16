@@ -39,7 +39,7 @@ internal class ExampleJvmIntrinsicsExtension : AbstractExtension(), JvmIntrinsic
         check(backend.config === backend.context.configuration)
         check(backend.irBuiltIns === backend.context.irBuiltIns)
         check(backend.symbols === backend.context.symbols)
-        check(backend.compileTarget.name == "JVM" || backend.compileTarget.isAndroid)
+        check(backend.compileTarget is ExampleJvmCompileTarget)
         initializationCount++
     }
 

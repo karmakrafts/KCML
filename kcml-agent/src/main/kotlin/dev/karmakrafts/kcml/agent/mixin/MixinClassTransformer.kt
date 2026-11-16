@@ -93,6 +93,10 @@ internal class MixinClassTransformer( // @formatter:off
             if (!className.startsWith(pkgName)) continue
             return classfileBuffer // Skip any classes which are part of a blacklisted package
         }
+        // Gradle also loads Native utilities, but cannot resolve compiler-only hooks.
+        if (className.startsWith("org/jetbrains/kotlin/") &&
+            loader?.getResource("org/jetbrains/kotlin/config/CompilerConfiguration.class") == null
+        ) return classfileBuffer
         val type = Type.getObjectType(className)
         try {
             if (this.loader.isMixin(type)) {

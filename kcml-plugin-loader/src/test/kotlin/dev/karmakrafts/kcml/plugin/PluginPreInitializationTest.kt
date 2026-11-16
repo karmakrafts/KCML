@@ -20,8 +20,12 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
+import dev.karmakrafts.kcml.api.target.CompileTargetFactory
+import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
+import dev.karmakrafts.kcml.api.target.CompileTargetType
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
+import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
@@ -50,10 +54,17 @@ class OptionsTestPlugin : CompilerPlugin {
         val entriesKey: CompilerConfigurationKey<List<String>> = CompilerConfigurationKey.create("options_test.entries")
     }
 
+    var registerTargetsCount: Int = 0
     var preInitCount: Int = 0
     var initCount: Int = 0
     var initializedValue: Int? = null
     var compileTargetName: String? = null
+    var initializedCompileTargetName: String? = null
+
+    override fun registerTargets(registry: CompileTargetRegistry) {
+        assertEquals("options_test", PluginLoaderImpl.loadingPluginId)
+        ++registerTargetsCount
+    }
 
     override fun preInit(context: PreInitializationContext) {
         assertEquals("options_test", PluginLoaderImpl.loadingPluginId)
@@ -73,6 +84,45 @@ class OptionsTestPlugin : CompilerPlugin {
         assertEquals(1, preInitCount)
         ++initCount
         initializedValue = context.config[valueKey]
+        initializedCompileTargetName = context.compileTarget.name
+    }
+}
+
+@Plugin("custom_targets_test")
+class CustomTargetsTestPlugin : CompilerPlugin {
+    var registerTargetsCount: Int = 0
+
+    override fun registerTargets(registry: CompileTargetRegistry) {
+        assertEquals("custom_targets_test", PluginLoaderImpl.loadingPluginId)
+        val dependency = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+        assertEquals(1, dependency.registerTargetsCount)
+        assertEquals(0, dependency.preInitCount)
+        ++registerTargetsCount
+        registry.register(object : CompileTargetType {
+            override val aliases: Set<String> = setOf("custom_test")
+        }, CompileTargetFactory { config ->
+            assertEquals("custom_test", config.kcmlCompileTarget)
+            JvmCompileTargetImpl(false, "Custom JVM")
+        })
+    }
+
+    override fun init(context: InitializationContext) {
+        assertEquals("Custom JVM", context.compileTarget.name)
+    }
+}
+
+@Plugin("failing_targets_test")
+class FailingTargetsTestPlugin : CompilerPlugin {
+    override fun registerTargets(registry: CompileTargetRegistry) {
+        error("registerTargets failure")
+    }
+
+    override fun preInit(context: PreInitializationContext) {
+        error("preInit must not run after registerTargets fails")
+    }
+
+    override fun init(context: InitializationContext) {
+        error("init must not run after registerTargets fails")
     }
 }
 
@@ -139,6 +189,112 @@ class PluginPreInitializationTest {
             reset()
             directory.toFile().deleteRecursively()
         }
+    }
+
+    @Test
+    fun `standalone argument entrypoint restores the custom target selection`() = checkStandaloneTargetSelection(false)
+
+    @Test
+    fun `standalone path entrypoint restores the custom target selection`() = checkStandaloneTargetSelection(true)
+
+    private fun checkStandaloneTargetSelection(usePaths: Boolean) = withPlugin(
+        arrayOf("plugin:kcml.bootstrap:compileTarget=custom_test", "plugin:kcml:options_testValue=5"),
+        listOf(OptionsTestPlugin::class.java, CustomTargetsTestPlugin::class.java),
+        compileTarget = null
+    ) { config, arguments ->
+        config.isReadOnly = true
+        if (usePaths) {
+            PluginLoaderImpl.loadAndInvokeStandalone(
+                config, arguments.pluginClasspaths.map { Path.of(it).toUri().toURL() }, "js"
+            )
+        }
+        else PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+        val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+        assertEquals("Custom JVM", plugin.compileTargetName)
+        assertEquals("Custom JVM", plugin.initializedCompileTargetName)
+        assertEquals(5, plugin.initializedValue)
+        assertNull(config.kcmlCompileTarget)
+    }
+
+    @Test
+    fun `standalone bootstrap options do not override an explicit target selection`() = withPlugin(
+        arrayOf("plugin:kcml.bootstrap:compileTarget=jvm", "plugin:kcml:options_testValue=5"),
+        listOf(OptionsTestPlugin::class.java, CustomTargetsTestPlugin::class.java),
+        compileTarget = "custom_test"
+    ) { config, arguments ->
+        PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+        assertEquals("Custom JVM", (PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin).compileTargetName)
+        assertEquals("custom_test", config.kcmlCompileTarget)
+    }
+
+    @Test
+    fun `standalone links without a bootstrap alias keep the platform fallback`() = withPlugin(
+        arrayOf("plugin:kcml:options_testValue=5"), compileTarget = null
+    ) { config, arguments ->
+        PluginLoaderImpl.loadAndInvokeStandalone(
+            config, arguments.pluginClasspaths.map { Path.of(it).toUri().toURL() }, "jvm"
+        )
+        assertEquals("JVM", (PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin).compileTargetName)
+        assertNull(config.kcmlCompileTarget)
+    }
+
+    @Test
+    fun `all targets are registered before preInit and reset between standalone invocations`() = withPlugin(
+        arrayOf("plugin:kcml:options_testValue=1"),
+        listOf(OptionsTestPlugin::class.java, CustomTargetsTestPlugin::class.java),
+        compileTarget = "custom_test"
+    ) { config, arguments ->
+        repeat(2) {
+            CommonHooks.onExecImpl(K2JVMCompiler(), arguments)
+            PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+            PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+            val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+            assertEquals(1, plugin.registerTargetsCount)
+            assertEquals(1, plugin.preInitCount)
+            assertEquals(1, plugin.initCount)
+            assertEquals("Custom JVM", plugin.compileTargetName)
+            assertEquals("Custom JVM", plugin.initializedCompileTargetName)
+            val provider = PluginLoaderImpl.getPlugin("custom_targets_test") as CustomTargetsTestPlugin
+            assertEquals(1, provider.registerTargetsCount)
+        }
+        CommonHooks.onExecImpl(K2JVMCompiler(), arguments)
+        withPlugin(arrayOf("plugin:kcml:options_testValue=1"), compileTarget = "custom_test") { config, arguments ->
+            assertFailsWith<NoSuchElementException> {
+                PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+            }
+        }
+    }
+
+    @Test
+    fun `early bootstrap registers custom targets once before the registrar initializes plugins`() = withPlugin(
+        arrayOf("plugin:kcml:options_testValue=7"),
+        listOf(OptionsTestPlugin::class.java, CustomTargetsTestPlugin::class.java),
+        compileTarget = "custom_test"
+    ) { config, arguments ->
+        config.kcmlPluginClasspaths = arguments.pluginClasspaths.map(Path::of)
+        PluginLoaderImpl.preInitialize(config)
+        val plugin = PluginLoaderImpl.getPlugin("options_test") as OptionsTestPlugin
+        assertEquals("Custom JVM", plugin.compileTargetName)
+        assertEquals(0, plugin.initCount)
+        processCompilerPluginsOptions(
+            config, arguments.pluginOptions.asIterable(), listOf(PluginLoaderImpl.commandLineProcessor)
+        )
+        with(PluginLoaderImpl) { CompilerPluginRegistrar.ExtensionStorage().loadAndInvoke(config) }
+        assertEquals(1, plugin.registerTargetsCount)
+        assertEquals(1, plugin.initCount)
+        assertEquals("Custom JVM", plugin.initializedCompileTargetName)
+        val provider = PluginLoaderImpl.getPlugin("custom_targets_test") as CustomTargetsTestPlugin
+        assertEquals(1, provider.registerTargetsCount)
+    }
+
+    @Test
+    fun `target registration failures are propagated and clear the active plugin ID`() = withPlugin(
+        emptyArray(), listOf(FailingTargetsTestPlugin::class.java)
+    ) { config, arguments ->
+        assertEquals("registerTargets failure", assertFailsWith<IllegalStateException> {
+            PluginLoaderImpl.loadAndInvokeStandalone(config, arguments)
+        }.message)
+        assertNull(PluginLoaderImpl.loadingPluginId)
     }
 
     @Test

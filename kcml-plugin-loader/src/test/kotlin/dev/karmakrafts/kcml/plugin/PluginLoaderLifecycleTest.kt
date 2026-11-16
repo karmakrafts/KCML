@@ -181,8 +181,13 @@ class PluginLoaderLifecycleTest {
         try {
             val classFile = directory.resolve(LifecycleTestPlugin::class.java.name.replace('.', '/') + ".class")
             Files.createDirectories(classFile.parent)
-            LifecycleTestPlugin::class.java.getResourceAsStream("/${LifecycleTestPlugin::class.java.name.replace('.', '/')}.class")!!
-                .use { Files.copy(it, classFile) }
+            LifecycleTestPlugin::class.java.getResourceAsStream(
+                "/${
+                    LifecycleTestPlugin::class.java.name.replace(
+                        '.', '/'
+                    )
+                }.class"
+            )!!.use { Files.copy(it, classFile) }
             val urls = listOf(directory.toUri().toURL())
             val compiler = K2JVMCompiler()
 

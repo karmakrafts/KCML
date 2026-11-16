@@ -24,6 +24,7 @@ import dev.karmakrafts.kcml.api.extension.js.LateJsExtension
 @ExtensionId("example_late_js_extension")
 internal class ExampleLateJsExtension : AbstractExtension(), LateJsExtension {
     override fun init(backend: LateJsBackend) {
+        check(backend.compileTarget === ExampleJsCompileTarget)
         backend.logger.info("Hello from the late JS extension")
     }
 }

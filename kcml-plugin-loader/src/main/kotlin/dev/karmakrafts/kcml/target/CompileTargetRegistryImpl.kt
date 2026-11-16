@@ -31,7 +31,7 @@ import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.util.concurrent.ConcurrentHashMap
 
-internal object CompileTargetRegistryImpl : CompileTargetRegistry {
+internal class CompileTargetRegistryImpl : CompileTargetRegistry {
     override val factories: ConcurrentHashMap<CompileTargetType, CompileTargetFactory> = ConcurrentHashMap()
 
     init {

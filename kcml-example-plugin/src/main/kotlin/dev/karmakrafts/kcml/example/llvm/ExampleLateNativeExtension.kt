@@ -24,6 +24,7 @@ import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
 @ExtensionId("late_native_example")
 internal class ExampleLateNativeExtension : AbstractExtension(), LateNativeExtension {
     override fun init(backend: LateNativeBackend) {
+        check(backend.compileTarget is ExampleNativeCompileTarget)
         backend.logger.info("Hello from the late native extension")
     }
 }

@@ -21,6 +21,7 @@ import org.gradle.api.Project
 import org.gradle.api.provider.Provider
 import org.gradle.testfixtures.ProjectBuilder
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import java.nio.file.Files
@@ -61,6 +62,38 @@ class KCMLCompilerOptionsTest {
             assertTrue(bootstrapOptions.any { it.key == "agentCommPort" })
             assertTrue(bootstrapOptions.none { it.key == "options_testEnabled" })
             assertEquals(plugin.getPluginArtifact().artifactId, bootstrap.getPluginArtifact().artifactId)
+
+            val extension = project.extensions.getByType(KCMLExtension::class.java)
+            val targetOptions = bootstrap.applyToCompilation(compilation)
+            assertEquals("jvm", targetOptions.get().single { it.key == "compileTarget" }.value)
+            extension.compileTargetAliases.put("js", "example_js")
+            assertEquals("jvm", targetOptions.get().single { it.key == "compileTarget" }.value)
+            extension.compileTargetAliases.put("jvm", "example_jvm")
+            assertEquals("example_jvm", targetOptions.get().single { it.key == "compileTarget" }.value)
+            extension.compileTargetAliases.set(emptyMap())
+            assertEquals("jvm", targetOptions.get().single { it.key == "compileTarget" }.value)
+        }
+        finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `native target alias override preserves the Konan target`() {
+        val directory = Files.createTempDirectory(Path.of("build"), "native-target-options-").toAbsolutePath()
+        try {
+            val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
+            project.pluginManager.apply("org.jetbrains.kotlin.multiplatform")
+            project.pluginManager.apply(KCMLGradlePlugin::class.java)
+            val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
+            val target = kotlin.linuxX64()
+            val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
+            val options = bootstrap.applyToCompilation(target.compilations.getByName("main"))
+            assertEquals("native", options.get().single { it.key == "compileTarget" }.value)
+            val extension = project.extensions.getByType(KCMLExtension::class.java)
+            extension.compileTargetAliases.put("native", "example_native")
+            assertEquals("example_native", options.get().single { it.key == "compileTarget" }.value)
+            assertEquals(target.konanTarget.name, options.get().single { it.key == "konanTarget" }.value)
         }
         finally {
             directory.toFile().deleteRecursively()

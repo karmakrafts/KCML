@@ -24,6 +24,7 @@ import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 @ExtensionId("example_late_wasm_extension")
 internal class ExampleLateWasmExtension : AbstractExtension(), LateWasmExtension {
     override fun init(backend: LateWasmBackend) {
+        check(backend.compileTarget === ExampleWasmCompileTarget)
         backend.logger.info("Hello from the late WASM extension")
     }
 }

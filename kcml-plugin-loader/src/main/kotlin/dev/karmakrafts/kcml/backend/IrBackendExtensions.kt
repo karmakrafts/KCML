@@ -27,9 +27,9 @@ import dev.karmakrafts.kcml.backend.wasm.WasmBackendImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.platform.js.JsPlatforms
-import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
-import org.jetbrains.kotlin.platform.konan.NativePlatforms
-import org.jetbrains.kotlin.platform.wasm.WasmPlatforms
+import org.jetbrains.kotlin.platform.jvm.isJvm
+import org.jetbrains.kotlin.platform.konan.isNative
+import org.jetbrains.kotlin.platform.wasm.isWasm
 
 internal fun IrBackend.Companion.create( // @formatter:off
     pluginId: String,
@@ -38,10 +38,13 @@ internal fun IrBackend.Companion.create( // @formatter:off
     loggerFactory: LoggerFactory,
     logger: Logger,
     loader: PluginLoader
-): IrBackend = when (context.platform) { // @formatter:on
-    in JvmPlatforms.allJvmPlatforms -> JvmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
-    in JsPlatforms.allJsPlatforms -> JsBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
-    in WasmPlatforms.allWasmPlatforms -> WasmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
-    in NativePlatforms.allNativePlatforms -> NativeBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+): IrBackend = when { // @formatter:on
+    context.platform.isJvm() -> JvmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+    context.platform in JsPlatforms.allJsPlatforms -> JsBackendImpl(
+        pluginId, context, config, loggerFactory, logger, loader
+    )
+
+    context.platform.isWasm() -> WasmBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
+    context.platform.isNative() -> NativeBackendImpl(pluginId, context, config, loggerFactory, logger, loader)
     else -> error("Unsupported compiler backend")
 }

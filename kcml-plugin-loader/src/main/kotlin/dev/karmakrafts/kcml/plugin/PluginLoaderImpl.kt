@@ -29,6 +29,8 @@ import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
+import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.hooks.CommonHooks
@@ -38,6 +40,7 @@ import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
+import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import io.github.alexandrepiveteau.graphs.DirectedGraph
 import io.github.alexandrepiveteau.graphs.Vertex
@@ -57,6 +60,7 @@ import org.jetbrains.kotlin.compiler.plugin.parseLegacyPluginOption
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
+import org.jetbrains.kotlin.konan.config.konanTarget
 import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
@@ -86,6 +90,20 @@ object PluginLoaderImpl : PluginLoader {
 
     private val sortedPlugins: LinkedHashMap<String, CompilerPlugin>
         get() = compilationState.get().sortedPlugins
+
+    private val compileTargetRegistry: CompileTargetRegistryImpl
+        get() = compilationState.get().compileTargetRegistry
+
+    internal val compileTargetOrNull: CompileTarget?
+        get() = compilationState.get().compileTarget
+
+    internal fun getCompileTarget(config: CompilerConfiguration): CompileTarget {
+        val state = compilationState.get()
+        return state.compileTarget ?: compileTargetRegistry.createTarget(config).also { target ->
+            state.compileTarget = target
+            if (target is NativeCompileTarget) config.konanTarget = target.konanTarget.name
+        }
+    }
 
     private var arePluginsLoaded: Boolean
         get() = compilationState.get().arePluginsLoaded
@@ -275,7 +293,7 @@ object PluginLoaderImpl : PluginLoader {
                     loader = this,
                     ipm = getOrCreateIpm(pluginId),
                     storage = getOrCreatePluginStorage(pluginId),
-                    compileTarget = CompileTargetRegistryImpl.createTarget(config)
+                    compileTarget = getCompileTarget(config)
                 )
                 ) // @formatter:on
             } catch (error: Throwable) {
@@ -307,9 +325,13 @@ object PluginLoaderImpl : PluginLoader {
         try {
             for ([pluginId, plugin] in sortedPlugins) {
                 loadingPluginId = pluginId
+                plugin.registerTargets(compileTargetRegistry)
+            }
+            for ([pluginId, plugin] in sortedPlugins) {
+                loadingPluginId = pluginId
                 val context = PreInitializationContext( // @formatter:off
                     storage = getOrCreatePluginStorage(pluginId),
-                    compileTarget = CompileTargetRegistryImpl.createTarget(config)
+                    compileTarget = getCompileTarget(config)
                 ) // @formatter:on
                 plugin.preInit(context)
                 state.optionProcessors += context.createCommandLineProcessor(pluginId)
@@ -391,17 +413,32 @@ object PluginLoaderImpl : PluginLoader {
         arePluginsLoaded = true
     }
 
+    private fun standaloneConfiguration(
+        config: CompilerConfiguration, options: Iterable<String>?, fallbackTarget: String? = null
+    ): CompilerConfiguration {
+        if (config.kcmlCompileTarget != null) return config
+        val target = parseOptions(options).lastOrNull { (val pluginId, val optionName) ->
+            pluginId == "${KCMLConstants.PLUGIN_ID}.bootstrap" && optionName == "compileTarget"
+        }?.value ?: fallbackTarget ?: return config
+        // Incremental JS/Wasm link contexts omit bootstrap settings and may be read-only.
+        return config.copy().apply { kcmlCompileTarget = target }
+    }
+
     // Invoked standalone for things like linking tasks
     @Synchronized
     fun loadAndInvokeStandalone(config: CompilerConfiguration, arguments: CommonCompilerArguments) {
-        setupLogging(config)
-        loadAllPlugins(config, arguments.pluginOptions.asIterable()) { loadCandidates(arguments) }
+        val options = arguments.pluginOptions.asIterable()
+        val loaderConfig = standaloneConfiguration(config, options)
+        setupLogging(loaderConfig)
+        loadAllPlugins(loaderConfig, options) { loadCandidates(arguments) }
     }
 
     @Synchronized
-    fun loadAndInvokeStandalone(config: CompilerConfiguration, pluginPaths: List<URL>) {
-        setupLogging(config)
-        loadAllPlugins(config) { loadCandidates(pluginPaths) }
+    fun loadAndInvokeStandalone(config: CompilerConfiguration, pluginPaths: List<URL>, fallbackTarget: String? = null) {
+        val options = CommonHooks.compilerArgumentsOrNull?.pluginOptions?.asIterable()
+        val loaderConfig = standaloneConfiguration(config, options, fallbackTarget)
+        setupLogging(loaderConfig)
+        loadAllPlugins(loaderConfig, options) { loadCandidates(pluginPaths) }
     }
 
     // Invoked through a delegate IR plugin

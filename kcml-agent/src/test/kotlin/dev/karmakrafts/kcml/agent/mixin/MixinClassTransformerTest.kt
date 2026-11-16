@@ -41,12 +41,16 @@ class MixinClassTransformerTest {
         visitEnd()
     }.toByteArray()
 
-    private fun withLoader(rewriteAccess: Int? = null, test: (MixinLoader, Path, ByteArray) -> Unit) {
+    private fun withLoader(
+        rewriteAccess: Int? = null,
+        targetName: String = "example/Target",
+        test: (MixinLoader, Path, ByteArray) -> Unit
+    ) {
         val directory = Files.createTempDirectory(Path.of("build"), "mixin-transformer-test-")
         try {
             val mixin = createClass("example/Mixin") {
                 visitAnnotation(Types.Mixin.indirectMixin.descriptor, false).apply {
-                    visit("target", "example.Target")
+                    visit("target", targetName.replace('/', '.'))
                     visitEnd()
                 }
                 rewriteAccess?.let { access ->
@@ -67,7 +71,7 @@ class MixinClassTransformerTest {
                     }
                     visitCode()
                     visitInsn(Opcodes.ICONST_2)
-                    visitFieldInsn(Opcodes.PUTSTATIC, "example/Target", "result", "I")
+                    visitFieldInsn(Opcodes.PUTSTATIC, targetName, "result", "I")
                     visitInsn(Opcodes.RETURN)
                     visitMaxs(1, 0)
                     visitEnd()
@@ -103,6 +107,35 @@ class MixinClassTransformerTest {
         val transformer = MixinClassTransformer(NoopLogger, loader, null)
 
         assertSame(mixin, transformer.transform(null, null, "example/Mixin", null, null, mixin))
+    }
+
+    @Test
+    fun `leaves Gradle native utilities untouched outside compiler class loaders`() {
+        val targetName = "org/jetbrains/kotlin/konan/target/HostManager"
+        withLoader(Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, targetName) { loader, _, _ ->
+            val target = createClass(targetName) {
+                visitField(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "result", "I", null, null).visitEnd()
+                visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "value", "()I", null, null).apply {
+                    visitCode()
+                    visitFieldInsn(Opcodes.GETSTATIC, targetName, "result", "I")
+                    visitInsn(Opcodes.IRETURN)
+                    visitMaxs(1, 0)
+                    visitEnd()
+                }
+            }
+            val gradleLoader = object : ClassLoader(null) {}
+            for (retransformable in listOf(false, true)) {
+                val injectedLoaders = ArrayList<ClassLoader>()
+                val transformer = MixinClassTransformer(
+                    NoopLogger, loader, null, { injectedLoaders += it }, retransformable
+                )
+
+                assertSame(target, transformer.transform(null, gradleLoader, targetName, null, null, target))
+                assertTrue(injectedLoaders.isEmpty())
+                assertNotSame(target, transformer.transform(null, javaClass.classLoader, targetName, null, null, target))
+                assertEquals(listOf(javaClass.classLoader), injectedLoaders)
+            }
+        }
     }
 
     @Test

@@ -22,7 +22,7 @@ import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.hooks.llvm.NativeGenerationStateView
-import dev.karmakrafts.kcml.target.NativeCompileTargetImpl
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
 import llvm.LLVMModuleRef
@@ -64,6 +64,6 @@ internal data class LateNativeBackendImpl(
     }
 
     override val compileTarget: NativeCompileTarget by lazy {
-        NativeCompileTargetImpl(secondStageConfig.target)
+        PluginLoaderImpl.getCompileTarget(config) as NativeCompileTarget
     }
 }

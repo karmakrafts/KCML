@@ -42,6 +42,19 @@ internal class ExampleIrIntrinsicsExtension : AbstractExtension(), IrIntrinsicsE
     }
 
     override fun process(call: IrCall, backend: IrBackend): IrExpression {
+        if (call.symbol.owner.name.asString() == "customCompileTargetName") {
+            return IrConstImpl.string(
+                call.startOffset, call.endOffset, backend.irBuiltIns.stringType, backend.compileTarget.name
+            )
+        }
+        if (call.symbol.owner.name.asString() == "customCompileTargetAlias") {
+            return IrConstImpl.string(
+                call.startOffset,
+                call.endOffset,
+                backend.irBuiltIns.stringType,
+                backend.compileTarget.type.aliases.single()
+            )
+        }
         return IrConstImpl.int(call.startOffset, call.endOffset, backend.irBuiltIns.intType, 44)
     }
 }
