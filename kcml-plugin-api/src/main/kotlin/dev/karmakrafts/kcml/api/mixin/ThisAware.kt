@@ -21,7 +21,6 @@ package dev.karmakrafts.kcml.api.mixin
  *
  * @param T type of the target object.
  */
-@IntrinsicInterface
 public interface ThisAware<T> {
     /**
      * Reads the target function's `this` reference after mixin rewriting.

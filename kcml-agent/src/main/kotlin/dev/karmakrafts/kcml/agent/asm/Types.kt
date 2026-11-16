@@ -28,8 +28,6 @@ internal object Types {
     object Mixin {
         val bridge: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/MixinBridge")
         val bridgeABI: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/MixinBridgeABI")
-        val intrinsicInterface: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/IntrinsicInterface")
-        val componentMarker: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/ComponentMarker")
         val directMixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/DirectMixin")
         val indirectMixin: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/IndirectMixin")
         val inject: Type = Type.getObjectType("dev/karmakrafts/kcml/api/mixin/Inject")

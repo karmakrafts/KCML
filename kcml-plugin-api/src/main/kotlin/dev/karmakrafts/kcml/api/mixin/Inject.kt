@@ -29,7 +29,6 @@ package dev.karmakrafts.kcml.api.mixin
  * @property target selector for the reference instruction; the default selects the first executable instruction.
  * @property order position of the injection relative to the selected reference instruction.
  */
-@ComponentMarker
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.FUNCTION)
 public annotation class Inject( // @formatter:off
