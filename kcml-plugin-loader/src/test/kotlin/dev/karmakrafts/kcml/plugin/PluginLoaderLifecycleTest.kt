@@ -145,7 +145,7 @@ class PluginLoaderLifecycleTest {
         JarOutputStream(Files.newOutputStream(path)).use { archive ->
             for ([entry, bytes] in mapOf(
                 "$name.class" to writer.toByteArray(),
-                "reloadable_plugin.json" to """{"id":"reloadable_plugin"}""".toByteArray()
+                "META-INF/reloadable_plugin.json" to """{"id":"reloadable_plugin"}""".toByteArray()
             )) {
                 archive.putNextEntry(JarEntry(entry))
                 archive.write(bytes)
@@ -166,6 +166,7 @@ class PluginLoaderLifecycleTest {
                 PluginLoaderImpl.loadAndInvokeStandalone(jvmCompilerConfiguration(), listOf(archive.toUri().toURL()))
                 val plugin = PluginLoaderImpl.getPlugin("reloadable_plugin")
                 assertEquals(generation, plugin.javaClass.getMethod("generation").invoke(plugin))
+                assertEquals("reloadable_plugin", PluginLoaderImpl.getMetadata("reloadable_plugin").id)
             }
         }
         finally {

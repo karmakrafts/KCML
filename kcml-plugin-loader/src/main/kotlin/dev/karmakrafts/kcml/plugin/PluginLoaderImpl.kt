@@ -193,7 +193,7 @@ object PluginLoaderImpl : PluginLoader {
         pluginId: String
     ) { // @formatter:on
         try {
-            pluginClass.getResourceAsStream("/$pluginId.json")!!.use {
+            pluginClass.getResourceAsStream("/META-INF/$pluginId.json")!!.use {
                 metadata[pluginId] = json.decodeFromStream<SerializablePluginMetadata>(it)
             }
         } catch (_: Throwable) {
