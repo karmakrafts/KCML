@@ -43,11 +43,11 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                     ) {
                         // Only complete target strings, using PSI without completion's dummy text
                         val position = parameters.originalFile.findElementAt(parameters.offset) ?: return
-                        (val prefix, val isRawString, val contentStart, val interpolationPrefixLength) = IndirectMixinTargetString.find(
+                        val target = IndirectMixinTargetString.find(
                             position, parameters.offset
                         ) ?: return
                         // Accept slash-separated JVM names as well as dotted names
-                        val matcher = PlainPrefixMatcher(prefix.replace('/', '.'))
+                        val matcher = PlainPrefixMatcher(target.prefix.replace('/', '.'))
                         val scopedResult = result.withPrefixMatcher(matcher)
                         val file = parameters.originalFile
                         val module = ModuleUtilCore.findModuleForPsiElement(file)
@@ -79,9 +79,7 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                             scopedResult.addElement(
                                 lookupElement.withInsertHandler(
                                     // Preserve string boundaries and raw-string handling on insertion
-                                    StringContentInsertHandler(
-                                        isRawString, contentStart, interpolationPrefixLength
-                                    )
+                                    StringContentInsertHandler(target)
                                 )
                             )
                         }

@@ -28,5 +28,11 @@
                       order="first"/>
         <completion.confidence language="kotlin" order="first"
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionConfidence"/>
+        <completion.contributor language="kotlin" order="first"
+                                implementationClass="dev.karmakrafts.kcml.intellij.completion.InjectCompletionContributor"/>
+        <typedHandler implementation="dev.karmakrafts.kcml.intellij.completion.InjectCompletionTypedHandler"
+                      order="first"/>
+        <completion.confidence language="kotlin" order="first"
+                               implementationClass="dev.karmakrafts.kcml.intellij.completion.InjectCompletionConfidence"/>
     </extensions>
 </idea-plugin>

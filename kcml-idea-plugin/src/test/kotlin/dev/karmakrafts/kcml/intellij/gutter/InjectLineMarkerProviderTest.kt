@@ -16,32 +16,11 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
-import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.roots.ModuleRootModificationUtil
-import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.util.IconLoader
-import com.intellij.psi.PsiFile
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
-import java.util.jar.JarEntry
-import java.util.jar.JarOutputStream
-import kotlin.io.path.Path
-import kotlin.io.path.createTempDirectory
-import kotlin.io.path.outputStream
+import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 
-class InjectLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
-    private var annotation: PsiFile? = null
-
-    override fun tearDown() {
-        try {
-            WriteCommandAction.runWriteCommandAction(project) {
-                annotation?.takeIf { it.isValid }?.delete()
-            }
-        }
-        finally {
-            annotation = null
-            super.tearDown()
-        }
-    }
+class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
 
     fun testTopLevelFunction() {
         addAnnotation()
@@ -119,35 +98,13 @@ class InjectLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     fun testCompiledKotlinAnnotation() {
-        val directory = createTempDirectory(Path("build"), "kcml-inject-gutter-library-")
-        val jar = directory.resolve("annotations.jar")
-        val libraryUrl = "jar://${jar.toAbsolutePath()}!/"
-        try {
-            JarOutputStream(jar.outputStream()).use { output ->
-                val classFile = "dev/karmakrafts/kcml/api/mixin/Inject.class"
-                output.putNextEntry(JarEntry(classFile))
-                javaClass.classLoader.getResourceAsStream(classFile)!!.use { it.copyTo(output) }
-                output.closeEntry()
-            }
-            WriteCommandAction.runWriteCommandAction(project) {
-                ModuleRootModificationUtil.addModuleLibrary(myFixture.module, libraryUrl)
-            }
+        myFixture.withAnnotationLibrary("dev.karmakrafts.kcml.api.mixin.Inject") {
             assertMarkers("@Inject(\"target\") fun <caret>inject() {}", 1)
-        }
-        finally {
-            WriteCommandAction.runWriteCommandAction(project) {
-                ModuleRootModificationUtil.updateModel(myFixture.module) { model ->
-                    val table = model.moduleLibraryTable
-                    table.libraries.filter { libraryUrl in it.getUrls(OrderRootType.CLASSES) }
-                        .forEach(table::removeLibrary)
-                }
-            }
-            directory.toFile().deleteRecursively()
         }
     }
 
     private fun addAnnotation() {
-        annotation = myFixture.addFileToProject(
+        addAnnotationSource(
             "dev/karmakrafts/kcml/api/mixin/Inject.kt", """
                 package dev.karmakrafts.kcml.api.mixin
                 annotation class Inject(val name: String)

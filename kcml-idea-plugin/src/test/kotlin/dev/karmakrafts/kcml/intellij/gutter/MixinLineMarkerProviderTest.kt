@@ -19,35 +19,16 @@ package dev.karmakrafts.kcml.intellij.gutter
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
-import com.intellij.openapi.roots.ModuleRootModificationUtil
-import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.util.PsiTreeUtil
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtClassOrObject
-import java.util.jar.JarEntry
-import java.util.jar.JarOutputStream
-import kotlin.io.path.Path
-import kotlin.io.path.createTempDirectory
-import kotlin.io.path.outputStream
 
-class MixinLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
-    private var annotations: PsiFile? = null
-
-    override fun tearDown() {
-        try {
-            WriteCommandAction.runWriteCommandAction(project) {
-                annotations?.takeIf { it.isValid }?.delete()
-            }
-        }
-        finally {
-            annotations = null
-            super.tearDown()
-        }
-    }
+class MixinLineMarkerProviderTest : AnnotationFixtureTestCase() {
 
     fun testIndirectMixin() {
         addAnnotations()
@@ -219,41 +200,19 @@ class MixinLineMarkerProviderTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     fun testCompiledKotlinAnnotations() {
-        val directory = createTempDirectory(Path("build"), "kcml-gutter-library-")
-        val jar = directory.resolve("annotations.jar")
-        val libraryUrl = "jar://${jar.toAbsolutePath()}!/"
-        try {
-            JarOutputStream(jar.outputStream()).use { output ->
-                for (name in listOf("DirectMixin", "IndirectMixin")) {
-                    val classFile = "dev/karmakrafts/kcml/api/mixin/$name.class"
-                    output.putNextEntry(JarEntry(classFile))
-                    javaClass.classLoader.getResourceAsStream(classFile)!!.use { it.copyTo(output) }
-                    output.closeEntry()
-                }
-            }
-            WriteCommandAction.runWriteCommandAction(project) {
-                ModuleRootModificationUtil.addModuleLibrary(myFixture.module, libraryUrl)
-            }
+        myFixture.withAnnotationLibrary(
+            "dev.karmakrafts.kcml.api.mixin.DirectMixin", "dev.karmakrafts.kcml.api.mixin.IndirectMixin"
+        ) {
             assertMarkers("@DirectMixin(Any::class) class <caret>Direct", 1)
             assertMarkers("@IndirectMixin(\"example.Target\") class <caret>Indirect", 1)
             val target = myFixture.addFileToProject("example/Target.kt", "package example\nclass Target")
             assertNavigation("@DirectMixin(example.Target::class) class <caret>Direct", target, "Target")
             assertNavigation("@IndirectMixin(\"example.Target\") class <caret>Indirect", target, "Target")
         }
-        finally {
-            WriteCommandAction.runWriteCommandAction(project) {
-                ModuleRootModificationUtil.updateModel(myFixture.module) { model ->
-                    val table = model.moduleLibraryTable
-                    table.libraries.filter { libraryUrl in it.getUrls(OrderRootType.CLASSES) }
-                        .forEach(table::removeLibrary)
-                }
-            }
-            directory.toFile().deleteRecursively()
-        }
     }
 
     private fun addAnnotations() {
-        annotations = myFixture.addFileToProject(
+        addAnnotationSource(
             "dev/karmakrafts/kcml/api/mixin/Mixins.kt", """
                 package dev.karmakrafts.kcml.api.mixin
                 annotation class DirectMixin(val target: kotlin.reflect.KClass<*>, val priority: Int = 0)

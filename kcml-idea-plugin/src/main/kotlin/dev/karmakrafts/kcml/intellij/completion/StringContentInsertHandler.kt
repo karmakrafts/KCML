@@ -20,12 +20,12 @@ import com.intellij.codeInsight.completion.InsertHandler
 import com.intellij.codeInsight.completion.InsertionContext
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.psi.util.PsiTreeUtil
+import dev.karmakrafts.kcml.intellij.util.StringTemplateContent
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
-internal class StringContentInsertHandler(
-    private val isRawString: Boolean, private val contentStart: Int, private val interpolationPrefixLength: Int
-) : InsertHandler<LookupElement> {
+internal class StringContentInsertHandler(private val content: StringTemplateContent) : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
+        val (_, isRawString, contentStart, interpolationPrefixLength) = content
         val insertedText =
             if (isRawString) item.lookupString.replace("$", "$".repeat(interpolationPrefixLength) + "{'${'$'}'}")
             else item.lookupString.replace("$", "\\$")

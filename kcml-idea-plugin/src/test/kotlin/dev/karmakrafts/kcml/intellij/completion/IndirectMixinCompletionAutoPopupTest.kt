@@ -24,30 +24,19 @@ import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.PathUtil
+import dev.karmakrafts.kcml.intellij.testutil.AnnotationLibrary
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.jar.JarEntry
-import java.util.jar.JarOutputStream
 
 class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
-    private lateinit var library: Path
+    private lateinit var library: AnnotationLibrary
 
     override fun runInDispatchThread(): Boolean = false
 
     override fun setUp() {
         super.setUp()
-        library = Files.createTempDirectory(Path.of("build"), "kcml-popup-library-").resolve("annotation.jar")
-        JarOutputStream(Files.newOutputStream(library)).use { output ->
-            val classFile = "dev/karmakrafts/kcml/api/mixin/IndirectMixin.class"
-            output.putNextEntry(JarEntry(classFile))
-            javaClass.classLoader.getResourceAsStream(classFile)!!.use { it.copyTo(output) }
-            output.closeEntry()
-        }
+        library = AnnotationLibrary("dev.karmakrafts.kcml.api.mixin.IndirectMixin")
         runInEdtAndWait {
-            WriteCommandAction.runWriteCommandAction(project) {
-                ModuleRootModificationUtil.addModuleLibrary(myFixture.module, "jar://${library.toAbsolutePath()}!/")
-            }
+            library.attachTo(myFixture.module)
             myFixture.addFileToProject(
                 "completion/targets/Target.kt", "package completion.targets; class Target; class TargetOther"
             )
@@ -59,7 +48,7 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
             super.tearDown()
         }
         finally {
-            if (::library.isInitialized) library.parent.toFile().deleteRecursively()
+            if (::library.isInitialized) library.close()
         }
     }
 

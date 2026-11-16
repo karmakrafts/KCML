@@ -21,20 +21,11 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.util.IconLoader
-import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiElement
 import com.intellij.util.PsiNavigateUtil
 import dev.karmakrafts.kcml.intellij.util.isMixin
-import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
-import org.jetbrains.kotlin.psi.KtAnnotationEntry
-import org.jetbrains.kotlin.psi.KtClassLiteralExpression
+import dev.karmakrafts.kcml.intellij.util.resolveMixinTarget
 import org.jetbrains.kotlin.psi.KtClassOrObject
-import org.jetbrains.kotlin.psi.KtConstantExpression
-import org.jetbrains.kotlin.psi.KtDotQualifiedExpression
-import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
-import org.jetbrains.kotlin.psi.KtLiteralStringTemplateEntry
-import org.jetbrains.kotlin.psi.KtStringTemplateEntryWithExpression
-import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 import javax.swing.Icon
 
 class MixinLineMarkerProvider : LineMarkerProvider {
@@ -48,7 +39,7 @@ class MixinLineMarkerProvider : LineMarkerProvider {
             if (declaration.nameIdentifier != element) continue
             val annotations = declaration.annotationEntries.filter { it.isMixin() }
             if (annotations.isEmpty()) continue
-            val target = annotations.firstNotNullOfOrNull { it.resolveTarget() }
+            val target = annotations.firstNotNullOfOrNull { it.resolveMixinTarget() }
             result.add(object : LineMarkerInfo<PsiElement>(
                 element,
                 element.textRange,
@@ -56,8 +47,8 @@ class MixinLineMarkerProvider : LineMarkerProvider {
                 { "KCML mixin" },
                 target?.let {
                     GutterIconNavigationHandler { _, source ->
-                        val current = (source.parent as? KtClassOrObject)?.annotationEntries?.filter { it.isMixin() }
-                            ?.firstNotNullOfOrNull { it.resolveTarget() }
+                        val current =
+                            (source.parent as? KtClassOrObject)?.annotationEntries?.firstNotNullOfOrNull { it.resolveMixinTarget() }
                         current?.let { PsiNavigateUtil.navigate(it.navigationElement, true) }
                     }
                 },
@@ -69,42 +60,6 @@ class MixinLineMarkerProvider : LineMarkerProvider {
                             super.looksTheSameAs(renderer) && isNavigateAction == renderer.isNavigateAction
                     }
             })
-        }
-    }
-
-    private fun KtAnnotationEntry.resolveTarget(): PsiElement? {
-        val argument = valueArguments.firstOrNull { it.getArgumentName()?.asName?.identifier == "target" }
-            ?: valueArguments.firstOrNull { it.getArgumentName() == null }
-        return when (val expression = argument?.getArgumentExpression()) {
-            is KtClassLiteralExpression -> {
-                val receiver = expression.receiverExpression
-                val reference = (receiver as? KtDotQualifiedExpression)?.selectorExpression ?: receiver
-                reference?.references?.firstNotNullOfOrNull { it.resolve() }
-            }
-
-            is KtStringTemplateExpression -> {
-                val name = buildString {
-                    for (entry in expression.entries) {
-                        append(
-                            when (entry) {
-                                is KtLiteralStringTemplateEntry -> entry.text
-                                is KtEscapeStringTemplateEntry -> entry.unescapedValue
-                                is KtStringTemplateEntryWithExpression -> {
-                                    val constant = entry.expression as? KtConstantExpression ?: return null
-                                    if (constant.text != "'${'$'}'") return null
-                                    "$"
-                                }
-
-                                else -> return null
-                            }
-                        )
-                    }
-                }.replace('/', '.').replace('$', '.')
-                KotlinFullClassNameIndex[name, project, resolveScope].firstOrNull()
-                    ?: JavaPsiFacade.getInstance(project).findClass(name, resolveScope)
-            }
-
-            else -> null
         }
     }
 }

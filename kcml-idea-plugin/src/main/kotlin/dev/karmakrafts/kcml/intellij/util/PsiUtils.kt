@@ -21,16 +21,15 @@ import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtValueArgument
+
+internal fun KtAnnotationEntry.argument(name: String, position: Int): KtValueArgument? =
+    (valueArguments.firstOrNull { it.getArgumentName()?.asName?.identifier == name } ?: valueArguments.getOrNull(
+        position
+    )?.takeIf { it.getArgumentName() == null }) as? KtValueArgument
 
 internal fun KtAnnotationEntry.isMixin(): Boolean {
-    val resolved = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
-        ?: return false
-    val name = when (resolved) {
-        is PsiClass -> resolved.qualifiedName
-        is KtClassOrObject -> resolved.fqName?.asString()
-        is PsiMethod -> resolved.containingClass?.qualifiedName
-        else -> PsiTreeUtil.getParentOfType(resolved, KtClassOrObject::class.java)?.fqName?.asString()
-    }
+    val name = qualifiedName()
     return name == TypeNames.DIRECT_MIXIN || name == TypeNames.INDIRECT_MIXIN
 }
 
