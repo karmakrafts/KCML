@@ -20,12 +20,17 @@ import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.lang.Language
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.OrderRootType
+import com.intellij.psi.JavaPsiFacade
+import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.org.objectweb.asm.ClassWriter
 import org.jetbrains.org.objectweb.asm.Opcodes
 import java.nio.file.Files
@@ -34,6 +39,78 @@ import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
 class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
+    fun testSmartCompletionShowsKotlinDeclarationIcons() {
+        addIndirectMixinAnnotation()
+        val targets = myFixture.addFileToProject(
+            "completion/icons/Targets.kt", """
+                package completion.icons
+
+                class TargetClass
+                interface TargetInterface
+                annotation class TargetAnnotation
+                enum class TargetEnum { ENTRY }
+                object TargetObject
+                class TargetOuter { private class TargetNested }
+            """.trimIndent()
+        ) as KtFile
+        myFixture.configureByText(
+            "Mixin.kt", """
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+
+                @IndirectMixin("completion.icons.<caret>")
+                class Example
+            """.trimIndent()
+        )
+
+        val variants = myFixture.complete(CompletionType.SMART).orEmpty()
+        val declarations = targets.declarations.filterIsInstance<KtClassOrObject>()
+        val outer = declarations.single { it.name == "TargetOuter" }
+        for (declaration in declarations + outer.declarations.filterIsInstance<KtClassOrObject>()) {
+            val name = if (declaration.parent == outer.body) "TargetOuter\$${declaration.name}" else declaration.name
+            val item = variants.single { it.lookupString == "completion.icons.$name" }
+            val presentation = LookupElementPresentation()
+            item.renderElement(presentation)
+            assertNotNull(item.lookupString, presentation.icon)
+            assertEquals(item.lookupString, declaration.getIcon(0), presentation.icon)
+        }
+    }
+
+    fun testSmartCompletionShowsJavaDeclarationIcons() {
+        addIndirectMixinAnnotation()
+        myFixture.addClass(
+            """
+                package completion.icons;
+                public class TargetOuter {
+                    public interface TargetInterface {}
+                    public @interface TargetAnnotation {}
+                    public enum TargetEnum { ENTRY }
+                    private static class TargetNested {}
+                }
+            """.trimIndent()
+        )
+        myFixture.configureByText(
+            "Mixin.kt", """
+                import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+
+                @IndirectMixin("completion.icons.<caret>")
+                class Example
+            """.trimIndent()
+        )
+
+        val variants = myFixture.complete(CompletionType.SMART).orEmpty()
+        val outer = JavaPsiFacade.getInstance(project).findClass(
+            "completion.icons.TargetOuter", GlobalSearchScope.projectScope(project)
+        )!!
+        for (declaration in listOf(outer) + outer.innerClasses) {
+            val name = if (declaration == outer) declaration.name else "TargetOuter\$${declaration.name}"
+            val item = variants.single { it.lookupString == "completion.icons.$name" }
+            val presentation = LookupElementPresentation()
+            item.renderElement(presentation)
+            assertNotNull(item.lookupString, presentation.icon)
+            assertEquals(item.lookupString, declaration.getIcon(0), presentation.icon)
+        }
+    }
+
     fun testCompletesPrivateSourceClassesForAliasedAnnotationAndSlashPrefix() {
         addIndirectMixinAnnotation()
         myFixture.addFileToProject(
@@ -189,6 +266,11 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             val variants = myFixture.completeBasic().orEmpty()
             assertTrue(variants.any { it.lookupString == "completion.library.LibraryOuter\$1" })
             assertTrue(variants.any { it.lookupString == "completion.library.LibraryOuter\$PrivateNested" })
+            for (item in variants.filter { it.lookupString.startsWith("completion.library.") }) {
+                val presentation = LookupElementPresentation()
+                item.renderElement(presentation)
+                assertNotNull(item.lookupString, presentation.icon)
+            }
         }
         finally {
             library.parent.toFile().deleteRecursively()

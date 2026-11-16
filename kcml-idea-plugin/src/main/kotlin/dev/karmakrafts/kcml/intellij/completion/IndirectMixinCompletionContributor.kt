@@ -23,12 +23,15 @@ import com.intellij.codeInsight.completion.CompletionResultSet
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.PlainPrefixMatcher
 import com.intellij.codeInsight.lookup.LookupElementBuilder
+import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.ProcessingContext
 import dev.karmakrafts.kcml.intellij.util.ClassNameUtils
+import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 
 class IndirectMixinCompletionContributor : CompletionContributor() {
     init {
@@ -64,7 +67,12 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                             // Match qualified, short, and nested-class name variants
                             val lookupNames = ClassNameUtils.lookupNames(candidate)
                             if (lookupNames.none(matcher::prefixMatches)) continue
+                            val project = parameters.position.project
+                            val qualifiedName = candidate.replace('$', '.')
+                            val declaration = KotlinFullClassNameIndex[qualifiedName, project, scope].firstOrNull()
+                                ?: JavaPsiFacade.getInstance(project).findClass(qualifiedName, scope)
                             var lookupElement = LookupElementBuilder.create(candidate)
+                                .withIcon(declaration?.getIcon(0) ?: AllIcons.Nodes.Class)
                             for (lookupName in lookupNames) {
                                 lookupElement = lookupElement.withLookupString(lookupName)
                             }
