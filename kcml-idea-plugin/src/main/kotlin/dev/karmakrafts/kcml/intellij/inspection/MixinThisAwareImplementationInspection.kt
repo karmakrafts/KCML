@@ -33,8 +33,8 @@ import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
-class ThisAwareImplementationInspection : LocalInspectionTool() {
-    override fun getID(): @NonNls String = "KCML_THIS_AWARE_IMPLEMENTATION"
+class MixinThisAwareImplementationInspection : LocalInspectionTool() {
+    override fun getID(): @NonNls String = "KCML_MIXIN_THIS_AWARE_IMPLEMENTATION"
 
     override fun getShortName(): @NonNls String = "KcmlMixinThisAwareImplementation"
 

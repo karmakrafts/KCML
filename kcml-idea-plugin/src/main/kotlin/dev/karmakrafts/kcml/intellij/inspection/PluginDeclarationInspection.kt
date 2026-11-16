@@ -30,7 +30,7 @@ import org.jetbrains.kotlin.psi.KtVisitorVoid
 class PluginDeclarationInspection : LocalInspectionTool() {
     override fun getShortName(): String = "KcmlPluginDeclaration"
 
-    override fun getID(): String = "KCML_PARTIAL_PLUGIN_DECLARATION"
+    override fun getID(): String = "KCML_PLUGIN_PARTIAL_DECLARATION"
 
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor =
         object : KtVisitorVoid() {

@@ -22,7 +22,7 @@ import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 class ThisAwareImplementationInspectionTest : AnnotationFixtureTestCase() {
     override fun setUp() {
         super.setUp()
-        myFixture.enableInspections(ThisAwareImplementationInspection())
+        myFixture.enableInspections(MixinThisAwareImplementationInspection())
     }
 
     fun testNonMixinClassesAndObjects() = check(

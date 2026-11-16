@@ -23,5 +23,6 @@ internal object TypeNames {
     const val DIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.DirectMixin"
     const val INDIRECT_MIXIN: String = "dev.karmakrafts.kcml.api.mixin.IndirectMixin"
     const val THIS_AWARE: String = "dev.karmakrafts.kcml.api.mixin.ThisAware"
+    const val CONSTANT_TABLE: String = "dev.karmakrafts.kcml.api.mixin.ConstantTable"
     const val INJECT: String = "dev.karmakrafts.kcml.api.mixin.Inject"
 }

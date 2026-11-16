@@ -31,7 +31,11 @@
         <localInspection language="kotlin" shortName="KcmlMixinThisAwareImplementation"
                          displayName="KCML mixin ThisAware implementation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
-                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.ThisAwareImplementationInspection"/>
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinThisAwareImplementationInspection"/>
+        <localInspection language="kotlin" shortName="KcmlMixinConstantTableUsage"
+                         displayName="KCML mixin ConstantTable usage"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinConstantTableUsageInspection"/>
 
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
