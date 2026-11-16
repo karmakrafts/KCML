@@ -24,6 +24,10 @@
                          displayName="KCML mixin instantiation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinInstantiationInspection"/>
+        <localInspection language="kotlin" shortName="KcmlPluginInstantiation"
+                         displayName="KCML plugin instantiation"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.PluginInstantiationInspection"/>
 
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
