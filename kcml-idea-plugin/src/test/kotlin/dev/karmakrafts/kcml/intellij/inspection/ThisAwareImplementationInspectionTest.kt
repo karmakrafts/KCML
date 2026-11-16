@@ -109,7 +109,7 @@ class ThisAwareImplementationInspectionTest : AnnotationFixtureTestCase() {
 
     fun testSuppression() = check(
         """
-            @Suppress("KCML_THIS_AWARE_IMPLEMENTATION")
+            @Suppress("KCML_MIXIN_THIS_AWARE_IMPLEMENTATION")
             class Suppressed : ThisAware<Any>
         """.trimIndent()
     )
