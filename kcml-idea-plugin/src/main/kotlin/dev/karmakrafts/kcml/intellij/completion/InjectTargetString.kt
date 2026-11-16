@@ -29,12 +29,17 @@ internal data class InjectTargetString(
 ) {
     companion object {
         fun find(position: PsiElement, offset: Int): InjectTargetString? {
-            val argument = position.annotationStringArgument(TypeNames.INJECT, "name", "descriptor") ?: return null
-            val content = argument.expression.contentAt(offset) ?: return null
-            return InjectTargetString(argument.annotation, argument.name, content)
+            (val annotation, val name, val expression) = position.annotationStringArgument(
+                TypeNames.INJECT, "name", "descriptor"
+            ) ?: return null
+            val content = expression.contentAt(offset) ?: return null
+            return InjectTargetString(annotation, name, content)
         }
 
-        fun isTargetStringAt(file: PsiFile, offset: Int): Boolean =
-            file.findElementAt(offset)?.let { find(it, offset) } != null
+        fun find(file: PsiFile, offset: Int): InjectTargetString? =
+            file.findElementAt(offset)?.let { find(it, offset) } ?: file.findElementAt((offset - 1).coerceAtLeast(0))
+                ?.let { find(it, offset) }
+
+        fun isTargetStringAt(file: PsiFile, offset: Int): Boolean = find(file, offset) != null
     }
 }

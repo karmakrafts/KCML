@@ -19,12 +19,25 @@ package dev.karmakrafts.kcml.intellij.completion
 import com.intellij.codeInsight.AutoPopupController
 import com.intellij.codeInsight.editorActions.TypedHandlerDelegate
 import com.intellij.openapi.editor.Editor
+import com.intellij.openapi.fileTypes.FileType
 import com.intellij.openapi.project.Project
 import com.intellij.psi.PsiFile
 
 internal class InjectCompletionTypedHandler : TypedHandlerDelegate() {
+    override fun beforeCharTyped(
+        charTyped: Char, project: Project, editor: Editor, file: PsiFile, fileType: FileType
+    ): Result {
+        if (charTyped == '"' && file.language.id == "kotlin") {
+            AutoPopupController.getInstance(project).scheduleAutoPopup(editor) { currentFile ->
+                InjectTargetString.isTargetStringAt(currentFile, editor.caretModel.offset)
+            }
+        }
+        return Result.CONTINUE
+    }
+
     override fun charTyped(charTyped: Char, project: Project, editor: Editor, file: PsiFile): Result {
-        if (!shouldShowPopup(charTyped, file, (editor.caretModel.offset - 1).coerceAtLeast(0))) return Result.CONTINUE
+        val offset = editor.caretModel.offset
+        if (!shouldShowPopup(charTyped, file, (offset - 1).coerceAtLeast(0))) return Result.CONTINUE
         AutoPopupController.getInstance(project).scheduleAutoPopup(editor) { currentFile ->
             shouldShowPopup(charTyped, currentFile, editor.caretModel.offset)
         }

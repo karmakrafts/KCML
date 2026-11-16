@@ -21,6 +21,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
@@ -30,7 +31,14 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal fun PsiElement.asPsiClass(): PsiClass? = when (this) {
     is PsiClass -> this
-    is KtClassOrObject -> toLightClass()
+    is KtClassOrObject -> {
+        val javaClass = fqName?.let { JavaToKotlinClassMap.mapKotlinToJava(it.toUnsafe()) }
+        if (javaClass != null) JavaPsiFacade.getInstance(project).findClass(
+            javaClass.asSingleFqName().asString(), resolveScope
+        )
+        else toLightClass()
+    }
+
     else -> null
 }
 

@@ -37,19 +37,27 @@ internal class InjectFunctionInsertHandler(
             context.file.findElementAt(target.content.contentStart), KtAnnotationEntry::class.java, false
         ) ?: return
         val descriptor = "\"${method.descriptor.replace("$", "\\$")}\""
-        val existing = annotation.argument("descriptor", 1)?.getArgumentExpression()
-        val end: Int
+        val name = annotation.argument("name", 0) ?: return
+        val descriptorArgument = annotation.argument("descriptor", 1)
+        val nameOffset = name.textRange.startOffset.takeIf {
+            name.getArgumentName() == null && (descriptorArgument == null || descriptorArgument.getArgumentName() != null)
+        }
+        val existing = descriptorArgument?.getArgumentExpression()
+        var end: Int
         if (existing != null) {
             val range = existing.textRange
             context.document.replaceString(range.startOffset, range.endOffset, descriptor)
             end = range.startOffset + descriptor.length - 1
         }
         else {
-            val argument = annotation.argument("name", 0) ?: return
-            val offset = argument.textRange.endOffset
+            val offset = name.textRange.endOffset
             val text = ", descriptor = $descriptor"
             context.document.insertString(offset, text)
             end = offset + text.length - 1
+        }
+        if (nameOffset != null) {
+            context.document.insertString(nameOffset, "name = ")
+            if (nameOffset <= end) end += "name = ".length
         }
         context.editor.caretModel.moveToOffset(end)
         context.tailOffset = end

@@ -38,8 +38,8 @@ class InjectCompletionContributor : CompletionContributor() {
                 override fun addCompletions(
                     parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet
                 ) {
-                    val position = parameters.originalFile.findElementAt(parameters.offset) ?: return
-                    val target = InjectTargetString.find(position, parameters.offset) ?: return
+                    val target = InjectTargetString.find(parameters.originalFile, parameters.offset) ?: return
+                    result.stopHere()
                     val methods = InjectTargetMethods.find(target.annotation)
                     val isName = target.argumentName == "name"
                     val name = if (isName) null

@@ -17,13 +17,25 @@
 package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.openapi.projectRoots.JavaSdk
+import com.intellij.openapi.projectRoots.Sdk
+import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.testFramework.runInEdtAndWait
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationLibrary
 
 class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
+    companion object {
+        private val DESCRIPTOR = object : LightProjectDescriptor() {
+            override fun getSdk(): Sdk =
+                JavaSdk.getInstance().createJdk("Inject popup JDK", System.getProperty("java.home"), false)
+        }
+    }
+
     private lateinit var library: AnnotationLibrary
+
+    override fun getProjectDescriptor(): LightProjectDescriptor = DESCRIPTOR
 
     override fun runInDispatchThread(): Boolean = false
 
@@ -61,6 +73,32 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
         assertTypingShowsLookup("@Inject(\"<caret>\")", "over", "overloaded", true)
     }
 
+    fun testTypingNameForCompiledKotlinTargetShowsLookup() {
+        assertTypingShowsLookup(
+            "@Inject(\"<caret>\")", "na", "name", mixin = "@IndirectMixin(\"dev.karmakrafts.kcml.api.mixin.Inject\")"
+        )
+    }
+
+    fun testTypingNameForDirectTargetShowsLookup() {
+        assertTypingShowsLookup(
+            "@Inject(\"<caret>\")", "over", "overloaded", mixin = "@DirectMixin(completion.PopupTarget::class)"
+        )
+    }
+
+    fun testTypingNameForDirectKotlinStringTargetShowsLookup() {
+        assertTypingShowsLookup(
+            "@Inject(\"<caret>\")", "sub", "substring", mixin = "@DirectMixin(String::class)"
+        )
+    }
+
+    fun testTypingInUnterminatedNameShowsLookup() {
+        assertTypingShowsLookup("@Inject(\"<caret>", "over", "overloaded")
+    }
+
+    fun testTypingOpeningQuoteShowsLookup() {
+        assertTypingShowsLookup("@Inject(<caret>)", "\"", "overloaded")
+    }
+
     fun testEditingNameShowsLookup() {
         assertTypingShowsLookup("@Inject(\"ov<caret>OldSuffix\")", "er", "overloaded")
     }
@@ -95,33 +133,46 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     private fun assertTypingShowsLookup(
-        annotation: String, typed: String, expected: String, select: Boolean = false, imports: String = ""
+        annotation: String,
+        typed: String,
+        expected: String,
+        select: Boolean = false,
+        imports: String = "",
+        mixin: String = "@IndirectMixin(\"completion.PopupTarget\")"
     ) {
         val tester = CompletionAutoPopupTester(myFixture)
         tester.runWithAutoPopupEnabled {
-            runInEdtAndWait { configure(annotation, imports) }
+            runInEdtAndWait { configure(annotation, imports, mixin) }
             tester.typeWithPauses(typed)
             runInEdtAndWait {
                 val lookup = tester.lookup
                 assertNotNull("Typing an Inject target should open completion", lookup)
                 val items = lookup!!.items.filter { it.lookupString == expected }
                 assertTrue(lookup.items.joinToString { it.lookupString }, items.isNotEmpty())
+                assertTrue(
+                    lookup.items.joinToString { it.lookupString },
+                    lookup.items.all { it.`object` is InjectTargetMethod })
                 if (select) {
                     lookup.currentItem = items.first()
                     myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-                    assertTrue(myFixture.file.text, "@Inject(\"overloaded\", descriptor = \"(" in myFixture.file.text)
+                    assertTrue(
+                        myFixture.file.text,
+                        "@Inject(name = \"overloaded\", descriptor = \"(" in myFixture.file.text
+                    )
                 }
                 else lookup.hide()
             }
         }
     }
 
-    private fun configure(annotation: String, imports: String = "") {
+    private fun configure(
+        annotation: String, imports: String = "", mixin: String = "@IndirectMixin(\"completion.PopupTarget\")"
+    ) {
         myFixture.configureByText(
             "Mixin.kt", """
                 import dev.karmakrafts.kcml.api.mixin.*
                 $imports
-                @IndirectMixin("completion.PopupTarget")
+                $mixin
                 class Example {
                     $annotation
                     fun inject() {}

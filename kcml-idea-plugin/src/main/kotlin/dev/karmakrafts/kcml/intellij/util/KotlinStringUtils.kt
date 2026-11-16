@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.util
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.lexer.KtTokens
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtConstantExpression
 import org.jetbrains.kotlin.psi.KtEscapeStringTemplateEntry
@@ -51,7 +52,8 @@ internal fun KtStringTemplateExpression.contentAt(offset: Int): StringTemplateCo
     val isRawString = text.startsWith("\"\"\"", dollarCount)
     val delimiterLength = if (isRawString) 3 else 1
     val contentStart = textRange.startOffset + dollarCount + delimiterLength
-    if (offset < contentStart || offset > textRange.endOffset - delimiterLength) return null
+    val closingLength = if (lastChild?.node?.elementType == KtTokens.CLOSING_QUOTE) delimiterLength else 0
+    if (offset < contentStart || offset > textRange.endOffset - closingLength) return null
     val prefix = buildString {
         for (entry in entries) {
             ProgressManager.checkCanceled()

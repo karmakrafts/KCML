@@ -25,5 +25,5 @@ import com.intellij.util.ThreeState
 class InjectCompletionConfidence : CompletionConfidence() {
     override fun shouldSkipAutopopup(
         editor: Editor, contextElement: PsiElement, psiFile: PsiFile, offset: Int
-    ): ThreeState = if (InjectTargetString.find(contextElement, offset) != null) ThreeState.NO else ThreeState.UNSURE
+    ): ThreeState = if (InjectTargetString.isTargetStringAt(psiFile, offset)) ThreeState.NO else ThreeState.UNSURE
 }

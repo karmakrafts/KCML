@@ -28,6 +28,7 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.org.objectweb.asm.ClassWriter
 import org.jetbrains.org.objectweb.asm.Opcodes
 import java.nio.file.Files
@@ -75,7 +76,18 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                 }
             """.trimIndent()
         )
-        myFixture.addClass("package completion; public class Parent { public void inherited() {} }")
+        myFixture.addClass(
+            """
+                package completion;
+                public class Parent {
+                    public void inherited() {}
+                    private void inheritedPrivate() {}
+                    public void overloaded(long value) {}
+                    public void unique() {}
+                }
+            """.trimIndent()
+        )
+        myFixture.addClass("package completion; public class Unrelated { public void foreignMethod() {} }")
         assertNotNull(
             "The fixture must resolve java.lang.String", JavaPsiFacade.getInstance(project).findClass(
                 "java.lang.String", GlobalSearchScope.allScope(project)
@@ -96,7 +108,29 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     fun testSmartCompletionShowsAllDeclaredOverloadsWithDescriptors() {
         configure("@Inject(\"over<caret>\")")
         val items = complete()
-        assertEquals(setOf("overloaded()V", "overloaded(I)Ljava/lang/String;", "overloadOther()V"), signatures(items))
+        assertEquals(
+            setOf("overloaded()V", "overloaded(I)Ljava/lang/String;", "overloaded(J)V", "overloadOther()V"),
+            signatures(items)
+        )
+    }
+
+    fun testNameCompletionContainsOnlySimpleMethodNamesAndDescriptors() {
+        for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
+            configure("@Inject(name = \"<caret>\")", "@IndirectMixin(\"completion.Target\")")
+            val items = complete(type)
+            assertTrue("Expected target methods for $type", items.isNotEmpty())
+            for (item in items) {
+                val rendered = presentation(item)
+                assertTrue("Unexpected completion: ${item.lookupString}", item.`object` is InjectTargetMethod)
+                val method = item.`object` as InjectTargetMethod
+                assertEquals(method.name, item.lookupString)
+                assertEquals(method.name, rendered.itemText)
+                assertEquals(method.descriptor, rendered.tailText)
+                assertNull(rendered.typeText)
+                assertFalse(method.name.contains('.'))
+                assertFalse(method.name.contains('/'))
+            }
+        }
     }
 
     fun testBasicCompletionIncludesPrivateMethodsAndJvmArrayDescriptors() {
@@ -106,7 +140,9 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(
             signatures.toString(), "nested(Lcompletion/Target\$Nested;)Lcompletion/Target\$Nested;" in signatures
         )
-        assertFalse(signatures.any { it.startsWith("inherited") || it.startsWith("<init>") })
+        assertTrue("inherited()V" in signatures)
+        assertTrue("inheritedPrivate()V" in signatures)
+        assertFalse(signatures.any { it.startsWith("foreignMethod") || it.startsWith("<init>") })
     }
 
     fun testUniqueFunctionInsertsOnlyName() {
@@ -115,13 +151,32 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(myFixture.file.text, "@Inject(\"unique\")" in myFixture.file.text)
     }
 
+    fun testCompiledKotlinTarget() {
+        myFixture.withAnnotationLibrary("dev.karmakrafts.kcml.api.mixin.Inject") {
+            configure("@Inject(\"na<caret>\")", "@IndirectMixin(\"dev.karmakrafts.kcml.api.mixin.Inject\")")
+            assertEquals(setOf("name()Ljava/lang/String;"), signatures(complete()))
+        }
+    }
+
+    fun testInheritedOverloadInsertsDescriptor() {
+        configure("@Inject(\"over<caret>\")")
+        select("overloaded", "(J)V")
+        assertTrue(myFixture.file.text, "@Inject(name = \"overloaded\", descriptor = \"(J)V\")" in myFixture.file.text)
+    }
+
     fun testOverloadInsertsNameAndDescriptor() {
         configure("@Inject(\"over<caret>\", order = 1)")
         select("overloaded", "(I)Ljava/lang/String;")
         assertTrue(
             myFixture.file.text,
-            "@Inject(\"overloaded\", descriptor = \"(I)Ljava/lang/String;\", order = 1)" in myFixture.file.text
+            "@Inject(name = \"overloaded\", descriptor = \"(I)Ljava/lang/String;\", order = 1)" in myFixture.file.text
         )
+    }
+
+    fun testOverloadNamesPositionalNameWithExistingNamedDescriptor() {
+        configure("@Inject(\"over<caret>\", descriptor = \"old\")")
+        select("overloaded", "()V")
+        assertTrue(myFixture.file.text, "@Inject(name = \"overloaded\", descriptor = \"()V\")" in myFixture.file.text)
     }
 
     fun testOtherMatchingNamesDoNotCountAsOverloads() {
@@ -150,7 +205,9 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
 
     fun testDescriptorCompletionIsRestrictedToSelectedName() {
         configure("@Inject(name = \"overloaded\", descriptor = \"(<caret>\")")
-        assertEquals(setOf("overloaded()V", "overloaded(I)Ljava/lang/String;"), signatures(complete()))
+        assertEquals(
+            setOf("overloaded()V", "overloaded(I)Ljava/lang/String;", "overloaded(J)V"), signatures(complete())
+        )
     }
 
     fun testDescriptorPrefixAndInsertion() {
@@ -165,6 +222,33 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(myFixture.file.text, "name = \"\"\"overloaded\"\"\", descriptor = \"()V\"" in myFixture.file.text)
     }
 
+    fun testDirectKotlinStringTargetUsesJvmMethods() {
+        configure("@Inject(\"<caret>\")", "@IndirectMixin(\"java.lang.String\")")
+        val expected = signatures(complete())
+        for (target in listOf("String", "kotlin.String", "Text")) {
+            configure(
+                "@Inject(\"<caret>\")", "@DirectMixin(target = $target::class)", "import kotlin.String as Text"
+            )
+            val signatures = signatures(complete())
+            assertTrue(
+                "Missing String methods for $target: $signatures", "substring(I)Ljava/lang/String;" in signatures
+            )
+            assertTrue("charAt(I)C" in signatures)
+            assertTrue("toString()Ljava/lang/String;" in signatures)
+            assertFalse(signatures.any { it.startsWith("foreignMethod") || it.startsWith("<init>") })
+            assertEquals("Direct and indirect String targets must expose the same JVM methods", expected, signatures)
+        }
+    }
+
+    fun testDirectKotlinStringOverloadInsertsDescriptor() {
+        configure("@Inject(\"sub<caret>\")", "@DirectMixin(String::class)")
+        select("substring", "(II)Ljava/lang/String;")
+        assertTrue(
+            myFixture.file.text,
+            "@Inject(name = \"substring\", descriptor = \"(II)Ljava/lang/String;\")" in myFixture.file.text
+        )
+    }
+
     fun testKotlinSourceTarget() {
         myFixture.addFileToProject(
             "completion/KotlinTarget.kt", """
@@ -175,21 +259,38 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                 }
             """.trimIndent()
         )
-        configure("@Inject(\"hid<caret>\")", "@IndirectMixin(\"completion.KotlinTarget\")")
-        assertEquals(setOf("hidden(I)J", "hidden()V"), signatures(complete()))
+        for (mixin in listOf(
+            "@IndirectMixin(\"completion.KotlinTarget\")", "@DirectMixin(completion.KotlinTarget::class)"
+        )) {
+            configure("@Inject(\"hid<caret>\")", mixin)
+            assertEquals(setOf("hidden(I)J", "hidden()V"), signatures(complete()))
+        }
     }
 
     fun testCompiledTargetIncludesPrivateSyntheticAndBridgeMethods() {
         addCompiledTarget()
         configure("@Inject(\"<caret>\")", "@IndirectMixin(\"completion.CompiledTarget\")")
+        val signatures = signatures(complete())
         assertEquals(
             setOf(
                 "hidden()V",
                 "access\$hidden(Lcompletion/CompiledTarget;)V",
                 "value()Ljava/lang/String;",
                 "value()Ljava/lang/Object;"
-            ), signatures(complete())
+            ), signatures.filter { it.substringBefore('(') in setOf("hidden", "access\$hidden", "value") }.toSet()
         )
+        assertTrue("toString()Ljava/lang/String;" in signatures)
+        assertFalse(signatures.any { it.startsWith("<init>") || it.startsWith("<clinit>") })
+    }
+
+    fun testInheritedCompiledPrivateSyntheticAndBridgeMethods() {
+        addCompiledTarget()
+        configure("@Inject(\"acc<caret>\")", "@IndirectMixin(\"completion.CompiledChild\")")
+        assertEquals(setOf("access\$hidden(Lcompletion/CompiledTarget;)V"), signatures(complete()))
+        configure("@Inject(\"hid<caret>\")", "@IndirectMixin(\"completion.CompiledChild\")")
+        assertEquals(setOf("hidden()V"), signatures(complete()))
+        configure("@Inject(\"val<caret>\")", "@IndirectMixin(\"completion.CompiledChild\")")
+        assertEquals(setOf("value()Ljava/lang/String;", "value()Ljava/lang/Object;"), signatures(complete()))
     }
 
     fun testSyntheticMethodInsertionEscapesDollar() {
@@ -204,7 +305,8 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         configure("@Inject(\"val<caret>\")", "@IndirectMixin(\"completion.CompiledTarget\")")
         select("value", "()Ljava/lang/Object;")
         assertTrue(
-            myFixture.file.text, "@Inject(\"value\", descriptor = \"()Ljava/lang/Object;\")" in myFixture.file.text
+            myFixture.file.text,
+            "@Inject(name = \"value\", descriptor = \"()Ljava/lang/Object;\")" in myFixture.file.text
         )
     }
 
@@ -300,6 +402,14 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             writer.visitEnd()
             output.putNextEntry(JarEntry("completion/CompiledTarget.class"))
             output.write(writer.toByteArray())
+            output.closeEntry()
+            val child = ClassWriter(0)
+            child.visit(
+                Opcodes.V21, Opcodes.ACC_PUBLIC, "completion/CompiledChild", null, "completion/CompiledTarget", null
+            )
+            child.visitEnd()
+            output.putNextEntry(JarEntry("completion/CompiledChild.class"))
+            output.write(child.toByteArray())
             output.closeEntry()
         }
         WriteCommandAction.runWriteCommandAction(project) {

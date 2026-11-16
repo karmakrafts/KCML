@@ -51,20 +51,27 @@ internal object InjectTargetMethods {
                 ProgressManager.checkCanceled()
                 it.resolveMixinTarget()?.asPsiClass()
             } ?: return emptyList()
-            val file = target.containingFile?.virtualFile
-            val methods = if (target is PsiCompiledElement || file?.extension == "class") {
-                target.compiledMethods()
-            }
-            else {
-                target.methods.mapNotNull {
-                    ProgressManager.checkCanceled()
-                    if (it.isConstructor) null
-                    else it.descriptor()?.let { descriptor ->
-                        InjectTargetMethod(it.name, descriptor)
+            val methods = linkedSetOf<InjectTargetMethod>()
+            val visited = hashSetOf<PsiClass>()
+            fun collect(type: PsiClass) {
+                ProgressManager.checkCanceled()
+                if (!visited.add(type)) return
+                val file = type.containingFile?.virtualFile
+                if (type is PsiCompiledElement || file?.extension == "class") {
+                    methods += type.compiledMethods()
+                }
+                else {
+                    for (method in type.methods) {
+                        ProgressManager.checkCanceled()
+                        if (!method.isConstructor) method.descriptor()?.let {
+                            methods += InjectTargetMethod(method.name, it)
+                        }
                     }
                 }
+                type.supers.forEach(::collect)
             }
-            methods.distinct()
+            collect(target)
+            methods.toList()
         } catch (_: IndexNotReadyException) {
             emptyList()
         }
