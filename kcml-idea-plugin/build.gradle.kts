@@ -44,6 +44,7 @@ dependencies {
     intellijPlatform {
         intellijIdea(libs.versions.intelliJVersion)
         bundledPlugin("com.intellij.java")
+        bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.kotlin")
         plugin("org.jetbrains.android", libs.versions.intelliJAndroid.get())
         plugin("com.android.tools.design", libs.versions.intelliJAndroidDesignTools.get())

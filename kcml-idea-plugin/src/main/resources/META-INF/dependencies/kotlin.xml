@@ -57,5 +57,15 @@
                       order="first"/>
         <completion.confidence language="kotlin" order="first"
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.InjectCompletionConfidence"/>
+        <completion.contributor language="kotlin" order="first"
+                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionContributor"/>
+        <completion.contributor language="JSON" order="first"
+                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionContributor"/>
+        <typedHandler implementation="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionTypedHandler"
+                      order="first"/>
+        <completion.confidence language="kotlin" order="first"
+                               implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
+        <completion.confidence language="JSON" order="first"
+                               implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
     </extensions>
 </idea-plugin>

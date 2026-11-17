@@ -58,7 +58,10 @@ class MixinInstantiationInspection : LocalInspectionTool() {
 
             private fun checkCall(call: KtCallElement) {
                 val callee = call.calleeExpression ?: return
-                checkReference((callee as? KtConstructorCalleeExpression)?.constructorReferenceExpression ?: callee, call)
+                checkReference(
+                    (callee as? KtConstructorCalleeExpression)?.constructorReferenceExpression ?: callee,
+                    call
+                )
             }
 
             private fun checkReference(reference: PsiElement, highlight: PsiElement = reference) {

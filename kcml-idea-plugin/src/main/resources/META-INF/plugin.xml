@@ -26,6 +26,7 @@
     </description>
 
     <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.json</depends>
     <depends optional="true" config-file="dependencies/java.xml">com.intellij.java</depends>
     <depends optional="true" config-file="dependencies/kotlin.xml">org.jetbrains.kotlin</depends>
     <idea-version since-build="223"/>

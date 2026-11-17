@@ -22,11 +22,11 @@ import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
 import com.intellij.util.PsiNavigateUtil
+import dev.karmakrafts.kcml.intellij.icon.Icons
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.argument
 import dev.karmakrafts.kcml.intellij.util.literalValue
@@ -34,11 +34,8 @@ import dev.karmakrafts.kcml.intellij.util.qualifiedName
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
-import javax.swing.Icon
 
 class PluginLineMarkerProvider : LineMarkerProvider {
-    private val icon: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/kcml.svg", javaClass)
-
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
 
     private fun KtClassOrObject.resolveMetadata(): PsiFile? {
@@ -72,7 +69,7 @@ class PluginLineMarkerProvider : LineMarkerProvider {
             result.add(object : LineMarkerInfo<PsiElement>(
                 element,
                 element.textRange,
-                icon,
+                Icons.kcml,
                 { "KCML plugin" },
                 target?.let {
                     GutterIconNavigationHandler { _, source ->

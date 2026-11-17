@@ -21,10 +21,10 @@ import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
 import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.project.IndexNotReadyException
-import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.util.PsiNavigateUtil
+import dev.karmakrafts.kcml.intellij.icon.Icons
 import dev.karmakrafts.kcml.intellij.util.ClassIndex
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.argument
@@ -35,11 +35,8 @@ import dev.karmakrafts.kcml.intellij.util.resolveMixinTarget
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtNamedFunction
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
-import javax.swing.Icon
 
 class InjectLineMarkerProvider : LineMarkerProvider {
-    private val icon: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/injection.svg", javaClass)
-
     override fun getLineMarkerInfo(element: PsiElement): LineMarkerInfo<*>? = null
 
     override fun collectSlowLineMarkers(elements: List<PsiElement>, result: MutableCollection<in LineMarkerInfo<*>>) {
@@ -51,7 +48,7 @@ class InjectLineMarkerProvider : LineMarkerProvider {
             result.add(object : LineMarkerInfo<PsiElement>(
                 element,
                 element.textRange,
-                icon,
+                Icons.injection,
                 { "KCML plugin" },
                 target?.let {
                     GutterIconNavigationHandler { _, source ->

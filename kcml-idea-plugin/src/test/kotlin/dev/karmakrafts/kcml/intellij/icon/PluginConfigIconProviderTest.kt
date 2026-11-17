@@ -122,19 +122,24 @@ class PluginConfigIconProviderTest : AnnotationFixtureTestCase() {
             assertEquals(matchesOther, provider.getIcon(other, 0, project) != null)
         }
 
-        edit("@Plugin(\"example\") class Example", true, false)
-        edit("@Plugin(\"other\") class Example", false, true)
-        edit("class Example", false, false)
-        edit("@Plugin(\"example\") class Example", true, false)
+        edit("@Plugin(\"example\") class Example", matches = true, matchesOther = false)
+        edit("@Plugin(\"other\") class Example", matches = false, matchesOther = true)
+        edit("class Example", matches = false, matchesOther = false)
+        edit("@Plugin(\"example\") class Example", matches = true, matchesOther = false)
         val before = refreshes
         WriteCommandAction.runWriteCommandAction(project) { source.delete() }
-        PlatformTestUtil.waitWithEventsDispatching("Deleted plugin icon presentation refresh", { refreshes > before }, 5)
+        PlatformTestUtil.waitWithEventsDispatching(
+            "Deleted plugin icon presentation refresh",
+            { refreshes > before },
+            5
+        )
         assertNull(provider.getIcon(file, 0, project))
     }
 
     fun testTestPluginDoesNotChangeProductionResourceIcon() {
         val source = myFixture.addFileToProject(
-            "testSources/Example.kt", "import dev.karmakrafts.kcml.api.plugin.Plugin\n@Plugin(\"example\") class Example"
+            "testSources/Example.kt",
+            "import dev.karmakrafts.kcml.api.plugin.Plugin\n@Plugin(\"example\") class Example"
         )
         PsiTestUtil.addSourceRoot(module, source.virtualFile.parent, true)
         assertNull(icon("META-INF/example.json"))
