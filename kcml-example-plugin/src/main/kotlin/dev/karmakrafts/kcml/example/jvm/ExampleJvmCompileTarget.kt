@@ -21,11 +21,11 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 
 internal class ExampleJvmCompileTarget(override val isAndroid: Boolean) : JvmCompileTarget {
     companion object Type : CompileTargetType {
-        override val aliases: Set<String> = setOf("example_jvm")
+        override val aliases: Set<String> = setOf("exampleJvm")
     }
 
     object AndroidType : CompileTargetType {
-        override val aliases: Set<String> = setOf("example_android")
+        override val aliases: Set<String> = setOf("exampleAndroid")
     }
 
     override val type: CompileTargetType

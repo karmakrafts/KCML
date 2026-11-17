@@ -21,7 +21,7 @@ import dev.karmakrafts.kcml.api.target.JsCompileTarget
 
 internal object ExampleJsCompileTarget : JsCompileTarget {
     object Type : CompileTargetType {
-        override val aliases: Set<String> = setOf("example_js")
+        override val aliases: Set<String> = setOf("exampleJs")
     }
 
     override val type: CompileTargetType = Type

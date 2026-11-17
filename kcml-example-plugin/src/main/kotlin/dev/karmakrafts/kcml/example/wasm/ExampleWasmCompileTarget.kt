@@ -21,7 +21,7 @@ import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 
 internal object ExampleWasmCompileTarget : WasmCompileTarget {
     object Type : CompileTargetType {
-        override val aliases: Set<String> = setOf("example_wasm")
+        override val aliases: Set<String> = setOf("exampleWasm")
     }
 
     override val type: CompileTargetType = Type

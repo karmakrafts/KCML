@@ -30,7 +30,6 @@ import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import java.net.URL
 import java.util.*
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -87,10 +86,40 @@ class NativeTargetConfigurationTest {
         assertEquals("+sse2", NativeTargetConfiguration.architecture(config)?.features)
         assertEquals("a;b=c", config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("flag"))
         assertEquals(
-            "/custom/llvm",
-            config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("llvmHome.linux_x64")
+            "/custom/llvm", config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("llvmHome.linux_x64")
         )
         assertSame(NativeTargetConfiguration.get(config), NativeTargetConfiguration.get(config))
+    }
+
+    @Test
+    fun `Native families are reused across configurations only when their properties match`() {
+        val familyName = "KCML_CONFIGURATION_${UUID.randomUUID().toString().replace('-', '_')}"
+        val customDescriptor = descriptor().replace("\"name\":\"LINUX\"", "\"name\":\"$familyName\"")
+        for (encoded in listOf(descriptor(), customDescriptor)) {
+            fun decode(value: String = encoded): NativeTargetConfiguration = checkNotNull(
+                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = value })
+            )
+
+            val first = decode()
+            val second = decode()
+            assertSame(first.target.family, second.target.family)
+            assertSame(first.target.architecture, second.target.architecture)
+            assertEquals(1, Family.entries.count { it.name == first.target.family.name })
+
+            val family = first.target.family
+            for ((property, value) in mapOf(
+                "exeSuffix" to family.exeSuffix,
+                "dynamicPrefix" to family.dynamicPrefix,
+                "dynamicSuffix" to family.dynamicSuffix,
+                "staticPrefix" to family.staticPrefix,
+                "staticSuffix" to family.staticSuffix
+            )) {
+                val conflicting = encoded.replace("\"$property\":\"$value\"", "\"$property\":\"wrong\"")
+                val error = assertFailsWith<IllegalArgumentException> { decode(conflicting) }
+                assertEquals("Conflicting definition of Native family '${family.name}'", error.message)
+                assertSame(family, decode().target.family)
+            }
+        }
     }
 
     @Test
@@ -112,9 +141,8 @@ class NativeTargetConfigurationTest {
         }
         val config = CompilerConfiguration().apply {
             kcmlNativeTarget = descriptor("""{"cpu":"generic"}""").replace(
-                    "\"name\":\"linux_x64\"",
-                    "\"explicitTarget\":false,\"name\":\"linux_x64\""
-                )
+                "\"name\":\"linux_x64\"", "\"explicitTarget\":false,\"name\":\"linux_x64\""
+            )
         }
         val configured = NativeTargetConfiguration.configure(pluginTarget, config)
         assertSame(KonanTarget.LINUX_ARM64, configured.konanTarget)
@@ -139,12 +167,11 @@ class NativeTargetConfigurationTest {
                 kcmlCompileTarget = "standalone_custom_native"
                 kcmlNativeTarget = descriptor("""{"cpu":"haswell"}""")
             }
-            PluginLoaderImpl.loadAndInvokeStandalone(config, emptyList<URL>())
+            PluginLoaderImpl.loadAndInvokeStandalone(config, emptyList())
             val target = PluginLoaderImpl.compileTargetOrNull as NativeCompileTarget
             assertSame(KonanTarget.LINUX_X64, target.konanTarget)
             assertEquals(
-                "haswell",
-                config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("targetCpu.linux_x64")
+                "haswell", config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("targetCpu.linux_x64")
             )
         }
         finally {

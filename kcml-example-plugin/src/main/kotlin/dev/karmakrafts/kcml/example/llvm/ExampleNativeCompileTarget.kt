@@ -22,7 +22,7 @@ import org.jetbrains.kotlin.konan.target.KonanTarget
 
 internal class ExampleNativeCompileTarget(override val konanTarget: KonanTarget) : NativeCompileTarget {
     companion object Type : CompileTargetType {
-        override val aliases: Set<String> = setOf("example_native")
+        override val aliases: Set<String> = setOf("exampleNative")
     }
 
     override val type: CompileTargetType = Type

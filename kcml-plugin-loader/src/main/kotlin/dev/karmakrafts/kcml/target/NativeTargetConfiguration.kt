@@ -72,7 +72,11 @@ internal class NativeTargetConfiguration(
                 )
             }
             val family = synchronized(Family::class.java) {
-                KonanTargets.createFamily(
+                Family.entries.firstOrNull { it.name == familyName }?.also {
+                    require(
+                        it.exeSuffix == exeSuffix && it.dynamicPrefix == dynamicPrefix && it.dynamicSuffix == dynamicSuffix && it.staticPrefix == staticPrefix && it.staticSuffix == staticSuffix
+                    ) { "Conflicting definition of Native family '$familyName'" }
+                } ?: KonanTargets.createFamily(
                     familyName, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix
                 )
             }

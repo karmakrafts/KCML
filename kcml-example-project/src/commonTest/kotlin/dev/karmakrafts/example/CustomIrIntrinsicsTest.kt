@@ -38,11 +38,11 @@ class CustomIrIntrinsicsTest {
     @Test
     fun `Custom compile target has its own type`() {
         val expectedAliases = mapOf(
-            "Example JVM" to "example_jvm",
-            "Example Android" to "example_android",
-            "Example JS" to "example_js",
-            "Example Wasm" to "example_wasm",
-            "Example Native" to "example_native"
+            "Example JVM" to "exampleJvm",
+            "Example Android" to "exampleAndroid",
+            "Example JS" to "exampleJs",
+            "Example Wasm" to "exampleWasm",
+            "Example Native" to "exampleNative"
         )
         assertEquals(expectedAliases.getValue(customCompileTargetName()), customCompileTargetAlias())
     }
