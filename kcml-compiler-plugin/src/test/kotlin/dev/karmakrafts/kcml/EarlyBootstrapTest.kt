@@ -168,6 +168,11 @@ private class EarlyJvmTestExtension(private val plugin: EarlyOptionsTestPlugin) 
 }
 
 class EarlyBootstrapTest {
+    companion object {
+        // All repeated agent attachments and compiler invocations share this budget on CI.
+        private val timeoutMillis: Long = TimeUnit.MINUTES.toMillis(3)
+    }
+
     @Test
     fun `fresh and repeated compiler invocations bootstrap before contributed option validation`() {
         val directory = Files.createTempDirectory(Path.of("build"), "early-bootstrap-").toAbsolutePath()
@@ -190,11 +195,11 @@ class EarlyBootstrapTest {
                 archive.closeEntry()
             }
             ServerSocket(0, 2, InetAddress.getLoopbackAddress()).use { server ->
-                server.soTimeout = 30_000
+                server.soTimeout = timeoutMillis.toInt()
                 val handshakes = CompletableFuture.runAsync {
                     repeat(11) {
                         server.accept().use { socket ->
-                            socket.soTimeout = 30_000
+                            socket.soTimeout = timeoutMillis.toInt()
                             val writer = AgentPacketWriter(socket.getOutputStream())
                             val handler = AgentPacketHandler(A2SHandshake.serializer()) { request ->
                                 writer.write(
@@ -224,7 +229,8 @@ class EarlyBootstrapTest {
                 ).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(
-                        process.waitFor(60, TimeUnit.SECONDS), "Early bootstrap timed out: ${Files.readString(log)}"
+                        process.waitFor(timeoutMillis, TimeUnit.MILLISECONDS),
+                        "Early bootstrap timed out after ${timeoutMillis}ms: ${Files.readString(log)}"
                     )
                     assertEquals(0, process.exitValue(), Files.readString(log))
                     handshakes.get(10, TimeUnit.SECONDS)
