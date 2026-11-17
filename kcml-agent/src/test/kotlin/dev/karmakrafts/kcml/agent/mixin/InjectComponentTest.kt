@@ -18,14 +18,18 @@ package dev.karmakrafts.kcml.agent.mixin
 
 import dev.karmakrafts.kcml.agent.asm.NonLoadingClassWriter
 import dev.karmakrafts.kcml.agent.asm.Types
+import dev.karmakrafts.kcml.agent.asm.restoreParameters
 import dev.karmakrafts.kcml.agent.log.NoopLogger
 import dev.karmakrafts.kcml.agent.mixin.component.ComponentContext
 import dev.karmakrafts.kcml.agent.mixin.component.InjectComponent
 import dev.karmakrafts.kcml.agent.mixin.component.MixinComponent
 import dev.karmakrafts.kcml.agent.mixin.component.ThisAwareComponent
+import dev.karmakrafts.kcml.api.mixin.ReturnContext
+import dev.karmakrafts.kcml.api.mixin.returnFromTarget
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
@@ -46,8 +50,139 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
+import dev.karmakrafts.kcml.api.mixin.Capture as MixinCapture
 
 class InjectComponentTest {
+    private object ReturnContextMixins {
+        @JvmStatic
+        fun int(context: ReturnContext<Int>, @MixinCapture(index = 0) result: Int?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun boolean(context: ReturnContext<Boolean>, @MixinCapture(index = 0) result: Boolean?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun byte(context: ReturnContext<Byte>, @MixinCapture(index = 0) result: Byte?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun short(context: ReturnContext<Short>, @MixinCapture(index = 0) result: Short?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun char(context: ReturnContext<Char>, @MixinCapture(index = 0) result: Char?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun long(context: ReturnContext<Long>, @MixinCapture(index = 0) result: Long?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun float(context: ReturnContext<Float>, @MixinCapture(index = 0) result: Float?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun double(context: ReturnContext<Double>, @MixinCapture(index = 0) result: Double?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun inlineInt(context: ReturnContext<Int>, @MixinCapture(index = 0) result: Int?) {
+            context.returnFromTarget(result ?: return)
+        }
+
+        @JvmStatic
+        fun string(context: ReturnContext<String>, @MixinCapture(index = 0) result: String?) {
+            val value = result ?: return
+            context.returnFromTarget(value)
+        }
+
+        @JvmStatic
+        fun unit(context: ReturnContext<Unit>) {
+            context.returnFromTarget()
+        }
+    }
+
+    private fun readReturnContextMixin(name: String): MethodNode {
+        val mixinClass = ClassNode()
+        val resource = "/${ReturnContextMixins::class.java.name.replace('.', '/')}.class"
+        checkNotNull(javaClass.getResourceAsStream(resource)).use { stream ->
+            ClassReader(stream.readBytes()).accept(mixinClass, 0)
+        }
+        return mixinClass.methods.single { method -> method.name == name }.apply { restoreParameters() }
+    }
+
+    private fun createReturnTarget(returnType: Type, parameterType: Type? = null): MethodNode {
+        val parameters = parameterType?.let { type -> arrayOf(type) } ?: emptyArray()
+        return MethodNode(
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "target", Type.getMethodDescriptor(returnType, *parameters), null, null
+        ).apply {
+            val start = LabelNode()
+            val end = LabelNode()
+            instructions.add(start)
+            instructions.add(InsnNode(Opcodes.NOP))
+            if (returnType == Type.VOID_TYPE) {
+                instructions.add(InsnNode(Opcodes.ACONST_NULL))
+                instructions.add(InsnNode(Opcodes.ATHROW))
+            }
+            else {
+                instructions.add(InsnNode(when (returnType.sort) {
+                    Type.LONG -> Opcodes.LCONST_0
+                    Type.FLOAT -> Opcodes.FCONST_0
+                    Type.DOUBLE -> Opcodes.DCONST_0
+                    Type.OBJECT, Type.ARRAY -> Opcodes.ACONST_NULL
+                    else -> Opcodes.ICONST_0
+                }))
+                instructions.add(InsnNode(returnType.getOpcode(Opcodes.IRETURN)))
+            }
+            instructions.add(end)
+            if (parameterType != null) {
+                localVariables = mutableListOf(LocalVariableNode("result", parameterType.descriptor, null, start, end, 0))
+                maxLocals = parameterType.size
+            }
+            maxStack = 2
+        }
+    }
+
+    private fun applyExecutableReturnMixin(mixinMethod: MethodNode, targetMethod: MethodNode): Class<*> {
+        val context = createContext(targetMethod)
+        context.targetClass.apply {
+            version = Opcodes.V1_8
+            access = Opcodes.ACC_PUBLIC
+            superName = "java/lang/Object"
+        }
+        assertTrue(createComponent(mixinMethod, Opcodes.NOP).apply(context))
+        return loadClass(context.targetClass)
+    }
+
+    private fun assertPrimitiveReturn(name: String, value: Any, fallback: Any) {
+        val wrapperClass = value.javaClass
+        val primitiveClass = wrapperClass.getField("TYPE").get(null) as Class<*>
+        val targetMethod = createReturnTarget(Type.getType(primitiveClass), Type.getType(wrapperClass))
+        val transformedClass = applyExecutableReturnMixin(readReturnContextMixin(name), targetMethod)
+        val target = transformedClass.getMethod("target", wrapperClass)
+
+        assertEquals(primitiveClass, target.returnType)
+        assertEquals(value, target.invoke(null, value))
+        assertEquals(fallback, target.invoke(null, null))
+    }
+
     private fun writeClass(classNode: ClassNode): ByteArray {
         val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
         classNode.accept(writer)
@@ -813,6 +948,96 @@ class InjectComponentTest {
         assertEquals(
             listOf(Opcodes.ICONST_0, Opcodes.ISTORE, Opcodes.RETURN, Opcodes.GOTO, Opcodes.RETURN),
             targetMethod.instructions.filter { it.opcode >= 0 }.map { it.opcode })
+    }
+
+    @Test
+    fun `loads and executes int return context`() {
+        assertPrimitiveReturn("int", 64, 0)
+    }
+
+    @Test
+    fun `loads and executes boolean return context`() {
+        assertPrimitiveReturn("boolean", true, false)
+    }
+
+    @Test
+    fun `loads and executes byte return context`() {
+        assertPrimitiveReturn("byte", (-83).toByte(), 0.toByte())
+    }
+
+    @Test
+    fun `loads and executes short return context`() {
+        assertPrimitiveReturn("short", (-12345).toShort(), 0.toShort())
+    }
+
+    @Test
+    fun `loads and executes char return context`() {
+        assertPrimitiveReturn("char", '\u03bb', '\u0000')
+    }
+
+    @Test
+    fun `loads and executes long return context`() {
+        assertPrimitiveReturn("long", 0x123456789ABCDEFL, 0L)
+    }
+
+    @Test
+    fun `loads and executes float return context`() {
+        assertPrimitiveReturn("float", 1.25F, 0F)
+    }
+
+    @Test
+    fun `loads and executes double return context`() {
+        assertPrimitiveReturn("double", -42.125, 0.0)
+    }
+
+    @Test
+    fun `loads and executes inline return context argument captured from slot zero`() {
+        assertPrimitiveReturn("inlineInt", 64, 0)
+    }
+
+    @Test
+    fun `keeps boxed primitive and reference target returns boxed`() {
+        for ((name, value) in listOf("int" to 64, "string" to "result")) {
+            val wrapperType = Type.getType(value.javaClass)
+            for (returnType in listOf(wrapperType, Types.any)) {
+                val targetMethod = createReturnTarget(returnType, wrapperType)
+                val transformedClass = applyExecutableReturnMixin(readReturnContextMixin(name), targetMethod)
+                val target = transformedClass.getMethod("target", value.javaClass)
+
+                assertEquals(value, target.invoke(null, value))
+                assertEquals(null, target.invoke(null, null))
+            }
+        }
+    }
+
+    @Test
+    fun `loads and executes unit return context as void`() {
+        val target = applyExecutableReturnMixin(
+            readReturnContextMixin("unit"), createReturnTarget(Type.VOID_TYPE)
+        ).getMethod("target")
+
+        assertEquals(Void.TYPE, target.returnType)
+        assertEquals(null, target.invoke(null))
+    }
+
+    @Test
+    fun `rejects incompatible return context and target signatures`() {
+        for ((name, returnType) in listOf(
+            "int" to Type.BOOLEAN_TYPE,
+            "boolean" to Type.INT_TYPE,
+            "byte" to Type.INT_TYPE,
+            "long" to Type.DOUBLE_TYPE,
+            "string" to Type.INT_TYPE,
+            "int" to Type.VOID_TYPE,
+            "unit" to Type.INT_TYPE
+        )) {
+            val targetMethod = createReturnTarget(returnType, Types.any)
+            val error = assertFailsWith<IllegalStateException>("$name must not return ${returnType.descriptor}") {
+                createComponent(readReturnContextMixin(name), Opcodes.NOP).apply(createContext(targetMethod))
+            }
+            assertTrue(error.message.orEmpty().contains("ReturnContext"))
+            assertTrue(error.message.orEmpty().contains(targetMethod.desc))
+        }
     }
 
     @Test

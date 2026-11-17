@@ -1,0 +1,59 @@
+/*
+ * Copyright 2026 Karma Krafts
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package dev.karmakrafts.kcml.mixin.llvm
+
+import dev.karmakrafts.kcml.api.mixin.Capture
+import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+import dev.karmakrafts.kcml.api.mixin.Inject
+import dev.karmakrafts.kcml.api.mixin.ReturnContext
+import dev.karmakrafts.kcml.hooks.KCMLHookApi
+import dev.karmakrafts.kcml.hooks.llvm.NativeTargetHooks
+import org.jetbrains.kotlin.konan.target.BinaryFormat
+import org.jetbrains.kotlin.konan.target.KonanTarget
+
+@OptIn(KCMLHookApi::class)
+@Suppress("UNUSED")
+@IndirectMixin("org.jetbrains.kotlin.konan.target.KonanTargetExtenstionsKt", -999)
+internal object KonanTargetExtensionsKtMixin {
+    @Inject(name = "binaryFormat", order = Inject.Order.BEFORE)
+    @JvmStatic
+    fun binaryFormat(context: ReturnContext<BinaryFormat>, @Capture(index = 0) target: KonanTarget) {
+        val result = NativeTargetHooks.onBinaryFormat(target) ?: return
+        context.returnFromTarget(result)
+    }
+
+    @Inject(name = "pointerBits", order = Inject.Order.BEFORE)
+    @JvmStatic
+    fun pointerBits(context: ReturnContext<Int>, @Capture(index = 0) target: KonanTarget) {
+        val result = NativeTargetHooks.onPointerBits(target) ?: return
+        context.returnFromTarget(result)
+    }
+
+    @Inject(name = "supports64BitAtomics", order = Inject.Order.BEFORE)
+    @JvmStatic
+    fun supports64BitAtomics(context: ReturnContext<Boolean>, @Capture(index = 0) target: KonanTarget) {
+        val result = NativeTargetHooks.onSupports64BitAtomics(target) ?: return
+        context.returnFromTarget(result)
+    }
+
+    @Inject(name = "supportsUnalignedAccess", order = Inject.Order.BEFORE)
+    @JvmStatic
+    fun supportsUnalignedAccess(context: ReturnContext<Boolean>, @Capture(index = 0) target: KonanTarget) {
+        val result = NativeTargetHooks.onSupportsUnalignedAccess(target) ?: return
+        context.returnFromTarget(result)
+    }
+}

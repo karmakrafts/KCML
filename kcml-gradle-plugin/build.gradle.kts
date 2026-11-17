@@ -80,11 +80,14 @@ configurations {
 dependencies {
     compileOnly(gradleApi())
     compileOnly(libs.kotlin.gradle.plugin)
+    compileOnly("org.jetbrains.kotlin:kotlin-klib-commonizer-api:${libs.versions.kotlin.get()}")
 
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     shade(projects.kcmlAgentProtocol)
     shade(projects.kcmlGradleApi)
+    shade(projects.kcmlHacks)
+    shade(libs.ow2.asm.core)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)
@@ -133,6 +136,7 @@ tasks {
     shadowJar {
         archiveClassifier = ""
         configurations = listOf(shade)
+        relocate("org.objectweb.asm", "dev.karmakrafts.kcml.gradle.internal.asm")
         dependencies {
             exclude { "kotlin-stdlib" in it.moduleName }
             exclude { "kotlin-reflect" in it.moduleName }
@@ -181,7 +185,7 @@ publishing {
                         val name = it.name()
                         name == "artifactId" || (name is groovy.namespace.QName && name.localPart == "artifactId")
                     }?.text()
-                    artifactId == "kcml-agent-protocol" || artifactId == "kcml-gradle-api"
+                    artifactId in setOf("kcml-agent-protocol", "kcml-gradle-api", "kcml-hacks", "asm")
                 }?.forEach { dependenciesNode.remove(it) }
             }
         }

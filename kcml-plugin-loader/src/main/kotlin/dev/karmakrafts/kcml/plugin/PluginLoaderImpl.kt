@@ -30,6 +30,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
@@ -38,9 +39,11 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
+import dev.karmakrafts.kcml.target.NativeTargetConfiguration
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
+import dev.karmakrafts.kcml.util.kcmlNativeTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import io.github.alexandrepiveteau.graphs.DirectedGraph
 import io.github.alexandrepiveteau.graphs.Vertex
@@ -60,7 +63,6 @@ import org.jetbrains.kotlin.compiler.plugin.parseLegacyPluginOption
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.MessageCollectorAccess
 import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.konan.config.konanTarget
 import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
@@ -97,11 +99,20 @@ object PluginLoaderImpl : PluginLoader {
     internal val compileTargetOrNull: CompileTarget?
         get() = compilationState.get().compileTarget
 
+    internal val nativeArchitectureOrNull: NativeArchitectureConfiguration?
+        get() = compilationState.get().nativeArchitecture
+
     internal fun getCompileTarget(config: CompilerConfiguration): CompileTarget {
         val state = compilationState.get()
-        return state.compileTarget ?: compileTargetRegistry.createTarget(config).also { target ->
+        return state.compileTarget ?: compileTargetRegistry.createTarget(config).let { target ->
+            if (target is NativeCompileTarget) NativeTargetConfiguration.configure(target, config)
+            else {
+                require(NativeTargetConfiguration.get(config) == null) { "Native target configuration requires a Native compile target" }
+                target
+            }
+        }.also { target ->
             state.compileTarget = target
-            if (target is NativeCompileTarget) config.konanTarget = target.konanTarget.name
+            state.nativeArchitecture = NativeTargetConfiguration.architecture(config)
         }
     }
 
@@ -327,6 +338,7 @@ object PluginLoaderImpl : PluginLoader {
                 loadingPluginId = pluginId
                 plugin.registerTargets(compileTargetRegistry)
             }
+            if (config.kcmlNativeTarget != null) getCompileTarget(config)
             for ([pluginId, plugin] in sortedPlugins) {
                 loadingPluginId = pluginId
                 val context = PreInitializationContext( // @formatter:off

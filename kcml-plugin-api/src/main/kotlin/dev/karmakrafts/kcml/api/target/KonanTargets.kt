@@ -16,18 +16,54 @@
 
 package dev.karmakrafts.kcml.api.target
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
-import dev.karmakrafts.kcml.api.util.ReflectionUtils
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.EnumExtender
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import org.objectweb.asm.ClassWriter
+import org.objectweb.asm.Opcodes
+import java.lang.reflect.Constructor
+
+private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.classLoader) {
+    val constructor: Constructor<out KonanTarget> by lazy {
+        val className = "dev/karmakrafts/kcml/api/target/internal/CustomKonanTarget"
+        val targetName = "org/jetbrains/kotlin/konan/target/KonanTarget"
+        val arguments = "Ljava/lang/String;Lorg/jetbrains/kotlin/konan/target/Family;" +
+            "Lorg/jetbrains/kotlin/konan/target/Architecture;"
+        val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+        writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, targetName, null)
+        writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "($arguments)V", null, null).apply {
+            visitCode()
+            visitVarInsn(Opcodes.ALOAD, 0)
+            visitVarInsn(Opcodes.ALOAD, 1)
+            visitVarInsn(Opcodes.ALOAD, 2)
+            visitVarInsn(Opcodes.ALOAD, 3)
+            visitInsn(Opcodes.ACONST_NULL)
+            visitMethodInsn(
+                Opcodes.INVOKESPECIAL, targetName, "<init>",
+                "(${arguments}Lkotlin/jvm/internal/DefaultConstructorMarker;)V", false
+            )
+            visitInsn(Opcodes.RETURN)
+            visitMaxs(0, 0)
+            visitEnd()
+        }
+        writer.visitEnd()
+        val bytes = writer.toByteArray()
+        defineClass(className.replace('/', '.'), bytes, 0, bytes.size)
+            .asSubclass(KonanTarget::class.java)
+            .getConstructor(String::class.java, Family::class.java, Architecture::class.java)
+    }
+}
 
 /** Utilities for defining custom Kotlin/Native families, architectures, and targets. */
-@OptIn(DiscouragedKcmlApi::class, DelicateKcmlApi::class)
+@OptIn(DiscouragedKcmlApi::class)
 @Suppress("NOTHING_TO_INLINE")
 public object KonanTargets {
+    @PublishedApi
+    internal val constructor: Constructor<out KonanTarget>
+        get() = CustomKonanTargetFactory.constructor
+
     /**
      * Defines and registers a new Kotlin/Native [Family] enum value.
      *
@@ -72,5 +108,5 @@ public object KonanTargets {
      */
     public inline fun create(
         name: String, family: Family, architecture: Architecture
-    ): KonanTarget = ReflectionUtils.new(name, family, architecture)
+    ): KonanTarget = constructor.newInstance(name, family, architecture)
 }

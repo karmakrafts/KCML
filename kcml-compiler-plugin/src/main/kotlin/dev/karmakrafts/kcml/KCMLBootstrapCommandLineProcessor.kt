@@ -23,6 +23,7 @@ import dev.karmakrafts.kcml.util.kcmlAgentDumpPath
 import dev.karmakrafts.kcml.util.kcmlAgentLogging
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlModuleName
+import dev.karmakrafts.kcml.util.kcmlNativeTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
 import org.jetbrains.kotlin.compiler.plugin.AbstractCliOption
 import org.jetbrains.kotlin.compiler.plugin.CliOption
@@ -45,6 +46,7 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
         private const val MODULE_NAME: String = "moduleName"
         private const val COMPILE_TARGET: String = "compileTarget"
         private const val KONAN_TARGET: String = "konanTarget"
+        private const val NATIVE_TARGET: String = "nativeTarget"
     }
 
     override val pluginId: String get() = "${KCMLConstants.PLUGIN_ID}.bootstrap"
@@ -67,6 +69,12 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
             optionName = KONAN_TARGET,
             valueDescription = "<string>",
             description = "The current Kotlin/Native target",
+            required = false
+        ),
+        CliOption(
+            optionName = NATIVE_TARGET,
+            valueDescription = "<base64-json>",
+            description = "Custom Kotlin/Native target and LLVM architecture configuration",
             required = false
         ),
         CliOption(
@@ -119,6 +127,7 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
             MODULE_NAME -> configuration.kcmlModuleName = value
             COMPILE_TARGET -> configuration.kcmlCompileTarget = value
             KONAN_TARGET -> configuration.konanTarget = value
+            NATIVE_TARGET -> configuration.kcmlNativeTarget = value
         }
     }
 }

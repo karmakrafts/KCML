@@ -22,6 +22,7 @@ import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilerPluginSupportPlugin
 import org.jetbrains.kotlin.gradle.plugin.SubpluginArtifact
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 internal class KCMLBootstrapGradlePlugin : KotlinCompilerPluginSupportPlugin {
     override fun apply(target: Project) = Unit
@@ -32,5 +33,8 @@ internal class KCMLBootstrapGradlePlugin : KotlinCompilerPluginSupportPlugin {
 
     override fun getCompilerPluginId(): String = "${BuildInfo.PLUGIN_ID}.bootstrap"
     override fun getPluginArtifact(): SubpluginArtifact = BuildInfo.pluginArtifact
-    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean = true
+
+    // Native options are provider-backed on the task because KGP eagerly snapshots subplugin options.
+    override fun isApplicable(kotlinCompilation: KotlinCompilation<*>): Boolean =
+        kotlinCompilation.target !is KotlinNativeTarget
 }

@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.plugin
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.ipm.IPMImpl
@@ -38,6 +39,7 @@ internal class CompilationState {
     val sortedPlugins: LinkedHashMap<String, CompilerPlugin> = LinkedHashMap()
     val compileTargetRegistry: CompileTargetRegistryImpl = CompileTargetRegistryImpl()
     var compileTarget: CompileTarget? = null
+    var nativeArchitecture: NativeArchitectureConfiguration? = null
     val optionProcessors: ArrayList<CommandLineProcessor> = ArrayList()
     var commandLineProcessor: CommandLineProcessor? = null
     var arePluginsPreInitialized: Boolean = false

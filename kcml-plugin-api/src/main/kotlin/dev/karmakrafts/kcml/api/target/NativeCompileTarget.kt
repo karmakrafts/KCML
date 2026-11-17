@@ -35,4 +35,8 @@ public interface NativeCompileTarget : CompileTarget {
      * When implementing a custom compile target, use [KonanTargets.create] to create a fitting custom target.
      */
     public val konanTarget: KonanTarget
+
+    /** Optional LLVM settings applied before Kotlin/Native constructs its platform configuration. */
+    public val architecture: NativeArchitectureConfiguration?
+        get() = null
 }

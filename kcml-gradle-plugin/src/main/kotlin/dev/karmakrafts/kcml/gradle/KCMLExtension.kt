@@ -21,6 +21,8 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import java.util.*
 import javax.inject.Inject
 
 /**
@@ -50,6 +52,9 @@ abstract class KCMLExtension @Inject internal constructor( // @formatter:off
 
     internal val customCompileTargets: MapProperty<String, String> =
         objects.mapProperty(String::class.java, String::class.java).convention(emptyMap())
+
+    internal val nativeTargets: MutableMap<KotlinNativeTarget, NativeTargetConfiguration> = IdentityHashMap()
+    internal val nativeTargetAdapter: CustomNativeTargetAdapter by lazy { CustomNativeTargetAdapter(project) }
 
     /**
      * The inclusive lower bound of the port range used for agent communication.

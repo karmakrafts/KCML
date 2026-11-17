@@ -18,12 +18,67 @@ package dev.karmakrafts.kcml.api.target
 
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.konan.target.HostManager
+import org.jetbrains.kotlin.konan.target.KonanTarget
+import java.lang.reflect.Modifier
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class KonanTargetsTest {
+    @Test
+    fun `creates fresh targets after native classes are preloaded`() {
+        val host = HostManager.host
+        val predefined = KonanTarget.predefinedTargets.toMap()
+        assertTrue(Modifier.isAbstract(KonanTarget::class.java.modifiers))
+        val name = "kcml_test_preloaded_target"
+
+        val first = KonanTargets.create(name, host.family, host.architecture)
+        val second = KonanTargets.create(name, host.family, host.architecture)
+
+        assertNotSame(first, second)
+        assertSame(first.javaClass, second.javaClass)
+        for (target in listOf(first, second)) {
+            assertEquals(name, target.name)
+            assertSame(host.family, target.family)
+            assertSame(host.architecture, target.architecture)
+            assertFalse(target in KonanTarget.predefinedTargets.values)
+        }
+        assertFalse(name in KonanTarget.predefinedTargets)
+        assertEquals(predefined, KonanTarget.predefinedTargets)
+        assertSame(host, HostManager.host)
+    }
+
+    @Test
+    fun `creates targets with runtime family and architecture without an agent`() {
+        val host = HostManager.host
+        val predefined = KonanTarget.predefinedTargets.toMap()
+        assertTrue(Modifier.isAbstract(KonanTarget::class.java.modifiers))
+        val family = KonanTargets.createFamily("KCML_TEST_TARGET_FAMILY", ".bin", "dyn", ".so", "stat", ".a")
+        val architecture = KonanTargets.createArchitecture("KCML_TEST_TARGET_ARCHITECTURE", 64)
+        val name = "kcml_test_runtime_target"
+
+        val first = KonanTargets.create(name, family, architecture)
+        val second = KonanTargets.create(name, family, architecture)
+
+        assertNotSame(first, second)
+        for (target in listOf(first, second)) {
+            assertEquals(name, target.name)
+            assertSame(family, target.family)
+            assertSame(architecture, target.architecture)
+            assertFalse(target in KonanTarget.predefinedTargets.values)
+        }
+        assertSame(family, Family.valueOf(family.name))
+        assertSame(architecture, Architecture.valueOf(architecture.name))
+        assertFalse(name in KonanTarget.predefinedTargets)
+        assertEquals(predefined, KonanTarget.predefinedTargets)
+        assertSame(host, HostManager.host)
+    }
+
     @Test
     fun `creates and registers family with all constructor properties`() {
         val name = "KCML_TEST_FAMILY_PROPERTIES"

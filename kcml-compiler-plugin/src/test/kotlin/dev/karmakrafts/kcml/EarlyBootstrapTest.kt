@@ -53,11 +53,19 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
+import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.Architecture
+import org.jetbrains.kotlin.konan.target.BinaryFormat
+import org.jetbrains.kotlin.konan.target.ClangFlags
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import org.jetbrains.kotlin.konan.target.binaryFormat
+import org.jetbrains.kotlin.konan.target.loadConfigurables
+import org.jetbrains.kotlin.konan.target.pointerBits
+import org.jetbrains.kotlin.konan.target.supports64BitAtomics
+import org.jetbrains.kotlin.konan.target.supportsUnalignedAccess
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -76,6 +84,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
@@ -88,6 +97,7 @@ class EarlyOptionsTestPlugin : CompilerPlugin {
 
     var creationCount: Int = 0
     var preInitCount: Int = 0
+    lateinit var factoryTarget: CompileTarget
     lateinit var preInitTarget: CompileTarget
     lateinit var initTarget: CompileTarget
     var initializedValue: Int? = null
@@ -97,9 +107,10 @@ class EarlyOptionsTestPlugin : CompilerPlugin {
 
     override fun registerTargets(registry: CompileTargetRegistry) {
         for (alias in listOf("custom_jvm", "custom_native")) {
-            registry.register(object : CompileTargetType {
+            val targetType = object : CompileTargetType {
                 override val aliases: Set<String> = setOf(alias)
-            }, CompileTargetFactory {
+            }
+            registry.register(targetType, CompileTargetFactory {
                 ++creationCount
                 when (alias) {
                     "custom_jvm" -> object : JvmCompileTarget {
@@ -108,10 +119,11 @@ class EarlyOptionsTestPlugin : CompilerPlugin {
                     }
                     else -> object : NativeCompileTarget {
                         override val name: String = "Custom Native"
+                        override val type: CompileTargetType = targetType
                         override val konanTarget: KonanTarget =
                             KonanTargets.create("kcml_custom_linux_x64", Family.LINUX, Architecture.X64)
                     }
-                }
+                }.also { factoryTarget = it }
             })
         }
     }
@@ -180,7 +192,7 @@ class EarlyBootstrapTest {
             ServerSocket(0, 2, InetAddress.getLoopbackAddress()).use { server ->
                 server.soTimeout = 30_000
                 val handshakes = CompletableFuture.runAsync {
-                    repeat(6) {
+                    repeat(11) {
                         server.accept().use { socket ->
                             socket.soTimeout = 30_000
                             val writer = AgentPacketWriter(socket.getOutputStream())
@@ -212,7 +224,7 @@ class EarlyBootstrapTest {
                 ).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(
-                        process.waitFor(45, TimeUnit.SECONDS), "Early bootstrap timed out: ${Files.readString(log)}"
+                        process.waitFor(60, TimeUnit.SECONDS), "Early bootstrap timed out: ${Files.readString(log)}"
                     )
                     assertEquals(0, process.exitValue(), Files.readString(log))
                     handshakes.get(10, TimeUnit.SECONDS)
@@ -230,45 +242,183 @@ class EarlyBootstrapTest {
 
 @OptIn(ExperimentalCompilerApi::class, CompilerConfiguration.Internals::class)
 object EarlyBootstrapProcess {
+    private const val NATIVE_TARGET = "kcml_bootstrap_native64"
+    private const val NATIVE_FAMILY = "KCML_BOOTSTRAP_FAMILY"
+    private const val NATIVE_ARCHITECTURE = "KCML_BOOTSTRAP_ARCH64"
+    private const val TARGET_TRIPLE = "x86_64-unknown-linux-gnu"
+    private const val DATA_LAYOUT = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+
+    private fun nativeTargetMetadata(bitness: Int = 64, dynamicSuffix: String = ".so", cpu: String = "x86-64"): String = """
+        {
+            "name": "$NATIVE_TARGET",
+            "family": {
+                "name": "$NATIVE_FAMILY",
+                "exeSuffix": ".bin",
+                "dynamicPrefix": "lib",
+                "dynamicSuffix": "$dynamicSuffix",
+                "staticPrefix": "lib",
+                "staticSuffix": ".a"
+            },
+            "architecture": {"name": "$NATIVE_ARCHITECTURE", "bitness": $bitness},
+            "llvm": {
+                "targetTriple": "$TARGET_TRIPLE",
+                "cpu": "$cpu",
+                "features": "+sse2",
+                "dataLayout": "$DATA_LAYOUT",
+                "properties": {"clangFlags.$NATIVE_TARGET": "-DKCML_BOOTSTRAP_NATIVE=1"}
+            }
+        }
+    """.trimIndent().let {
+        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(it.toByteArray(Charsets.UTF_8))
+    }
+
+    private fun assertNativeMetadata(target: CompileTarget) {
+        assertEquals("Custom Native", target.name)
+        assertEquals(setOf("custom_native"), target.type.aliases)
+        val native = target as NativeCompileTarget
+        assertEquals(NATIVE_TARGET, native.konanTarget.name)
+        with(native.konanTarget.family) {
+            assertEquals(NATIVE_FAMILY, name)
+            assertEquals(".bin", exeSuffix)
+            assertEquals("lib", dynamicPrefix)
+            assertEquals(".so", dynamicSuffix)
+            assertEquals("lib", staticPrefix)
+            assertEquals(".a", staticSuffix)
+        }
+        assertEquals(NATIVE_ARCHITECTURE, native.konanTarget.architecture.name)
+        assertEquals(64, native.konanTarget.architecture.bitness)
+        assertEquals(BinaryFormat.ELF, native.konanTarget.binaryFormat())
+        assertEquals(64, native.konanTarget.pointerBits())
+        assertFalse(native.konanTarget.supports64BitAtomics())
+        assertFalse(native.konanTarget.supportsUnalignedAccess())
+        with(assertNotNull(native.architecture)) {
+            assertEquals(TARGET_TRIPLE, targetTriple)
+            assertEquals("x86-64", cpu)
+            assertEquals("+sse2", features)
+            assertEquals(DATA_LAYOUT, dataLayout)
+            assertEquals(mapOf("clangFlags.$NATIVE_TARGET" to "-DKCML_BOOTSTRAP_NATIVE=1"), properties)
+        }
+    }
+
     @JvmStatic
     fun main(arguments: Array<String>) {
         val processors = ServiceLoader.load(CommandLineProcessor::class.java).toList()
         assertTrue(processors.indexOfFirst { it.pluginId == "kcml.bootstrap" } < processors.indexOfFirst { it.pluginId == "kcml" })
+        var host: KonanTarget? = null
+        var predefinedTargets: Map<String, KonanTarget>? = null
+        var familyCount = 0
+        var architectureCount = 0
+        fun assertHostUnchanged() {
+            assertSame(host, HostManager.host)
+            assertTrue(HostManager().enabled.any { it === host })
+            assertEquals(predefinedTargets, KonanTarget.predefinedTargets)
+            for ((name, target) in assertNotNull(predefinedTargets)) assertSame(target, KonanTarget.predefinedTargets[name])
+        }
+
         fun assertNoCustomNativeTarget() {
             val hostManager = HostManager()
-            assertFalse("kcml_custom_linux_x64" in hostManager.targets)
-            assertTrue(hostManager.targetValues.none { it.name == "kcml_custom_linux_x64" })
-            assertTrue(hostManager.enabled.none { it.name == "kcml_custom_linux_x64" })
+            for (name in listOf("kcml_custom_linux_x64", NATIVE_TARGET)) {
+                assertFalse(name in hostManager.targets)
+                assertTrue(hostManager.targetValues.none { it.name == name })
+                assertTrue(hostManager.enabled.none { it.name == name })
+            }
+            assertHostUnchanged()
         }
 
         var previous: EarlyOptionsTestPlugin? = null
-        for (alias in listOf("custom_native", "custom_jvm")) {
+        var reconstructedFamily: Family? = null
+        var reconstructedArchitecture: Architecture? = null
+        for ((alias, metadata) in listOf(
+            "custom_native" to null, "custom_native" to nativeTargetMetadata(), "custom_jvm" to null
+        )) {
             for (value in 1..2) {
-                val config = CompilerConfiguration()
+                val config = CompilerConfiguration().apply {
+                    if (metadata != null) put(
+                        NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES, mapOf(
+                            "kcml.bootstrap.retained" to "present", "targetCpu.$NATIVE_TARGET" to "stale-cpu"
+                        )
+                    )
+                }
                 processCompilerPluginsOptions(
-                    config, listOf(
-                        "plugin:kcml:early_options_testValue=$value",
-                        "plugin:kcml.bootstrap:compileTarget=$alias",
-                        "plugin:kcml.bootstrap:agentCommPort=${arguments[0]}",
-                        "plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}"
-                    ), processors
+                    config, buildList {
+                        add("plugin:kcml:early_options_testValue=$value")
+                        add("plugin:kcml.bootstrap:compileTarget=$alias")
+                        metadata?.let { add("plugin:kcml.bootstrap:nativeTarget=$it") }
+                        add("plugin:kcml.bootstrap:agentCommPort=${arguments[0]}")
+                        add("plugin:kcml.bootstrap:pluginClasspaths=${arguments[1]}")
+                    }, processors
                 )
                 val plugin = PluginLoaderImpl.getPlugin("early_options_test") as EarlyOptionsTestPlugin
+                if (host == null) {
+                    host = HostManager.host
+                    predefinedTargets = KonanTarget.predefinedTargets.toMap()
+                    familyCount = Family.entries.size
+                    architectureCount = Architecture.entries.size
+                    assertTrue(Family.entries.none { it.name == NATIVE_FAMILY })
+                    assertTrue(Architecture.entries.none { it.name == NATIVE_ARCHITECTURE })
+                }
                 assertNotSame(previous, plugin)
                 assertNotSame(previous?.preInitTarget, plugin.preInitTarget)
                 assertEquals(1, plugin.preInitCount)
                 assertEquals(1, plugin.creationCount)
                 assertEquals(value, config[EarlyOptionsTestPlugin.key])
                 assertEquals(null, plugin.initializedValue)
+                assertSame(plugin.factoryTarget.type, plugin.preInitTarget.type)
+                if (metadata != null) {
+                    assertNativeMetadata(plugin.preInitTarget)
+                    assertNotSame(plugin.factoryTarget, plugin.preInitTarget)
+                    assertEquals("kcml_custom_linux_x64", (plugin.factoryTarget as NativeCompileTarget).konanTarget.name)
+                    val overrides = assertNotNull(config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES])
+                    assertEquals(
+                        mapOf(
+                            "kcml.bootstrap.retained" to "present",
+                            "targetTriple.$NATIVE_TARGET" to TARGET_TRIPLE,
+                            "targetCpu.$NATIVE_TARGET" to "x86-64",
+                            "targetCpuFeatures.$NATIVE_TARGET" to "+sse2",
+                            "clangFlags.$NATIVE_TARGET" to "-DKCML_BOOTSTRAP_NATIVE=1"
+                        ), overrides
+                    )
+                    val target = (plugin.preInitTarget as NativeCompileTarget).konanTarget
+                    val configurables = loadConfigurables(target, Properties().apply { putAll(overrides) }, null)
+                    assertSame(target, configurables.target)
+                    assertEquals(TARGET_TRIPLE, configurables.targetTriple.toString())
+                    assertEquals("x86-64", configurables.targetCpu)
+                    assertEquals("+sse2", configurables.targetCpuFeatures)
+                    assertTrue(configurables is ClangFlags)
+                    assertEquals(listOf("-DKCML_BOOTSTRAP_NATIVE=1"), configurables.clangFlags)
+                    Class.forName("org.jetbrains.kotlin.backend.konan.llvm.Runtime")
+                    if (reconstructedFamily != null) {
+                        assertSame(reconstructedFamily, target.family)
+                        assertSame(reconstructedArchitecture, target.architecture)
+                    }
+                    reconstructedFamily = target.family
+                    reconstructedArchitecture = target.architecture
+                    assertSame(target.family, Family.entries.single { it.name == NATIVE_FAMILY })
+                    assertSame(target.architecture, Architecture.entries.single { it.name == NATIVE_ARCHITECTURE })
+                    assertEquals(familyCount + 1, Family.entries.size)
+                    assertEquals(architectureCount + 1, Architecture.entries.size)
+                }
+                else {
+                    assertSame(plugin.factoryTarget, plugin.preInitTarget)
+                    assertTrue(config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES].isNullOrEmpty())
+                }
                 with(KCMLCompilerPluginRegistrar()) {
                     CompilerPluginRegistrar.ExtensionStorage().registerExtensions(config)
                 }
                 assertEquals(value, plugin.initializedValue)
                 assertSame(plugin.preInitTarget, plugin.initTarget)
                 assertEquals(1, plugin.creationCount)
+                assertHostUnchanged()
                 if (alias == "custom_native") {
                     val target = (plugin.initTarget as NativeCompileTarget).konanTarget
-                    assertEquals("kcml_custom_linux_x64", target.name)
+                    if (metadata != null) assertNativeMetadata(plugin.initTarget)
+                    else {
+                        assertEquals("kcml_custom_linux_x64", target.name)
+                        assertSame(Family.LINUX, target.family)
+                        assertSame(Architecture.X64, target.architecture)
+                        assertEquals(null, (plugin.initTarget as NativeCompileTarget).architecture)
+                        assertFalse(NATIVE_TARGET in HostManager().targets)
+                    }
                     assertEquals(target.name, config.konanTarget)
                     val hostManager = HostManager()
                     assertSame(target, hostManager.targetManager(target.name).target)
@@ -279,6 +429,11 @@ object EarlyBootstrapProcess {
                     assertSame(target, hostManager.enabled.single { it.name == target.name })
                     assertFalse(target.name in KonanTarget.predefinedTargets)
                     assertFalse(target in KonanTarget.predefinedTargets.values)
+                    if (metadata != null) {
+                        assertFalse("kcml_custom_linux_x64" in hostManager.targets)
+                        previous = plugin
+                        continue
+                    }
                     val constructor = Class.forName("org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig")
                         .constructors.single()
                     Class.forName("dev.karmakrafts.kcml.hooks.CommonHooks").methods.single { it.name == "onExecImpl" }
@@ -305,6 +460,29 @@ object EarlyBootstrapProcess {
                     assertNoCustomNativeTarget()
                 }
                 previous = plugin
+            }
+            if (metadata != null) {
+                for ((invalidMetadata, message) in listOf(
+                    nativeTargetMetadata(dynamicSuffix = ".conflict") to "Conflicting definition of Native family",
+                    nativeTargetMetadata(bitness = 32) to "Conflicting definition of Native architecture",
+                    nativeTargetMetadata(cpu = " ") to "Native architecture cpu must not be blank"
+                )) {
+                    val processor = KCMLBootstrapCommandLineProcessor()
+                    val config = CompilerConfiguration()
+                    fun option(name: String, value: String) = processor.processOption(
+                        processor.pluginOptions.single { it.optionName == name }, value, config
+                    )
+                    option("compileTarget", "custom_native")
+                    option("nativeTarget", invalidMetadata)
+                    option("pluginClasspaths", arguments[1])
+                    val failure = assertFailsWith<IllegalArgumentException> { option("agentCommPort", arguments[0]) }
+                    assertTrue(failure.message.orEmpty().contains(message), failure.stackTraceToString())
+                    assertEquals(familyCount + 1, Family.entries.size)
+                    assertEquals(architectureCount + 1, Architecture.entries.size)
+                    assertSame(reconstructedFamily, Family.entries.single { it.name == NATIVE_FAMILY })
+                    assertSame(reconstructedArchitecture, Architecture.entries.single { it.name == NATIVE_ARCHITECTURE })
+                    assertHostUnchanged()
+                }
             }
         }
         val directory = Files.createTempDirectory(Path.of("build"), "unconfigured-compiler-")

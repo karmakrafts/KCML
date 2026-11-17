@@ -67,3 +67,4 @@ rootProject.name = "kcml-gradle-plugin"
 
 includeFromRoot("kcml-gradle-api")
 includeFromRoot("kcml-agent-protocol")
+includeFromRoot("kcml-hacks")

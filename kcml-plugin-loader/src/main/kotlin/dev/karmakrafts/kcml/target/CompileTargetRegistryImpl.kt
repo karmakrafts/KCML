@@ -40,7 +40,8 @@ internal class CompileTargetRegistryImpl : CompileTargetRegistry {
             JvmCompileTargetImpl(config.kcmlCompileTarget == "android")
         }
         factories[NativeCompileTarget] = CompileTargetFactory { config ->
-            val konanTarget = KonanTarget.predefinedTargets[config.konanTarget]
+            val konanTarget =
+                NativeTargetConfiguration.get(config)?.target ?: KonanTarget.predefinedTargets[config.konanTarget]
                 ?: error("Could not determine Konan target for KCML native backend")
             NativeCompileTargetImpl(konanTarget)
         }
@@ -66,7 +67,10 @@ internal class CompileTargetRegistryImpl : CompileTargetRegistry {
         val compileTargetName = requireNotNull(
             config.kcmlCompileTarget ?: if (config.konanTarget != null) "native" else null
         ) { "KCML compile target not specified" }
-        val targetType = factories.keys.first { type -> compileTargetName in type.aliases && type.isSelected(config) }
+        val targetType =
+            factories.keys.firstOrNull { type -> compileTargetName in type.aliases && type.isSelected(config) }
+                ?: NativeCompileTarget.takeIf { NativeTargetConfiguration.get(config) != null }
+                ?: throw NoSuchElementException("No compile target registered for '$compileTargetName'")
         return createTarget(targetType, config)
     }
 }

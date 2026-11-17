@@ -27,9 +27,13 @@ import org.jetbrains.kotlin.gradle.InternalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
+import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.konan.target.Architecture
+import org.jetbrains.kotlin.konan.target.Family
+import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
@@ -111,16 +115,26 @@ class KCMLCompilerOptionsTest {
     }
 
     @Test
-    fun `custom target helpers only accept a name and configuration closure`() {
+    fun `custom target helpers preserve name closures and accept explicit Native identities`() {
         val functions = Class.forName("dev.karmakrafts.kcml.gradle.CustomCompileTargetExtensionsKt").methods.filter {
             it.name in setOf("customJvmTarget", "customJsTarget", "customWasmTarget", "customNativeTarget")
         }
-        assertEquals(5, functions.size)
-        functions.forEach { function ->
+        assertEquals(8, functions.size)
+        val nameClosures = functions.filter { it.parameterCount == 3 && it.parameterTypes[1] == String::class.java }
+        assertEquals(5, nameClosures.size)
+        nameClosures.forEach { function ->
             assertEquals(3, function.parameterCount)
             assertEquals(String::class.java, function.parameterTypes[1])
             assertEquals(Function1::class.java, function.parameterTypes[2])
         }
+        assertEquals(
+            setOf(
+            listOf(KonanTarget::class.java, Function1::class.java),
+            listOf(String::class.java, KonanTarget::class.java, Function1::class.java),
+            listOf(String::class.java, Family::class.java, Architecture::class.java, Function1::class.java)
+        ), functions.filterNot { it in nameClosures }.map { it.parameterTypes.drop(1) }.toSet()
+        )
+        assertTrue(functions.none { KotlinTarget::class.java in it.parameterTypes })
     }
 
     @Test

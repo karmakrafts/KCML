@@ -23,6 +23,8 @@ import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinWasmJsTargetDsl
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
+import org.jetbrains.kotlin.konan.target.Architecture
+import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
@@ -107,4 +109,37 @@ fun KotlinMultiplatformExtension.customNativeTarget(
         selectCustomCompileTarget(name)
         configure()
     }
+}
+
+/**
+ * Creates an independent Native target preserving the supplied [konanTarget] instance.
+ */
+fun KotlinMultiplatformExtension.customNativeTarget(
+    name: String, konanTarget: KonanTarget, configure: KotlinNativeTarget.() -> Unit = {}
+): KotlinNativeTarget {
+    checkCustomTargetName(name)
+    require(konanTarget.name.isNotBlank()) { "Konan target name must not be blank" }
+    return createCustomNativeTarget(name, konanTarget).apply {
+        selectCustomCompileTarget(name)
+        project.extensions.getByType(KCMLExtension::class.java).nativeTargets.getOrPut(this) { NativeTargetConfiguration() }.explicit =
+            true
+        configure()
+    }
+}
+
+/**
+ * Creates a Native target using [konanTarget]'s real name by default.
+ */
+fun KotlinMultiplatformExtension.customNativeTarget(
+    konanTarget: KonanTarget, configure: KotlinNativeTarget.() -> Unit = {}
+): KotlinNativeTarget = customNativeTarget(konanTarget.name, konanTarget, configure)
+
+/**
+ * Creates a Native target with an independent Konan identity, including runtime enum constants.
+ */
+fun KotlinMultiplatformExtension.customNativeTarget(
+    name: String, family: Family, architecture: Architecture, configure: KotlinNativeTarget.() -> Unit = {}
+): KotlinNativeTarget {
+    checkCustomTargetName(name)
+    return customNativeTarget(name, customKonanTarget(name, family, architecture), configure)
 }

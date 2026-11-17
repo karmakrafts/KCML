@@ -43,6 +43,7 @@ import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.LocalVariableNode
 import org.objectweb.asm.tree.MethodInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.TypeInsnNode
 import org.objectweb.asm.tree.VarInsnNode
 
 /**
@@ -58,6 +59,17 @@ internal data class InjectComponent( // @formatter:off
     val mixinMethod: MethodNode
 ) : AbstractMixinComponent() { // @formatter:on
     companion object {
+        private val primitiveWrappers: Map<Type, Type> = mapOf(
+            Type.BOOLEAN_TYPE to Type.getObjectType("java/lang/Boolean"),
+            Type.BYTE_TYPE to Type.getObjectType("java/lang/Byte"),
+            Type.SHORT_TYPE to Type.getObjectType("java/lang/Short"),
+            Type.CHAR_TYPE to Type.getObjectType("java/lang/Character"),
+            Type.INT_TYPE to Type.getObjectType("java/lang/Integer"),
+            Type.LONG_TYPE to Type.getObjectType("java/lang/Long"),
+            Type.FLOAT_TYPE to Type.getObjectType("java/lang/Float"),
+            Type.DOUBLE_TYPE to Type.getObjectType("java/lang/Double")
+        )
+
         fun fromAnnotation( // @formatter:off
             mixinClass: ClassNode,
             mixinMethod: MethodNode,
@@ -294,7 +306,7 @@ internal data class InjectComponent( // @formatter:off
         remove(receiver)
     }
 
-    private fun InsnList.processReturnContext(context: ComponentContext): InsnList {
+    private fun InsnList.processReturnContext(context: ComponentContext, targetMethod: MethodNode): InsnList {
         // If the mixin function doesn't have a ReturnContext parameter, we return early
         if (!hasReturnContext()) return this
         val [_, _, logger] = context
@@ -305,16 +317,35 @@ internal data class InjectComponent( // @formatter:off
         val calls = filterIsInstance<MethodInsnNode>().filter { instruction -> instruction.isReturnFromTargetCall() }
         if (calls.isEmpty()) return this
         val returnContextType = getReturnContextType()
-        val isUnit = returnContextType == Types.unit
-        val returnOpcode = if (isUnit) Opcodes.RETURN else returnContextType.getOpcode(Opcodes.IRETURN)
+        val targetReturnType = Type.getReturnType(targetMethod.desc)
+        val wrapperType = primitiveWrappers[targetReturnType]
+        val isVoid = targetReturnType == Type.VOID_TYPE
+        check(when {
+            isVoid -> returnContextType == Types.unit
+            wrapperType != null -> returnContextType == wrapperType || returnContextType == targetReturnType
+            else -> returnContextType.sort == Type.OBJECT || returnContextType.sort == Type.ARRAY
+        }) {
+            "ReturnContext<${returnContextType.className}> is incompatible with target method ${targetMethod.name}${targetMethod.desc}"
+        }
+        val returnOpcode = targetReturnType.getOpcode(Opcodes.IRETURN)
         for (call in calls) {
-            val previous = if (isUnit) {
+            val previous = if (isVoid) {
                 // Unit is passed as Unit.INSTANCE, but a JVM void return must leave no value on the operand stack.
                 removeUnitArgument(call)
             }
             else call.previous
-            val receiver = findReturnContextReceiver(previous, returnContextIndices, isUnit)
+            val receiver = findReturnContextReceiver(previous, returnContextIndices, returnContextType == Types.unit)
             removeReturnContextReceiver(receiver, returnContextIndices)
+            if (wrapperType != null) {
+                insertBefore(call, TypeInsnNode(Opcodes.CHECKCAST, wrapperType.internalName))
+                insertBefore(call, MethodInsnNode(
+                    Opcodes.INVOKEVIRTUAL,
+                    wrapperType.internalName,
+                    "${targetReturnType.className}Value",
+                    "()${targetReturnType.descriptor}",
+                    false
+                ))
+            }
             set(call, InsnNode(returnOpcode))
         }
         return this
@@ -336,9 +367,9 @@ internal data class InjectComponent( // @formatter:off
                 if (source is LabelNode) put(source, copiedInstructions[index] as LabelNode)
             }
         }
-        injection.processCapturedLocals(context, targetMethod, injectionPoint, relocated, capturedIndices)
-            .processReturnFrame(context)
-            .processReturnContext(context)
+        injection.processReturnFrame(context)
+            .processReturnContext(context, targetMethod)
+            .processCapturedLocals(context, targetMethod, injectionPoint, relocated, capturedIndices)
         context.otherComponents.filterIsInstance<ThisAwareComponent>()
             .singleOrNull()
             ?.prepareInjection(injection, relocated)

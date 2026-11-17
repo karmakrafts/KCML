@@ -42,6 +42,7 @@ import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilerPluginData
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
+import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -59,6 +60,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
         private const val OPT_MODULE_NAME: String = "moduleName"
         private const val OPT_COMPILE_TARGET: String = "compileTarget"
         private const val OPT_KONAN_TARGET: String = "konanTarget"
+        private const val OPT_NATIVE_TARGET: String = "nativeTarget"
     }
 
     override fun apply(target: Project) {
@@ -151,6 +153,32 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 }
                 val nativeCacheTasks = HashMap<String, TaskProvider<KCMLPrepareNativeCacheTask>>()
                 kmpExtension.targets.filterIsInstance<KotlinNativeTarget>().forEach { target ->
+                    target.compilations.forEach { compilation ->
+                        val bootstrap = bootstrapOptions(compilation).map { options ->
+                            CompilerPluginOptions().apply {
+                                options.forEach { addPluginArgument("${BuildInfo.PLUGIN_ID}.bootstrap", it) }
+                            }
+                        }
+                        compilation.compileTaskProvider.configure { task ->
+                            val existingData = task.kotlinPluginData
+                            val classpath = project.files(
+                                project.configurations.getByName(CONFIGURATION_NAME),
+                                project.configurations.getByName("kcmlRuntime")
+                            )
+                            task.kotlinPluginData = bootstrap.map { options ->
+                                val previous = existingData?.orNull
+                                KotlinCompilerPluginData(
+                                    previous?.classpath?.plus(classpath) ?: classpath, CompilerPluginOptions().apply {
+                                        previous?.options?.let { addPluginArgument(it) }
+                                        addPluginArgument(options)
+                                    }, previous?.inputsOutputsState ?: KotlinCompilerPluginData.InputsOutputsState(
+                                        emptyMap(), emptySet(), emptySet()
+                                    )
+                                )
+                            }
+                            task.inputs.property("kcmlBootstrapOptions", bootstrap.map { it.arguments })
+                        }
+                    }
                     target.binaries.forEach { binary ->
                         val plugins = project.configurations.getByName(CONFIGURATION_NAME)
                         val runtime = project.configurations.getByName("kcmlRuntime")
@@ -176,6 +204,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                 }
                             }
                         prepareCache.configure { task ->
+                            task.inputs.property("kcmlNativeTarget${target.name}", project.provider {
+                                target.nativeTargetJson().orEmpty()
+                            })
                             task.inputs.property("kcmlPluginOptions${target.name}", contributedOptions.map { options ->
                                 options.map { "${it.key}=${it.value}" }
                             })
@@ -330,8 +361,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
     internal fun bootstrapOptions(kotlinCompilation: KotlinCompilation<*>): Provider<List<SubpluginOption>> {
         val project = kotlinCompilation.target.project
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
-        val konanTarget = getKonanTarget(kotlinCompilation)
         return providerFactory.provider {
+            val nativeTarget = (kotlinCompilation.target as? KotlinNativeTarget)?.nativeTargetJson()
+            val konanTarget = getKonanTarget(kotlinCompilation)
             val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
                 it.file.toPath().absolutePathString()
             }
@@ -353,6 +385,12 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 } // @formatter:on
                 if (compileTarget != null) add(SubpluginOption(OPT_COMPILE_TARGET, compileTarget))
                 if (konanTarget != null) add(SubpluginOption(OPT_KONAN_TARGET, konanTarget))
+                if (nativeTarget != null) add(
+                    SubpluginOption(
+                        OPT_NATIVE_TARGET,
+                        Base64.getUrlEncoder().withoutPadding().encodeToString(nativeTarget.toByteArray(Charsets.UTF_8))
+                    )
+                )
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
             }
         }

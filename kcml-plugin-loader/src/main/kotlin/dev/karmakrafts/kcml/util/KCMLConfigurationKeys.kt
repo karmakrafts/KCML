@@ -29,6 +29,7 @@ internal object KCMLConfigurationKeys {
     val agentDumpPath: CompilerConfigurationKey<Path> = CompilerConfigurationKey.create("kcmlAgentDumpPath")
     val moduleName: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlModuleName")
     val compileTarget: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlCompileTarget")
+    val nativeTarget: CompilerConfigurationKey<String> = CompilerConfigurationKey.create("kcmlNativeTarget")
 }
 
 inline var CompilerConfiguration.kcmlPluginClasspaths: List<Path>
@@ -71,4 +72,10 @@ inline var CompilerConfiguration.kcmlCompileTarget: String?
     get() = get(KCMLConfigurationKeys.compileTarget)
     set(value) {
         put(KCMLConfigurationKeys.compileTarget, value ?: return)
+    }
+
+inline var CompilerConfiguration.kcmlNativeTarget: String?
+    get() = get(KCMLConfigurationKeys.nativeTarget)
+    set(value) {
+        put(KCMLConfigurationKeys.nativeTarget, value ?: return)
     }

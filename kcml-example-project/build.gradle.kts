@@ -31,6 +31,7 @@ kcml {
 
 kotlin {
     defaultCompilerOptions()
+
     customJvmTarget("exampleJvm")
     customJsTarget("exampleJs") { browser(); nodejs() }
     customWasmTarget("exampleWasm") { browser(); nodejs() }
