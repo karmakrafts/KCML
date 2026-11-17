@@ -20,7 +20,9 @@ package dev.karmakrafts.example
 internal fun customIrIntrinsic(): Int = throw NotImplementedError("Intrinsic not lowered by KCML example plugin")
 
 @CustomIrIntrinsic
-internal fun customCompileTargetName(): String = throw NotImplementedError("Compile target not lowered by KCML example plugin")
+internal fun customCompileTargetName(): String =
+    throw NotImplementedError("Compile target not lowered by KCML example plugin")
 
 @CustomIrIntrinsic
-internal fun customCompileTargetAlias(): String = throw NotImplementedError("Compile target type not lowered by KCML example plugin")
+internal fun customCompileTargetAlias(): String =
+    throw NotImplementedError("Compile target type not lowered by KCML example plugin")

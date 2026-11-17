@@ -336,10 +336,11 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 it.file.toPath().absolutePathString()
             }
             val moduleName = getModuleName(kotlinCompilation)
-            val compileTarget = extension.customCompileTargets.get()[kotlinCompilation.target.name]
-                ?: getCompileTarget(kotlinCompilation)?.let { alias ->
-                    extension.compileTargetAliases.get()[alias] ?: alias
-                }
+            val compileTarget = extension.customCompileTargets.get()[kotlinCompilation.target.name] ?: getCompileTarget(
+                kotlinCompilation
+            )?.let { alias ->
+                extension.compileTargetAliases.get()[alias] ?: alias
+            }
             buildList {
                 add(SubpluginOption(OPT_PLUGIN_CLASSPATH, pluginClasspaths))
                 add(SubpluginOption(OPT_AGENT_LOGGING, extension.agentLogging.get().toString()))

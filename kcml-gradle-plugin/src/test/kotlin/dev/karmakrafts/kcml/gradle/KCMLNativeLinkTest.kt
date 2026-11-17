@@ -78,7 +78,10 @@ class KCMLNativeLinkTest {
             project.dependencies.add("kcmlRuntime", project.files(runtimePlugin.toFile()))
             project.dependencies.add("kcml", project.files(contributedPlugin.toFile()))
             val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
-            val targets = listOf(kotlin.linuxX64(), kotlin.mingwX64())
+            val targets = if (useTargetDsl) listOf(
+                kotlin.customNativeTarget(aliases.getValue("native")), kotlin.customNativeTarget("another_native")
+            )
+            else listOf(kotlin.linuxX64(), kotlin.mingwX64())
             targets.forEach { it.binaries.executable() }
             targets.flatMap { it.binaries }.forEach { binary ->
                 binary.linkTaskProvider.configure { task ->
@@ -96,10 +99,7 @@ class KCMLNativeLinkTest {
             (project as ProjectInternal).evaluate()
             targets.flatMap { it.binaries }.forEach { it.linkTaskProvider.get() }
             val extension = project.extensions.getByType(KCMLExtension::class.java)
-            if (useTargetDsl) {
-                targets.forEach { kotlin.customNativeTarget(aliases.getValue("native"), it) }
-            }
-            else extension.compileTargetAliases.set(aliases)
+            if (!useTargetDsl) extension.compileTargetAliases.set(aliases)
             project.extensions.extraProperties["linkTestValue"] = "late"
             targets.forEach { target ->
                 target.compilations.forEach { compilation ->
@@ -114,7 +114,7 @@ class KCMLNativeLinkTest {
                     assertEquals("preserved", data?.inputsOutputsState?.inputs?.get("other"), link.name)
                     val bootstrap = "plugin:${BuildInfo.PLUGIN_ID}.bootstrap:"
                     assertEquals(
-                        listOf("${bootstrap}compileTarget=${aliases["native"] ?: "native"}"),
+                        listOf("${bootstrap}compileTarget=${if (useTargetDsl) target.name else aliases["native"] ?: "native"}"),
                         arguments.filter { it.startsWith("${bootstrap}compileTarget=") },
                         link.name
                     )
@@ -140,10 +140,13 @@ class KCMLNativeLinkTest {
                     val prepareCache = link.taskDependencies.getDependencies(link)
                         .filterIsInstance<KCMLPrepareNativeCacheTask>()
                         .single()
-                    assertEquals(if (useTargetDsl) emptyMap() else aliases,
-                        prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
-                    assertEquals(if (useTargetDsl) targets.associate { it.name to aliases.getValue("native") }
-                        else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
+                    assertEquals(
+                        if (useTargetDsl) emptyMap() else aliases,
+                        prepareCache.inputs.properties["kcmlCompileTargetAliases"],
+                        link.name
+                    )
+                    assertEquals(if (useTargetDsl) targets.associate { it.name to it.name }
+                    else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
                     targets.forEach { cacheTarget ->
                         assertEquals(
                             listOf("linkTestContext=${cacheTarget.name}:${binary.compilation.name}:late"),

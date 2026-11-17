@@ -74,13 +74,16 @@ class KCMLJsLinkTest {
             project.extensions.extraProperties["linkTestValue"] = "initial"
             project.configurations.getByName("kcmlRuntime").dependencies.clear()
             val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
-            val targets = listOf(
+            val targets = (if (useTargetDsl) listOf(
+                kotlin.customJsTarget(aliases.getValue("js")) { nodejs(); binaries.executable() },
+                kotlin.customWasmTarget(aliases.getValue("wasm")) { nodejs(); binaries.executable() })
+            else listOf(
                 kotlin.js { nodejs(); binaries.executable() },
                 kotlin.wasmJs { nodejs(); binaries.executable() },
                 kotlin.wasmWasi {
                     wasmtime()
                     binaries.executable()
-                }).map { it as KotlinJsIrTarget }
+                })).map { it as KotlinJsIrTarget }
             val libraries = targets.flatMap { it.binaries.library() }
             (project as ProjectInternal).evaluate()
             val binaries = libraries + targets.flatMap { target ->
@@ -90,13 +93,7 @@ class KCMLJsLinkTest {
             assertTrue(binaries.any { it.compilation.name == "test" })
             binaries.forEach { it.linkTask.get() }
             val extension = project.extensions.getByType(KCMLExtension::class.java)
-            if (useTargetDsl) {
-                targets.forEach { target ->
-                    if (target.name == "js") kotlin.customJsTarget(aliases.getValue("js"), target)
-                    else kotlin.customWasmTarget(aliases.getValue("wasm"), target)
-                }
-            }
-            else extension.compileTargetAliases.set(aliases)
+            if (!useTargetDsl) extension.compileTargetAliases.set(aliases)
             project.extensions.extraProperties["linkTestValue"] = "late"
             targets.forEach { target ->
                 target.compilations.forEach { compilation ->
@@ -107,7 +104,7 @@ class KCMLJsLinkTest {
                 val link = binary.linkTask.get()
                 val compilation = binary.compilation
                 val target = compilation.target
-                val alias = if (target.name == "js") "js" else "wasm"
+                val alias = if (target.wasmTargetType == null) "js" else "wasm"
                 val arguments = link.pluginOptions.get().flatMap { CompilerPluginOptions(it).arguments }
                 assertEquals(arguments.distinct(), arguments, link.name)
                 val bootstrap = "plugin:${BuildInfo.PLUGIN_ID}.bootstrap:"
@@ -129,10 +126,13 @@ class KCMLJsLinkTest {
                 assertTrue(arguments.none { it.startsWith("${bootstrap}konanTarget=") }, link.name)
                 val prepareCache =
                     link.taskDependencies.getDependencies(link).filterIsInstance<KCMLPrepareJsCacheTask>().single()
-                assertEquals(if (useTargetDsl) emptyMap() else aliases,
-                    prepareCache.inputs.properties["kcmlCompileTargetAliases"], link.name)
-                assertEquals(if (useTargetDsl) targets.associate { it.name to aliases.getValue(if (it.name == "js") "js" else "wasm") }
-                    else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
+                assertEquals(
+                    if (useTargetDsl) emptyMap() else aliases,
+                    prepareCache.inputs.properties["kcmlCompileTargetAliases"],
+                    link.name
+                )
+                assertEquals(if (useTargetDsl) targets.associate { it.name to it.name }
+                else emptyMap(), prepareCache.inputs.properties["kcmlCustomCompileTargets"], link.name)
                 assertEquals(
                     listOf("linkTestContext=${target.name}:${compilation.name}:late"),
                     prepareCache.inputs.properties["kcmlPluginOptions"],

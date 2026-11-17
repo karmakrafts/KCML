@@ -15,25 +15,13 @@
  */
 
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
-import dev.karmakrafts.conventions.kotlin.withAndroidLibrary
-import dev.karmakrafts.conventions.kotlin.withBrowser
-import dev.karmakrafts.conventions.kotlin.withJvm
-import dev.karmakrafts.conventions.kotlin.withNative
-import dev.karmakrafts.conventions.kotlin.withNodeJs
-import dev.karmakrafts.conventions.kotlin.withWasmWasi
-import dev.karmakrafts.conventions.kotlin.withWasmtime
-import dev.karmakrafts.conventions.kotlin.withWeb
 import dev.karmakrafts.kcml.gradle.customJsTarget
 import dev.karmakrafts.kcml.gradle.customJvmTarget
 import dev.karmakrafts.kcml.gradle.customNativeTarget
 import dev.karmakrafts.kcml.gradle.customWasmTarget
-import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
-    alias(libs.plugins.android.library)
     id("dev.karmakrafts.kcml.kcml-gradle-plugin")
 }
 
@@ -43,28 +31,10 @@ kcml {
 
 kotlin {
     defaultCompilerOptions()
-    withAndroidLibrary(group.toString())
-    withJvm()
-    withNative()
-    withWeb {
-        withBrowser()
-        withNodeJs()
-    }
-    withWasmWasi {
-        @OptIn(ExperimentalWasmDsl::class) //
-        withWasmtime()
-    }
-
-    customJvmTarget("example_jvm", jvm())
-    targets.filter { it.platformType == KotlinPlatformType.androidJvm }.forEach {
-        customJvmTarget("example_android", it)
-    }
-    customJsTarget("example_js", js())
-    customWasmTarget("example_wasm", wasmJs())
-    @OptIn(ExperimentalWasmDsl::class) customWasmTarget("example_wasm", wasmWasi())
-    targets.withType<KotlinNativeTarget>().toList().forEach {
-        customNativeTarget("example_native", it)
-    }
+    customJvmTarget("exampleJvm")
+    customJsTarget("exampleJs") { browser(); nodejs() }
+    customWasmTarget("exampleWasm") { browser(); nodejs() }
+    customNativeTarget("exampleNative")
 
     applyDefaultHierarchyTemplate()
     sourceSets {
@@ -73,12 +43,12 @@ kotlin {
                 implementation(libs.kotlin.test)
             }
         }
-        named("wasmJsTest") {
-            kotlin.srcDir("src/wasmTest/kotlin")
+        listOf("Main", "Test").forEach { compilation ->
+            named("exampleJs$compilation") { kotlin.srcDir("src/js$compilation/kotlin") }
+            named("exampleWasm$compilation") { kotlin.srcDir("src/wasmJs$compilation/kotlin") }
         }
-        named("wasmWasiTest") {
-            kotlin.srcDir("src/wasmTest/kotlin")
-        }
+        named("exampleJvmTest") { kotlin.srcDir("src/jvmTest/kotlin") }
+        named("exampleWasmTest") { kotlin.srcDir("src/wasmTest/kotlin") }
     }
 }
 

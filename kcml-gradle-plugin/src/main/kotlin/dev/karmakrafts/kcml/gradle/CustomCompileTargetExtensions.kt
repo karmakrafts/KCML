@@ -18,13 +18,10 @@ package dev.karmakrafts.kcml.gradle
 
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
-import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.plugin.KotlinTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
-import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinWithJavaTarget
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinJsTargetDsl
 import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinWasmJsTargetDsl
-import org.jetbrains.kotlin.gradle.targets.js.dsl.KotlinWasmTargetDsl
 import org.jetbrains.kotlin.gradle.targets.jvm.KotlinJvmTarget
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
@@ -34,102 +31,80 @@ private fun KotlinTarget.selectCustomCompileTarget(name: String) {
     project.extensions.getByType(KCMLExtension::class.java).customCompileTargets.put(this.name, name)
 }
 
+private fun KotlinMultiplatformExtension.checkCustomTargetName(name: String) {
+    require(name.isNotBlank()) { "Custom compile target alias must not be blank" }
+    require(name !in targets.names) { "Kotlin target '$name' already exists" }
+}
+
 /**
- * Selects the plugin-provided compile target alias [name] for this Kotlin/JVM project's target.
+ * Creates an independent JVM target named [name] using the plugin-provided alias [name].
  */
 fun KotlinJvmProjectExtension.customJvmTarget(
-    name: String,
-    configure: KotlinWithJavaTarget<*, *>.() -> Unit = {}
-): KotlinWithJavaTarget<*, *> = target.apply {
-    selectCustomCompileTarget(name)
-    configure()
+    name: String, configure: KotlinJvmTarget.() -> Unit = {}
+): KotlinJvmTarget {
+    require(name.isNotBlank()) { "Custom compile target alias must not be blank" }
+    require(name != target.name && "${name}Main" !in sourceSets.names && "${name}Test" !in sourceSets.names) {
+        "Kotlin target '$name' already exists"
+    }
+    return CustomJvmTargetPreset(target.project, target).create(name).apply {
+        selectCustomCompileTarget(name)
+        configure()
+    }
 }
 
 /**
  * Creates a JVM target named [name] using the plugin-provided compile target alias [name].
  */
 fun KotlinMultiplatformExtension.customJvmTarget(
-    name: String,
-    configure: KotlinJvmTarget.() -> Unit = {}
-): KotlinJvmTarget = customJvmTarget(name, jvm(name), configure)
-
-/**
- * Selects the plugin-provided alias [name] for an existing JVM or Android [target].
- */
-fun <T : KotlinTarget> KotlinMultiplatformExtension.customJvmTarget(
-    name: String,
-    target: T,
-    configure: T.() -> Unit = {}
-): T = target.apply {
-    require(platformType == KotlinPlatformType.jvm || platformType == KotlinPlatformType.androidJvm)
-    selectCustomCompileTarget(name)
-    configure()
+    name: String, configure: KotlinJvmTarget.() -> Unit = {}
+): KotlinJvmTarget {
+    checkCustomTargetName(name)
+    return jvm(name) {
+        selectCustomCompileTarget(name)
+        configure()
+    }
 }
 
 /**
  * Creates a JavaScript target named [name] using the plugin-provided compile target alias [name].
  */
 fun KotlinMultiplatformExtension.customJsTarget(
-    name: String,
-    configure: KotlinJsTargetDsl.() -> Unit = {}
-): KotlinJsTargetDsl = customJsTarget(name, js(name), configure)
-
-/**
- * Selects the plugin-provided alias [name] for an existing JavaScript [target].
- */
-fun <T : KotlinJsTargetDsl> KotlinMultiplatformExtension.customJsTarget(
-    name: String,
-    target: T,
-    configure: T.() -> Unit = {}
-): T = target.apply {
-    require(platformType == KotlinPlatformType.js)
-    selectCustomCompileTarget(name)
-    configure()
+    name: String, configure: KotlinJsTargetDsl.() -> Unit = {}
+): KotlinJsTargetDsl {
+    checkCustomTargetName(name)
+    return js(name) {
+        selectCustomCompileTarget(name)
+        configure()
+    }
 }
 
 /**
  * Creates a Wasm JS target named [name] using the plugin-provided compile target alias [name].
- * To select Wasm WASI, pass a target created with `wasmWasi` to the other overload.
  */
 fun KotlinMultiplatformExtension.customWasmTarget(
-    name: String,
-    configure: KotlinWasmJsTargetDsl.() -> Unit = {}
-): KotlinWasmJsTargetDsl = customWasmTarget(name, wasmJs(name), configure)
-
-/**
- * Selects the plugin-provided alias [name] for an existing Wasm JS or Wasm WASI [target].
- */
-fun <T : KotlinWasmTargetDsl> KotlinMultiplatformExtension.customWasmTarget(
-    name: String,
-    target: T,
-    configure: T.() -> Unit = {}
-): T = target.apply {
-    selectCustomCompileTarget(name)
-    configure()
+    name: String, configure: KotlinWasmJsTargetDsl.() -> Unit = {}
+): KotlinWasmJsTargetDsl {
+    checkCustomTargetName(name)
+    return wasmJs(name) {
+        selectCustomCompileTarget(name)
+        configure()
+    }
 }
 
 /**
  * Creates a host Native target named [name] using the plugin-provided compile target alias [name].
- * To choose another platform, pass a target created with Kotlin's Native target DSL to the other overload.
  */
 fun KotlinMultiplatformExtension.customNativeTarget(
-    name: String,
-    configure: KotlinNativeTarget.() -> Unit = {}
-): KotlinNativeTarget = customNativeTarget(name, when (HostManager.host) {
-    KonanTarget.LINUX_X64 -> linuxX64(name)
-    KonanTarget.MINGW_X64 -> mingwX64(name)
-    KonanTarget.MACOS_ARM64 -> macosArm64(name)
-    else -> error("Unsupported Kotlin/Native host: ${HostManager.host}")
-}, configure)
-
-/**
- * Selects the plugin-provided alias [name] for an existing Native [target], preserving its platform.
- */
-fun <T : KotlinNativeTarget> KotlinMultiplatformExtension.customNativeTarget(
-    name: String,
-    target: T,
-    configure: T.() -> Unit = {}
-): T = target.apply {
-    selectCustomCompileTarget(name)
-    configure()
+    name: String, configure: KotlinNativeTarget.() -> Unit = {}
+): KotlinNativeTarget {
+    checkCustomTargetName(name)
+    return when (HostManager.host) {
+        KonanTarget.LINUX_X64 -> linuxX64(name)
+        KonanTarget.MINGW_X64 -> mingwX64(name)
+        KonanTarget.MACOS_ARM64 -> macosArm64(name)
+        else -> error("Unsupported Kotlin/Native host: ${HostManager.host}")
+    }.apply {
+        selectCustomCompileTarget(name)
+        configure()
+    }
 }

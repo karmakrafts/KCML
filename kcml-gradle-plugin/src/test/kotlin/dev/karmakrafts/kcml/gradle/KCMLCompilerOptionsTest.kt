@@ -18,19 +18,24 @@ package dev.karmakrafts.kcml.gradle
 
 import dev.karmakrafts.kcml.gradle.api.KCMLGradleSupportPlugin
 import org.gradle.api.Project
+import org.gradle.api.internal.project.ProjectInternal
+import org.gradle.api.plugins.JavaPluginExtension
 import org.gradle.api.provider.Provider
 import org.gradle.testfixtures.ProjectBuilder
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.InternalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.SubpluginOption
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -45,7 +50,8 @@ class OptionsSupportPlugin : KCMLGradleSupportPlugin {
 
 class KCMLCompilerOptionsTest {
     @Test
-    fun `JVM project custom target DSL selects existing target lazily`() {
+    @OptIn(InternalKotlinGradlePluginApi::class)
+    fun `JVM project custom targets have independent source sets and tasks`() {
         val directory = Files.createTempDirectory(Path.of("build"), "jvm-target-dsl-").toAbsolutePath()
         try {
             val project = ProjectBuilder.builder().withProjectDir(directory.toFile()).build()
@@ -58,18 +64,62 @@ class KCMLCompilerOptionsTest {
             val target = kotlin.customJvmTarget("example_jvm") {
                 compilerOptions.moduleName.set("custom_module")
             }
-            assertSame(kotlin.target, target)
-            options.forEach { (compilation, provider) ->
-                assertEquals("example_jvm", provider.get().single { it.key == "compileTarget" }.value)
-                val moduleName = if (compilation == "main") "custom_module" else "custom_module_$compilation"
-                assertEquals(moduleName, provider.get().single { it.key == "moduleName" }.value)
+            val another = kotlin.customJvmTarget("another_jvm")
+            assertNotSame<Any>(kotlin.target, target)
+            assertNotSame(target, another)
+            assertEquals(setOf("main", "test"), kotlin.target.compilations.names)
+            listOf(target, another).forEach { custom ->
+                assertEquals(setOf("main", "test"), custom.compilations.map { it.name }.toSet())
+                custom.compilations.forEach { compilation ->
+                    assertEquals(
+                        "${custom.name}${compilation.name.replaceFirstChar(Char::uppercaseChar)}",
+                        compilation.defaultSourceSet.name
+                    )
+                    assertNotSame(
+                        kotlin.target.compilations.getByName(compilation.name).compileTaskProvider.get(),
+                        compilation.compileTaskProvider.get()
+                    )
+                    assertEquals(
+                        custom.name,
+                        bootstrap.applyToCompilation(compilation).get().single { it.key == "compileTarget" }.value
+                    )
+                }
             }
-            kotlin.customJvmTarget("another_jvm")
-            options.values.forEach { assertEquals("another_jvm", it.get().single { it.key == "compileTarget" }.value) }
+            options.values.forEach { assertEquals("jvm", it.get().single { it.key == "compileTarget" }.value) }
+            assertTrue("example_jvmTest" in project.tasks.names)
+            assertTrue("another_jvmTest" in project.tasks.names)
             assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget(" ") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget("example_jvm") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget(kotlin.target.name) }
+            target.compilations.create("integrationTest").associateWith(target.compilations.getByName("main"))
+            assertEquals(setOf("main", "test"), kotlin.target.compilations.names)
+            project.extensions.getByType(JavaPluginExtension::class.java).sourceSets.create("ordinary")
+            assertEquals(setOf("main", "test", "ordinary"), kotlin.target.compilations.names)
+            (project as ProjectInternal).evaluate()
+            listOf(target, another).forEach { custom ->
+                custom.compilations.forEach { compilation ->
+                    val task = compilation.compileTaskProvider.get() as KotlinCompile
+                    val pluginOptions = task.pluginOptions.get()
+                        .flatMap { it.allOptions()["${BuildInfo.PLUGIN_ID}.bootstrap"].orEmpty() }
+                    assertEquals(custom.name, pluginOptions.single { it.key == "compileTarget" }.value)
+                }
+            }
         }
         finally {
             directory.toFile().deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `custom target helpers only accept a name and configuration closure`() {
+        val functions = Class.forName("dev.karmakrafts.kcml.gradle.CustomCompileTargetExtensionsKt").methods.filter {
+            it.name in setOf("customJvmTarget", "customJsTarget", "customWasmTarget", "customNativeTarget")
+        }
+        assertEquals(5, functions.size)
+        functions.forEach { function ->
+            assertEquals(3, function.parameterCount)
+            assertEquals(String::class.java, function.parameterTypes[1])
+            assertEquals(Function1::class.java, function.parameterTypes[2])
         }
     }
 
@@ -94,12 +144,11 @@ class KCMLCompilerOptionsTest {
                     } to "example_jvm",
                     customJsTarget("example_js") { nodejs() } to "example_js",
                     customWasmTarget("example_wasm") { nodejs() } to "example_wasm",
-                    customWasmTarget("example_wasi", wasmWasi("customWasi")) {
-                        wasmtime()
-                    } to "example_wasi",
                     customNativeTarget("example_host") to "example_host",
-                    customNativeTarget("example_native", mingwX64("customMingw")) to "example_native"
-                )
+                    customJvmTarget("second_jvm") to "second_jvm",
+                    customJsTarget("second_js") { nodejs() } to "second_js",
+                    customWasmTarget("second_wasm") { nodejs() } to "second_wasm",
+                    customNativeTarget("second_native") to "second_native")
             }
             val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
             targets.forEach { (target, alias) ->
@@ -107,6 +156,14 @@ class KCMLCompilerOptionsTest {
                 assertTrue(target.compilations.any { it.name == "main" })
                 assertTrue(target.compilations.any { it.name == "test" })
                 target.compilations.forEach { compilation ->
+                    assertEquals(
+                        "${target.name}${compilation.name.replaceFirstChar(Char::uppercaseChar)}",
+                        compilation.defaultSourceSet.name
+                    )
+                    assertSame(
+                        compilation.compileTaskProvider.get(),
+                        project.tasks.getByName(compilation.compileKotlinTaskName)
+                    )
                     val options = bootstrap.applyToCompilation(compilation).get()
                     assertEquals(alias, options.single { it.key == "compileTarget" }.value, target.name)
                     if (target is KotlinNativeTarget) {
@@ -117,12 +174,24 @@ class KCMLCompilerOptionsTest {
             val jvm = kotlin.jvm()
             val options = bootstrap.applyToCompilation(jvm.compilations.getByName("main"))
             assertEquals("jvm", options.get().single { it.key == "compileTarget" }.value)
-            assertSame(jvm, kotlin.customJvmTarget("late_jvm", jvm))
-            assertEquals("late_jvm", options.get().single { it.key == "compileTarget" }.value)
+            val compilations = targets.keys.flatMap { it.compilations }
+            assertEquals(compilations.size, compilations.map { it.defaultSourceSet }.distinct().size)
+            assertEquals(compilations.size, compilations.map { it.compileTaskProvider.name }.distinct().size)
             val extension = project.extensions.getByType(KCMLExtension::class.java)
             extension.compileTargetAliases.put("jvm", "legacy_jvm")
-            assertEquals("late_jvm", options.get().single { it.key == "compileTarget" }.value)
-            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget("wrong_family", kotlin.linuxX64()) }
+            assertEquals("legacy_jvm", options.get().single { it.key == "compileTarget" }.value)
+            assertEquals(
+                "example_jvm",
+                bootstrap.applyToCompilation(kotlin.targets.getByName("example_jvm").compilations.getByName("main"))
+                    .get()
+                    .single { it.key == "compileTarget" }.value
+            )
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget("jvm") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customJsTarget("js") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customWasmTarget("wasmJs") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customNativeTarget("second_native") }
+            assertFailsWith<IllegalArgumentException> { kotlin.customJvmTarget(" ") }
+            assertTrue(" " !in kotlin.targets.names)
         }
         finally {
             directory.toFile().deleteRecursively()

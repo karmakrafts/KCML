@@ -31,10 +31,7 @@ class CustomIntrinsicsTest {
     @Test
     fun `Intrinsic arguments are evaluated once in order`() {
         val events = ArrayList<Int>()
-        val result = intrinsicWithArguments(
-            run { events += 1; 0x4B434D4C },
-            run { events += 2; 2 }
-        )
+        val result = intrinsicWithArguments(run { events += 1; 0x4B434D4C }, run { events += 2; 2 })
         assertEquals(44, result)
         assertEquals(listOf(1, 2), events)
     }

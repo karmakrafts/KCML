@@ -82,6 +82,7 @@ class JsCodeGenerationTest {
             events += value
             return value
         }
+
         fun combine(first: Int, second: Int): Int = first * 10 + second
 
         assertEquals(12, combine(argument(1), argument(2)))
