@@ -28,6 +28,7 @@ import org.jetbrains.kotlin.commonizer.CommonizerTarget
 import org.jetbrains.kotlin.commonizer.LeafCommonizerTarget
 import org.jetbrains.kotlin.commonizer.allLeaves
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
+import org.jetbrains.kotlin.gradle.plugin.KotlinCompilation
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.targets.native.internal.commonizerTarget
 import org.jetbrains.kotlin.gradle.targets.native.toolchain.chooseKotlinNativeProvider
@@ -55,9 +56,7 @@ internal class CustomNativeTargetAdapter(project: Project) {
         val kotlin = project.extensions.getByType(KotlinMultiplatformExtension::class.java)
         kotlin.sourceSets.all { sourceSet -> configure(sourceSet, sourceSet.commonizerTarget) }
         kotlin.targets.all { target ->
-            target.compilations.all { compilation ->
-                configure(compilation, compilation.commonizerTarget)
-            }
+            target.compilations.all(::configure)
         }
     }
 
@@ -95,6 +94,10 @@ internal class CustomNativeTargetAdapter(project: Project) {
                 })
             }
         }
+    }
+
+    fun configure(compilation: KotlinCompilation<*>) {
+        configure(compilation, compilation.commonizerTarget)
     }
 
     private fun configure(owner: HasMutableExtras, original: Future<CommonizerTarget?>) {
