@@ -23,4 +23,5 @@ internal object Icons {
     val kcml: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/kcml.svg", javaClass)
     val injection: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/injection.svg", javaClass)
     val mixin: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/mixin.svg", javaClass)
+    val target: Icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/target.svg", javaClass)
 }
