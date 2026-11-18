@@ -23,6 +23,7 @@ package dev.karmakrafts.kcml.api.mixin
  * table. Names must be literal strings, and the registered value must match the accessor's type.
  * These functions must not be invoked directly without mixin rewriting.
  */
+@OnlyInsideMixin
 public object ConstantTable {
     /**
      * Reads a registered string constant after mixin rewriting.

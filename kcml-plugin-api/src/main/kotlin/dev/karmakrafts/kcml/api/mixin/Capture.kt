@@ -28,6 +28,7 @@ package dev.karmakrafts.kcml.api.mixin
  * @property index JVM local-variable slot to capture, overriding name matching;
  *   [AUTOMATIC_INDEX] falls back to name matching.
  */
+@OnlyInsideMixin
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.VALUE_PARAMETER)
 public annotation class Capture( // @formatter:off

@@ -25,6 +25,7 @@ package dev.karmakrafts.kcml.api.mixin
  *
  * @param T return type of the target function.
  */
+@OnlyInsideMixin
 public interface ReturnContext<T> {
     /**
      * Returns from the target function with [value] after mixin rewriting.
@@ -42,5 +43,6 @@ public interface ReturnContext<T> {
  *
  * @throws NotImplementedError if invoked directly without mixin rewriting.
  */
+@OnlyInsideMixin
 @Suppress("NOTHING_TO_INLINE")
 public inline fun ReturnContext<Unit>.returnFromTarget(): Unit = returnFromTarget(Unit)

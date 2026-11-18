@@ -28,5 +28,6 @@ public interface ThisAware<T> {
      * @return the target object's dispatch receiver.
      * @throws NotImplementedError if invoked directly without mixin rewriting.
      */
+    @OnlyInsideMixin
     public fun getThis(): T = throw NotImplementedError("This should not be called directly")
 }
