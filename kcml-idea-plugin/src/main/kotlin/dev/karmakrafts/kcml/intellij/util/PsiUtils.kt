@@ -33,6 +33,10 @@ internal fun KtAnnotationEntry.isMixin(): Boolean {
     return name == TypeNames.DIRECT_MIXIN || name == TypeNames.INDIRECT_MIXIN
 }
 
+internal fun PsiClass.isMixin(): Boolean {
+    return hasAnnotation(TypeNames.DIRECT_MIXIN) || hasAnnotation(TypeNames.INDIRECT_MIXIN)
+}
+
 internal fun KtAnnotationEntry.qualifiedName(): String? {
     val resolved = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
         ?: return null

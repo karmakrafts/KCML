@@ -16,7 +16,10 @@
 
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
+        <!-- File icon providers -->
         <fileIconProvider implementation="dev.karmakrafts.kcml.intellij.icon.PluginConfigIconProvider"/>
+
+        <!-- Local inspections -->
         <localInspection language="kotlin" shortName="KcmlPluginDeclaration"
                          displayName="KCML plugin annotation and interface mismatch"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
@@ -38,6 +41,12 @@
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinConstantTableUsageInspection"/>
 
+        <!-- Implicit usage providers -->
+        <implicitUsageProvider implementation="dev.karmakrafts.kcml.intellij.gutter.PluginImplicitUsageProvider"/>
+        <implicitUsageProvider implementation="dev.karmakrafts.kcml.intellij.gutter.MixinImplicitUsageProvider"/>
+        <implicitUsageProvider implementation="dev.karmakrafts.kcml.intellij.gutter.InjectImplicitUsageProvider"/>
+
+        <!-- Line marker providers -->
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.MixinLineMarkerProvider"/>
         <codeInsight.lineMarkerProvider language="kotlin"
@@ -45,6 +54,7 @@
         <codeInsight.lineMarkerProvider language="kotlin"
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.InjectLineMarkerProvider"/>
 
+        <!-- Completion contributors -->
         <completion.contributor language="kotlin" order="first"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionContributor"/>
         <typedHandler implementation="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionTypedHandler"
