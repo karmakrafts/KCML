@@ -31,7 +31,6 @@ import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
 import org.jetbrains.kotlin.ir.declarations.IrFile
 import org.objectweb.asm.Opcodes
 
-@Suppress("UNUSED")
 @OptIn(KCMLHookApi::class)
 @IndirectMixin("org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmModuleFragmentGeneratorKt", -999)
 internal object WasmModuleFragmentGeneratorKtMixin {

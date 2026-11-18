@@ -29,7 +29,6 @@ import org.jetbrains.kotlin.ir.expressions.IrConst
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.backend.wasm.ir2wasm.DeclarationGeneratorKt", -999)
 internal object DeclarationGeneratorKtMixin {
     @Inject(name = "generateConstExpression", order = Inject.Order.BEFORE)

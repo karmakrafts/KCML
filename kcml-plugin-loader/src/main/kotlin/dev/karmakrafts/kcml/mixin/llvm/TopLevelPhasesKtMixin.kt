@@ -24,7 +24,6 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.llvm.LLVMHooks
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.driver.phases.TopLevelPhasesKt", -999)
 internal object TopLevelPhasesKtMixin {
     @Inject(name = $$"runBackend$lambda$0$runAfterLowerings", order = Order.BEFORE)

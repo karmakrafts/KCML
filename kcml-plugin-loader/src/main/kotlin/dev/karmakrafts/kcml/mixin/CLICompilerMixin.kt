@@ -25,12 +25,9 @@ import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import org.jetbrains.kotlin.cli.common.CLICompiler
 import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.config.Services
 import java.util.function.Consumer
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED", "UNCHECKED_CAST")
 @DirectMixin(CLICompiler::class)
 internal class CLICompilerMixin<A : CommonCompilerArguments> : ThisAware<CLICompiler<A>> {
     @Inject(
@@ -38,12 +35,12 @@ internal class CLICompilerMixin<A : CommonCompilerArguments> : ThisAware<CLIComp
         "(Lorg/jetbrains/kotlin/cli/common/messages/MessageCollector;Lorg/jetbrains/kotlin/config/Services;Lorg/jetbrains/kotlin/cli/common/arguments/CommonCompilerArguments;)Lorg/jetbrains/kotlin/cli/common/ExitCode;"
     )
     fun exec( // @formatter:off
-        @Capture messageCollector: MessageCollector,
-        @Capture services: Services,
         @Capture arguments: A
     ) { // @formatter:on
         val classLoader = getThis()::class.java.classLoader
-        val injectLoader = MixinBridge.INSTANCE.getConstant("kcml", "inject_loader") as Consumer<ClassLoader>
+
+        @Suppress("UNCHECKED_CAST") val injectLoader =
+            MixinBridge.INSTANCE.getConstant("kcml", "inject_loader") as Consumer<ClassLoader>
         injectLoader.accept(classLoader)
         // ======================== KCML loader class loading boundary ========================
         CommonHooks.onExecImpl(getThis(), arguments)

@@ -27,7 +27,6 @@ import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(HostManager::class, -999)
 internal class HostManagerMixin : ThisAware<HostManager> {
     @Inject(name = "getTargetValues", order = Order.BEFORE)

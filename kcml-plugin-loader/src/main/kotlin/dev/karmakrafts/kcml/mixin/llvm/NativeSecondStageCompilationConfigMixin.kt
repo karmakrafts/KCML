@@ -25,7 +25,6 @@ import dev.karmakrafts.kcml.hooks.llvm.NativeTargetHooks
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.NativeSecondStageCompilationConfig", -999)
 internal object NativeSecondStageCompilationConfigMixin {
     @Inject(name = "<init>", order = Order.BEFORE)

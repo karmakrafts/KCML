@@ -56,7 +56,6 @@ private const val VISITOR_RESULT: String =
     "Lorg/jetbrains/kotlin/backend/jvm/codegen/BlockInfo;)Lorg/jetbrains/kotlin/backend/jvm/codegen/PromisedValue;"
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(ExpressionCodegen::class, -999)
 internal class ExpressionCodegenMixin : ThisAware<ExpressionCodegen> {
     @Inject(

@@ -30,7 +30,6 @@ import org.jetbrains.kotlin.ir.expressions.IrBlockBody
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(BodyGenerator::class, -999)
 internal class BodyGeneratorMixin : ThisAware<BodyGenerator> {
     @Inject(name = $$"generateExpression$org_jetbrains_kotlin_backend_wasm", order = Inject.Order.BEFORE)

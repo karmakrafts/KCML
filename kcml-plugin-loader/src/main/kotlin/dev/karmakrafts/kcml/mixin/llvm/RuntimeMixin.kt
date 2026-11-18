@@ -24,7 +24,6 @@ import dev.karmakrafts.kcml.hooks.llvm.NativeTargetHooks
 import org.objectweb.asm.Opcodes
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.backend.konan.llvm.Runtime", -999)
 internal class RuntimeMixin : ThisAware<Any> {
     @Inject(

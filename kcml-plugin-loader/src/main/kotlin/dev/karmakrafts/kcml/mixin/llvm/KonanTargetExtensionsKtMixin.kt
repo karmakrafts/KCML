@@ -26,7 +26,6 @@ import org.jetbrains.kotlin.konan.target.BinaryFormat
 import org.jetbrains.kotlin.konan.target.KonanTarget
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.konan.target.KonanTargetExtenstionsKt", -999)
 internal object KonanTargetExtensionsKtMixin {
     @Inject(name = "binaryFormat", order = Inject.Order.BEFORE)

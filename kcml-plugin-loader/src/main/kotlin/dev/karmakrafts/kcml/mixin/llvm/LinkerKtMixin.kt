@@ -25,7 +25,6 @@ import dev.karmakrafts.kcml.target.CustomNativeLinker
 import org.jetbrains.kotlin.konan.target.Configurables
 import org.jetbrains.kotlin.konan.target.LinkerFlags
 
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.konan.target.LinkerKt", -999)
 internal object LinkerKtMixin {
     @Inject(name = "linker", order = Inject.Order.BEFORE)

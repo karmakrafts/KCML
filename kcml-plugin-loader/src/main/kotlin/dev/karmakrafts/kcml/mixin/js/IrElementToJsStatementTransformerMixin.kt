@@ -28,7 +28,6 @@ import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
 import org.jetbrains.kotlin.js.backend.ast.JsStatement
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(IrElementToJsStatementTransformer::class, -999)
 internal class IrElementToJsStatementTransformerMixin {
     // The generic expression and delegating-constructor visitors already delegate to the expression transformer.

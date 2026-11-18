@@ -24,7 +24,6 @@ import dev.karmakrafts.kcml.hooks.jvm.JVMHooks
 import org.jetbrains.kotlin.backend.jvm.codegen.ClassCodegen
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(ClassCodegen::class, -999)
 internal class ClassCodegenMixin : ThisAware<ClassCodegen> {
     @Inject(name = "generate", descriptor = "()V", order = Inject.Order.BEFORE)

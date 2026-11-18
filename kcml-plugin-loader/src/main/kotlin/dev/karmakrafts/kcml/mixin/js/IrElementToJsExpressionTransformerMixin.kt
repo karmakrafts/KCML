@@ -28,7 +28,6 @@ import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
 import org.jetbrains.kotlin.js.backend.ast.JsExpression
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(IrElementToJsExpressionTransformer::class, -999)
 internal class IrElementToJsExpressionTransformerMixin {
     @Inject(name = "visitComposite", order = Inject.Order.BEFORE)

@@ -32,7 +32,6 @@ import org.jetbrains.kotlin.ir.declarations.IrProperty
 import org.jetbrains.kotlin.ir.declarations.IrTypeAlias
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @DirectMixin(IrFileToWasmIrGenerator::class, -999)
 internal class IrFileToWasmIrGeneratorMixin : ThisAware<IrFileToWasmIrGenerator> {
     @Inject(name = "visitClass", order = Inject.Order.BEFORE)

@@ -38,7 +38,6 @@ import dev.karmakrafts.kcml.example.wasm.ExampleWasmCodeGenerationExtension
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmCompileTarget
 import dev.karmakrafts.kcml.example.wasm.ExampleWasmIntrinsicsExtension
 
-@Suppress("UNUSED")
 @Plugin("example")
 class ExamplePlugin : CompilerPlugin {
     override fun registerTargets(registry: CompileTargetRegistry) {

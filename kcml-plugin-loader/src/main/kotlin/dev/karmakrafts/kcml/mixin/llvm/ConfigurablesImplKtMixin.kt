@@ -29,7 +29,6 @@ import org.jetbrains.kotlin.konan.util.ProgressCallback
 import java.util.*
 
 @OptIn(KCMLHookApi::class)
-@Suppress("UNUSED")
 @IndirectMixin("org.jetbrains.kotlin.konan.target.ConfigurablesImplKt", -999)
 internal object ConfigurablesImplKtMixin {
     @Inject(name = "loadConfigurables", order = Order.BEFORE)
