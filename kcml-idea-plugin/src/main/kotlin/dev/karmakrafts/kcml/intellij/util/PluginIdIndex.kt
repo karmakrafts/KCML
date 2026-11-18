@@ -14,21 +14,17 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.completion
+package dev.karmakrafts.kcml.intellij.util
 
 import com.intellij.json.psi.JsonFile
 import com.intellij.json.psi.JsonObject
 import com.intellij.json.psi.JsonStringLiteral
-import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
-import dev.karmakrafts.kcml.intellij.util.TypeNames
-import dev.karmakrafts.kcml.intellij.util.argument
-import dev.karmakrafts.kcml.intellij.util.literalValue
-import dev.karmakrafts.kcml.intellij.util.qualifiedName
+import com.intellij.util.concurrency.ThreadingAssertions
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import org.jetbrains.kotlin.idea.stubindex.KotlinAnnotationsIndex
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -38,8 +34,8 @@ internal object PluginIdIndex {
     data class Ids(val production: Set<String>, val all: Set<String>)
 
     fun fromMetadata(module: Module): Ids {
-        ApplicationManager.getApplication().assertIsNonDispatchThread()
-        ApplicationManager.getApplication().assertReadAccessAllowed()
+        ThreadingAssertions.assertReadAccess()
+        ThreadingAssertions.assertBackgroundThread()
         val roots = ModuleRootManager.getInstance(module)
         val manager = PsiManager.getInstance(module.project)
         val production = mutableSetOf<String>()
@@ -63,8 +59,8 @@ internal object PluginIdIndex {
     }
 
     fun fromAnnotations(module: Module): Ids {
-        ApplicationManager.getApplication().assertIsNonDispatchThread()
-        ApplicationManager.getApplication().assertReadAccessAllowed()
+        ThreadingAssertions.assertReadAccess()
+        ThreadingAssertions.assertBackgroundThread()
         val project = module.project
         val roots = ModuleRootManager.getInstance(module)
         val scope = GlobalSearchScope.moduleScope(module)

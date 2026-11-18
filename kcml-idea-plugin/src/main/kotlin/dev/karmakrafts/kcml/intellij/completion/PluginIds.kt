@@ -31,6 +31,7 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.concurrency.AppExecutorUtil
+import dev.karmakrafts.kcml.intellij.util.PluginIdIndex
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import java.util.concurrent.atomic.AtomicBoolean
 
