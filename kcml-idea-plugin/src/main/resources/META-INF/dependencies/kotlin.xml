@@ -36,10 +36,10 @@
                          displayName="KCML mixin ThisAware implementation"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinThisAwareImplementationInspection"/>
-        <localInspection language="kotlin" shortName="KcmlMixinConstantTableUsage"
-                         displayName="KCML mixin ConstantTable usage"
+        <localInspection language="kotlin" shortName="KcmlOnlyInsideMixinUsage"
+                         displayName="KCML mixin-only API usage"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
-                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MixinConstantTableUsageInspection"/>
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.OnlyInsideMixinUsageInspection"/>
 
         <!-- Implicit usage providers -->
         <implicitUsageProvider implementation="dev.karmakrafts.kcml.intellij.gutter.PluginImplicitUsageProvider"/>
