@@ -18,12 +18,15 @@ package dev.karmakrafts.kcml.api.extension.js
 
 import dev.karmakrafts.kcml.api.backend.js.JsCodeGenerator
 import dev.karmakrafts.kcml.api.backend.js.LateJsBackend
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.js.backend.ast.JsExpression
 import org.jetbrains.kotlin.js.backend.ast.JsNode
 
 /** Replaces selected function calls with custom JavaScript expressions. */
+@OnlyOn(JsCompileTarget::class)
 public interface JsIntrinsicsExtension : JsCodeGenerationExtension {
     /**
      * Delegates function-access expressions to the call-specific predicate.

@@ -18,6 +18,8 @@
 
 package dev.karmakrafts.kcml.api.backend.llvm
 
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMConstInt
 import llvm.LLVMConstReal
@@ -35,6 +37,7 @@ import org.jetbrains.kotlin.ir.types.IrType
  * @throws IllegalArgumentException if [function] cannot be materialized.
  */
 @Suppress("NOTHING_TO_INLINE")
+@OnlyOn(NativeCompileTarget::class)
 public inline fun NativeCodeGenerator.materializeFunction(function: IrSimpleFunction): LlvmCallable =
     requireNotNull(tryMaterializeFunction(function)) {
         "Could not materialize function during code generation of plugin '${backend.pluginId}'"
@@ -48,6 +51,7 @@ public inline fun NativeCodeGenerator.materializeFunction(function: IrSimpleFunc
  * @throws IllegalArgumentException if [type] cannot be materialized.
  */
 @Suppress("NOTHING_TO_INLINE")
+@OnlyOn(NativeCompileTarget::class)
 public inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef =
     requireNotNull(tryMaterializeType(type)) {
         "Could not materialize type during code generation of plugin '${backend.pluginId}'"
@@ -61,8 +65,11 @@ public inline fun NativeCodeGenerator.materializeType(type: IrType): LLVMTypeRef
  * @return the LLVM type corresponding to this IR type.
  * @throws IllegalArgumentException if this IR type cannot be materialized.
  */
-context(generator: NativeCodeGenerator)
-public inline val IrType.llvm: LLVMTypeRef get() = generator.materializeType(this)
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val IrType.llvm: LLVMTypeRef
+    get() = generator.materializeType(
+        this
+    )
 
 /**
  * Materializes this Kotlin IR function as an LLVM callable using the context [NativeCodeGenerator].
@@ -70,42 +77,45 @@ public inline val IrType.llvm: LLVMTypeRef get() = generator.materializeType(thi
  * @return the LLVM callable corresponding to this IR function.
  * @throws IllegalArgumentException if this IR function cannot be materialized.
  */
-context(generator: NativeCodeGenerator)
-public inline val IrSimpleFunction.llvm: LlvmCallable get() = generator.materializeFunction(this)
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val IrSimpleFunction.llvm: LlvmCallable
+    get() = generator.materializeFunction(
+        this
+    )
 
 // Signed constants
 
 /** Creates an LLVM `i1` constant representing this Boolean value. */
-context(generator: NativeCodeGenerator)
-public inline val Boolean.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Boolean.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int1, if (this) 1L else 0L, 0)) {
         "Could not create constant Byte value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i8` constant representing this Byte value. */
-context(generator: NativeCodeGenerator)
-public inline val Byte.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Byte.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int8, toLong(), 0)) {
         "Could not create constant Byte value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i16` constant representing this Short value. */
-context(generator: NativeCodeGenerator)
-public inline val Short.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Short.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int16, toLong(), 0)) {
         "Could not create constant Short value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i32` constant representing this Int value. */
-context(generator: NativeCodeGenerator)
-public inline val Int.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Int.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int32, toLong(), 0)) {
         "Could not create constant Int value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i64` constant representing this Long value. */
-context(generator: NativeCodeGenerator)
-public inline val Long.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Long.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int64, this, 0)) {
         "Could not create constant Long value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
@@ -113,29 +123,29 @@ public inline val Long.llvm: LLVMValueRef
 // Unsigned constants
 
 /** Creates an LLVM `i8` constant representing this UByte value. */
-context(generator: NativeCodeGenerator)
-public inline val UByte.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val UByte.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int8, toLong(), 0)) {
         "Could not create constant UByte value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i16` constant representing this UShort value. */
-context(generator: NativeCodeGenerator)
-public inline val UShort.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val UShort.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int16, toLong(), 0)) {
         "Could not create constant UShort value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i32` constant representing this UInt value. */
-context(generator: NativeCodeGenerator)
-public inline val UInt.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val UInt.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int32, toLong(), 0)) {
         "Could not create constant UInt value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `i64` constant representing this ULong value. */
-context(generator: NativeCodeGenerator)
-public inline val ULong.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val ULong.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstInt(generator.types.int64, toLong(), 0)) {
         "Could not create constant ULong value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
@@ -143,15 +153,15 @@ public inline val ULong.llvm: LLVMValueRef
 // Float constants
 
 /** Creates an LLVM `float` constant representing this Float value. */
-context(generator: NativeCodeGenerator)
-public inline val Float.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Float.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstReal(generator.types.float32, toDouble())) {
         "Could not create constant Float value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }
 
 /** Creates an LLVM `double` constant representing this Double value. */
-context(generator: NativeCodeGenerator)
-public inline val Double.llvm: LLVMValueRef
+@OnlyOn(NativeCompileTarget::class)
+context(generator: NativeCodeGenerator) public inline val Double.llvm: LLVMValueRef
     get() = requireNotNull(LLVMConstReal(generator.types.float64, this)) {
         "Could not create constant Double value for LLVM during code generation of plugin '${generator.backend.pluginId}'"
     }

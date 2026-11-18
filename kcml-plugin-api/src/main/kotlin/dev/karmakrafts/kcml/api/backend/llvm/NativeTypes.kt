@@ -16,12 +16,15 @@
 
 package dev.karmakrafts.kcml.api.backend.llvm
 
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMTypeRef
 
 /**
  * Provides LLVM types used during native code generation.
  */
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 public interface NativeTypes {
     /** One-bit integer type. */

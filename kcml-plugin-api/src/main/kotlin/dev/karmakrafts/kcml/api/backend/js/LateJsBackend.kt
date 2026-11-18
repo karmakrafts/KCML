@@ -19,12 +19,14 @@ package dev.karmakrafts.kcml.api.backend.js
 import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrBuiltIns
 import org.jetbrains.kotlin.ir.backend.js.BackendJsSymbols
 import org.jetbrains.kotlin.ir.backend.js.JsIrBackendContext
 
 /** Exposes the JavaScript compiler state during AST generation after IR lowering. */
+@OnlyOn(JsCompileTarget::class)
 public interface LateJsBackend : Backend {
     /** Identifies this context as the late JavaScript backend. */
     override val type: BackendType

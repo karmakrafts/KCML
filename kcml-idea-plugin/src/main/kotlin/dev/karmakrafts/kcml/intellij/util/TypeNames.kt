@@ -27,8 +27,5 @@ internal object TypeNames {
     const val INJECT: String = "dev.karmakrafts.kcml.api.mixin.Inject"
 
     const val COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.CompileTarget"
-    const val JVM_COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.JvmCompileTarget"
-    const val JS_COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.JsCompileTarget"
-    const val WASM_COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.WasmCompileTarget"
-    const val NATIVE_COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.NativeCompileTarget"
+    const val ONLY_ON: String = "dev.karmakrafts.kcml.api.target.OnlyOn"
 }

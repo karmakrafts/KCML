@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend.llvm
 import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
 import llvm.LLVMModuleRef
@@ -35,6 +36,7 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
  * In addition to the common IR services, this context provides the Konan compilation state and
  * LLVM objects used while Kotlin/Native lowers IR to native code.
  */
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 public interface LateNativeBackend : Backend {
     /** Identifies this context as the late Kotlin/Native backend. */

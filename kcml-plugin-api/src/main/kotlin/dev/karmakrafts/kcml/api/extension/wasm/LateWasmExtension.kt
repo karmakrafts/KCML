@@ -18,8 +18,11 @@ package dev.karmakrafts.kcml.api.extension.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.extension.Extension
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 
 /** Participates in Kotlin/Wasm's late WebAssembly code-generation phase through KCML. */
+@OnlyOn(WasmCompileTarget::class)
 public interface LateWasmExtension : Extension {
     /**
      * Initializes this extension for a WebAssembly backend invocation.

@@ -49,7 +49,9 @@ public class NativeArchitectureConfiguration {
 
     /** Validates explicit settings without imposing a fixed list of LLVM architectures. */
     public fun validate() {
-        for ((key, value) in listOf("targetTriple" to targetTriple, "cpu" to cpu, "features" to features, "dataLayout" to dataLayout)) {
+        for ([key, value] in listOf(
+            "targetTriple" to targetTriple, "cpu" to cpu, "features" to features, "dataLayout" to dataLayout
+        )) {
             require(value == null || value.isNotBlank() || key == "features" && value.isEmpty()) {
                 "Native architecture $key must not be blank"
             }

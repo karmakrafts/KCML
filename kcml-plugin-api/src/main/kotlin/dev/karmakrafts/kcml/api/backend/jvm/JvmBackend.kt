@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend.jvm
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /**
  * Marks an [IrBackend] context executing Kotlin's JVM IR backend.
@@ -26,6 +27,7 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
  * This specialization allows a KCML extension to run only for JVM compilations while using the
  * target-independent services inherited from [IrBackend].
  */
+@OnlyOn(JvmCompileTarget::class)
 public interface JvmBackend : IrBackend {
     /** Identifies this context as the JVM backend. */
     override val type: BackendType

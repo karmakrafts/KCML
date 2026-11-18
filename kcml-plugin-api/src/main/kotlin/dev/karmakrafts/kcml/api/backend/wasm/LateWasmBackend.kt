@@ -18,6 +18,8 @@ package dev.karmakrafts.kcml.api.backend.wasm
 
 import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.backend.BackendType
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmDeclarationCodegenContext
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmTypeCodegenContext
@@ -30,6 +32,7 @@ import org.jetbrains.kotlin.ir.IrBuiltIns
  * This backend context is available to extensions that participate in the late WebAssembly
  * compilation phase and need to inspect or generate WebAssembly declarations.
  */
+@OnlyOn(WasmCompileTarget::class)
 public interface LateWasmBackend : Backend {
     /** Identifies this context as the late WebAssembly backend. */
     override val type: BackendType

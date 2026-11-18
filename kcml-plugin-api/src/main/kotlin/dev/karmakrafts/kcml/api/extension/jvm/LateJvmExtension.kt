@@ -18,8 +18,11 @@ package dev.karmakrafts.kcml.api.extension.jvm
 
 import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
 import dev.karmakrafts.kcml.api.extension.Extension
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /** Runs after JVM lowerings, before bytecode generation. */
+@OnlyOn(JvmCompileTarget::class)
 public interface LateJvmExtension : Extension {
     /**
      * Initializes this extension for a JVM backend invocation.

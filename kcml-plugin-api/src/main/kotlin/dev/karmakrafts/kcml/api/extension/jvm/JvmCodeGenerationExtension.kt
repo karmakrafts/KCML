@@ -18,10 +18,13 @@ package dev.karmakrafts.kcml.api.extension.jvm
 
 import dev.karmakrafts.kcml.api.backend.jvm.JvmCodeGenerator
 import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.IrElement
 
 /** Intercepts JVM IR as it is translated to bytecode, including nested expressions. */
+@OnlyOn(JvmCompileTarget::class)
 public interface JvmCodeGenerationExtension : LateJvmExtension {
     /**
      * Selects elements to transform or replace using [process].

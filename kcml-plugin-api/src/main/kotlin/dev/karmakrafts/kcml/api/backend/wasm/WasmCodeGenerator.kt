@@ -16,6 +16,8 @@
 
 package dev.karmakrafts.kcml.api.backend.wasm
 
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
@@ -26,6 +28,7 @@ import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
  * Extensions can use the compiler contexts exposed by this interface together with the instruction
  * helpers in this package to contribute code to the current function body.
  */
+@OnlyOn(WasmCompileTarget::class)
 public interface WasmCodeGenerator {
     /** Late WebAssembly backend context for the current compilation. */
     public val backend: LateWasmBackend

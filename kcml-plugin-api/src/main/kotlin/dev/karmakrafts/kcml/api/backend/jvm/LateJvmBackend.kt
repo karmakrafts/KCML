@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend.jvm
 import dev.karmakrafts.kcml.api.backend.Backend
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.JvmBackendContext
 import org.jetbrains.kotlin.backend.jvm.JvmSymbols
 import org.jetbrains.kotlin.codegen.state.GenerationState
@@ -26,6 +27,7 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.ir.IrBuiltIns
 
 /** Exposes the JVM compiler state during bytecode generation. */
+@OnlyOn(JvmCompileTarget::class)
 public interface LateJvmBackend : Backend {
     /** Identifies this context as the late JVM backend. */
     override val type: BackendType

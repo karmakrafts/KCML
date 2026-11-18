@@ -29,8 +29,8 @@ private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.cl
     val constructor: Constructor<out KonanTarget> by lazy {
         val className = "dev/karmakrafts/kcml/api/target/internal/CustomKonanTarget"
         val targetName = "org/jetbrains/kotlin/konan/target/KonanTarget"
-        val arguments = "Ljava/lang/String;Lorg/jetbrains/kotlin/konan/target/Family;" +
-            "Lorg/jetbrains/kotlin/konan/target/Architecture;"
+        val arguments =
+            "Ljava/lang/String;Lorg/jetbrains/kotlin/konan/target/Family;" + "Lorg/jetbrains/kotlin/konan/target/Architecture;"
         val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
         writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, targetName, null)
         writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "($arguments)V", null, null).apply {
@@ -41,8 +41,11 @@ private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.cl
             visitVarInsn(Opcodes.ALOAD, 3)
             visitInsn(Opcodes.ACONST_NULL)
             visitMethodInsn(
-                Opcodes.INVOKESPECIAL, targetName, "<init>",
-                "(${arguments}Lkotlin/jvm/internal/DefaultConstructorMarker;)V", false
+                Opcodes.INVOKESPECIAL,
+                targetName,
+                "<init>",
+                "(${arguments}Lkotlin/jvm/internal/DefaultConstructorMarker;)V",
+                false
             )
             visitInsn(Opcodes.RETURN)
             visitMaxs(0, 0)
@@ -50,8 +53,7 @@ private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.cl
         }
         writer.visitEnd()
         val bytes = writer.toByteArray()
-        defineClass(className.replace('/', '.'), bytes, 0, bytes.size)
-            .asSubclass(KonanTarget::class.java)
+        defineClass(className.replace('/', '.'), bytes, 0, bytes.size).asSubclass(KonanTarget::class.java)
             .getConstructor(String::class.java, Family::class.java, Architecture::class.java)
     }
 }

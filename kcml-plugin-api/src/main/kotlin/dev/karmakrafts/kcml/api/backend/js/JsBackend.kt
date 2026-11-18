@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend.js
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /**
  * Marks an [IrBackend] context executing Kotlin's JavaScript IR backend.
@@ -26,6 +27,7 @@ import dev.karmakrafts.kcml.api.target.JsCompileTarget
  * This specialization allows a KCML extension to run only for JavaScript compilations while using
  * the target-independent services inherited from [IrBackend].
  */
+@OnlyOn(JsCompileTarget::class)
 public interface JsBackend : IrBackend {
     /** Identifies this context as the JavaScript backend. */
     override val type: BackendType

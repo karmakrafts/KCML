@@ -18,11 +18,14 @@ package dev.karmakrafts.kcml.api.extension.jvm
 
 import dev.karmakrafts.kcml.api.backend.jvm.JvmCodeGenerator
 import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
 /** Replaces selected calls with custom JVM bytecode. */
+@OnlyOn(JvmCompileTarget::class)
 public interface JvmIntrinsicsExtension : JvmCodeGenerationExtension {
     /**
      * Delegates function-access expressions to the call-specific predicate.

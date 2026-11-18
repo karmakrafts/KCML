@@ -18,10 +18,13 @@ package dev.karmakrafts.kcml.api.extension.js
 
 import dev.karmakrafts.kcml.api.backend.js.JsCodeGenerator
 import dev.karmakrafts.kcml.api.backend.js.LateJsBackend
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.js.backend.ast.JsNode
 
 /** Intercepts lowered Kotlin IR as it is translated to JavaScript AST nodes. */
+@OnlyOn(JsCompileTarget::class)
 public interface JsCodeGenerationExtension : LateJsExtension {
     /**
      * Selects elements to transform or replace using [process].

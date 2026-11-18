@@ -16,6 +16,8 @@
 
 package dev.karmakrafts.kcml.api.backend.js
 
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.backend.js.utils.JsGenerationContext
 import org.jetbrains.kotlin.ir.expressions.IrExpression
@@ -23,6 +25,7 @@ import org.jetbrains.kotlin.js.backend.ast.JsExpression
 import org.jetbrains.kotlin.js.backend.ast.JsStatement
 
 /** Generates JavaScript AST nodes while Kotlin IR is translated to JavaScript. */
+@OnlyOn(JsCompileTarget::class)
 public interface JsCodeGenerator {
     /** Late JavaScript backend for the current compilation. */
     public val backend: LateJsBackend

@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.api.backend.llvm
 import dev.karmakrafts.kcml.api.backend.BackendType
 import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /**
  * Marks an [IrBackend] context executing Kotlin's native IR backend.
@@ -26,6 +27,7 @@ import dev.karmakrafts.kcml.api.target.NativeCompileTarget
  * This specialization allows a KCML extension to run only for native compilations while using the
  * target-independent services inherited from [IrBackend].
  */
+@OnlyOn(NativeCompileTarget::class)
 public interface NativeBackend : IrBackend {
     /** Identifies this context as the Kotlin/Native IR backend. */
     override val type: BackendType

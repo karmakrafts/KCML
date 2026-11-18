@@ -16,6 +16,8 @@
 
 package dev.karmakrafts.kcml.api.backend.jvm
 
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.codegen.BlockInfo
 import org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
@@ -23,6 +25,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.org.objectweb.asm.commons.InstructionAdapter
 
 /** Generates JVM bytecode within the currently intercepted function body. */
+@OnlyOn(JvmCompileTarget::class)
 public interface JvmCodeGenerator {
     /** Late JVM backend available during bytecode generation. */
     public val backend: LateJvmBackend

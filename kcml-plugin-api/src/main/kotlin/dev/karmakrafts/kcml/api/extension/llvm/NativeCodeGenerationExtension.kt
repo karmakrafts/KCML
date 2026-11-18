@@ -18,6 +18,8 @@ package dev.karmakrafts.kcml.api.extension.llvm
 
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMValueRef
 import org.jetbrains.kotlin.ir.IrElement
@@ -29,6 +31,7 @@ import org.jetbrains.kotlin.ir.IrElement
  * expression, including nested expressions. Children are intercepted when they are generated,
  * not in a separate traversal before their parent is generated.
  */
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 public interface NativeCodeGenerationExtension : LateNativeExtension {
     /**

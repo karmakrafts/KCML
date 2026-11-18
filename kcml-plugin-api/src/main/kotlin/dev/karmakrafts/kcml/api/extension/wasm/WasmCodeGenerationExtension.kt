@@ -18,6 +18,8 @@ package dev.karmakrafts.kcml.api.extension.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import org.jetbrains.kotlin.ir.IrElement
 
 /**
@@ -27,6 +29,7 @@ import org.jetbrains.kotlin.ir.IrElement
  * and expressions, including nested expressions. Children are intercepted as they are generated,
  * not in a separate traversal before their parent is generated.
  */
+@OnlyOn(WasmCompileTarget::class)
 public interface WasmCodeGenerationExtension : LateWasmExtension {
     /**
      * Selects elements to transform or replace using [process].

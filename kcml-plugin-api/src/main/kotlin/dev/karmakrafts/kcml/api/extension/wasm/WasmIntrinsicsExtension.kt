@@ -18,10 +18,13 @@ package dev.karmakrafts.kcml.api.extension.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import org.jetbrains.kotlin.ir.IrElement
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 
 /** Replaces selected function calls with custom WebAssembly instructions. */
+@OnlyOn(WasmCompileTarget::class)
 public interface WasmIntrinsicsExtension : WasmCodeGenerationExtension {
     /**
      * Delegates function-access expressions to the call-specific predicate.

@@ -18,8 +18,11 @@ package dev.karmakrafts.kcml.api.extension.js
 
 import dev.karmakrafts.kcml.api.backend.js.LateJsBackend
 import dev.karmakrafts.kcml.api.extension.Extension
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /** Participates in Kotlin/JS's late JavaScript code-generation phase through KCML. */
+@OnlyOn(JsCompileTarget::class)
 public interface LateJsExtension : Extension {
     /**
      * Initializes this extension for a JavaScript backend invocation.

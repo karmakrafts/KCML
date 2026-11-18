@@ -18,6 +18,8 @@
 
 package dev.karmakrafts.kcml.api.backend.llvm
 
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
 import llvm.LLVMTypeRef
@@ -33,6 +35,7 @@ import org.jetbrains.kotlin.ir.types.IrType
  * Use [functionBuilder] to emit LLVM instructions into the function currently being generated and
  * the materialization functions to obtain LLVM representations of Kotlin IR declarations and types.
  */
+@OnlyOn(NativeCompileTarget::class)
 public interface NativeCodeGenerator {
     /** The late native backend available during code generation. */
     public val backend: LateNativeBackend
