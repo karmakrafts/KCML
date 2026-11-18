@@ -19,6 +19,10 @@ package dev.karmakrafts.kcml.intellij.completion
 import com.intellij.codeInsight.CodeInsightSettings
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.util.ThreeState
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
@@ -53,6 +57,62 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         addMetadata("different-filename", "example")
         configureAnnotation("@Plugin(\"ex<caret>\") class Example")
         assertEquals(setOf("example"), variants())
+    }
+
+    fun testMetadataLookupOnEdtIsDeferredAndCached() {
+        addMetadata("example", "example")
+        configureAnnotation("@Plugin(\"<caret>\") class Example")
+        assertTrue(ApplicationManager.getApplication().isDispatchThread)
+        assertEquals(emptySet<String>(), PluginIds.fromMetadata(myFixture.file))
+        waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
+        assertSame(PluginIds.fromMetadata(myFixture.file), PluginIds.fromMetadata(myFixture.file))
+    }
+
+    fun testAnnotationLookupOnEdtIsDeferredAndCached() {
+        addPlugin("Example", "example")
+        configureJson("""{"id":"<caret>"}""")
+        assertTrue(ApplicationManager.getApplication().isDispatchThread)
+        assertEquals(emptySet<String>(), PluginIds.fromAnnotations(myFixture.file))
+        waitForIds(setOf("example")) { PluginIds.fromAnnotations(myFixture.file) }
+        assertSame(PluginIds.fromAnnotations(myFixture.file), PluginIds.fromAnnotations(myFixture.file))
+    }
+
+    fun testMetadataCacheInvalidatesAfterEditAndDeletion() {
+        val metadata = addMetadata("example", "example")
+        configureAnnotation("@Plugin(\"<caret>\") class Example")
+        waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            val documents = PsiDocumentManager.getInstance(project)
+            val document = documents.getDocument(metadata)!!
+            document.setText("""{"id":"updated"}""")
+            documents.commitDocument(document)
+        }
+        waitForIds(setOf("updated")) { PluginIds.fromMetadata(myFixture.file) }
+        WriteCommandAction.runWriteCommandAction(project) { metadata.delete() }
+        assertEquals(emptySet<String>(), PluginIds.fromMetadata(myFixture.file))
+    }
+
+    fun testAnnotationCacheInvalidatesAfterEdit() {
+        val source = addPlugin("Example", "example")
+        configureJson("""{"id":"<caret>"}""")
+        waitForIds(setOf("example")) { PluginIds.fromAnnotations(myFixture.file) }
+        WriteCommandAction.runWriteCommandAction(project) {
+            val documents = PsiDocumentManager.getInstance(project)
+            val document = documents.getDocument(source)!!
+            document.setText(source.text.replace("\"example\"", "\"updated\""))
+            documents.commitDocument(document)
+        }
+        waitForIds(setOf("updated")) { PluginIds.fromAnnotations(myFixture.file) }
+    }
+
+    fun testMetadataCacheInvalidatesAfterResourceRootChange() {
+        val metadata = addMetadata("example", "example")
+        configureAnnotation("@Plugin(\"<caret>\") class Example")
+        waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
+        PsiTestUtil.removeSourceRoot(module, metadata.virtualFile.parent.parent)
+        assertEquals(emptySet<String>(), PluginIds.fromMetadata(myFixture.file))
+        PsiTestUtil.addSourceRoot(module, metadata.virtualFile.parent.parent, JavaResourceRootType.RESOURCE)
+        waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
     }
 
     fun testBasicCompletionSupportsAliasedNamedArgumentAndReplacesSuffix() {
@@ -190,6 +250,11 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
                 myFixture.editor, myFixture.file.findElementAt(offset)!!, myFixture.file, offset
             )
         )
+    }
+
+    private fun waitForIds(expected: Set<String>, lookup: () -> Set<String>) {
+        PlatformTestUtil.waitWithEventsDispatching("Plugin ID background indexing", { lookup() == expected }, 10)
+        assertEquals(expected, lookup())
     }
 
     private fun assertPopupEnabled() {

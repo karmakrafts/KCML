@@ -30,7 +30,9 @@ import dev.karmakrafts.kcml.intellij.util.annotationStringArgument
 import dev.karmakrafts.kcml.intellij.util.contentAt
 
 internal data class PluginIdString(
-    val prefix: String, val inAnnotation: Boolean, val insertHandler: InsertHandler<LookupElement>
+    val prefix: String,
+    val inAnnotation: Boolean,
+    val insertHandler: InsertHandler<LookupElement>
 ) {
     companion object {
         fun find(file: PsiFile, offset: Int): PluginIdString? {
