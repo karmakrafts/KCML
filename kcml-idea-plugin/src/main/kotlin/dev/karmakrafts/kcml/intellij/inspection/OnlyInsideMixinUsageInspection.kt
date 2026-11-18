@@ -58,6 +58,7 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
                     is KtCallableReferenceExpression -> parent.receiverExpression.takeIf {
                         parent.callableReference == expression
                     }
+
                     else -> {
                         val call = (parent as? KtCallExpression) ?: expression
                         (call.parent as? KtQualifiedExpression)?.takeIf { it.selectorExpression == call }?.receiverExpression
@@ -84,9 +85,8 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
                 val qualifiedMemberCall = (call?.parent as? KtQualifiedExpression)?.takeIf {
                     it.selectorExpression == call && owner?.let { owner -> isRestricted(owner, mutableSetOf()) } == true
                 }
-                val highlight =
-                    qualifiedMemberCall ?: call ?: qualifiedCall
-                    ?: (parent as? KtUserType)?.takeIf { it.referenceExpression == expression } ?: expression
+                val highlight = qualifiedMemberCall ?: call ?: qualifiedCall
+                ?: (parent as? KtUserType)?.takeIf { it.referenceExpression == expression } ?: expression
                 val startOffset = if (highlight == qualifiedMemberCall) highlight.textRange.startOffset
                 else expression.textRange.startOffset
                 holder.registerProblem(
@@ -117,6 +117,7 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
             is KtDeclaration -> ((target.parent as? KtClassBody)?.parent)?.let {
                 isRestricted(it, visited)
             } == true
+
             else -> false
         }
     }

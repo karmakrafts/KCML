@@ -29,13 +29,15 @@ import com.intellij.codeInsight.lookup.LookupElementRenderer
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.Project
 import com.intellij.patterns.PlatformPatterns
+import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.ProcessingContext
 import dev.karmakrafts.kcml.intellij.util.ClassIndex
 import dev.karmakrafts.kcml.intellij.util.ClassNameUtils
 
-class IndirectMixinCompletionContributor : CompletionContributor() {
+internal class IndirectMixinCompletionContributor : CompletionContributor() {
     init {
         for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
             extend(
@@ -43,57 +45,56 @@ class IndirectMixinCompletionContributor : CompletionContributor() {
                     override fun addCompletions(
                         parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet
                     ) {
-                        // Only complete target strings, using PSI without completion's dummy text
-                        val position = parameters.originalFile.findElementAt(parameters.offset) ?: return
-                        val target = IndirectMixinTargetString.find(
-                            position, parameters.offset
-                        ) ?: return
-                        result.stopHere()
-                        // Accept slash-separated JVM names as well as dotted names
-                        val matcher = PlainPrefixMatcher(target.prefix.replace('/', '.'))
-                        val scopedResult = result.withPrefixMatcher(matcher)
-                        val file = parameters.originalFile
-                        val module = ModuleUtilCore.findModuleForPsiElement(file)
-                        // Include module dependencies alongside the file's resolve scope
-                        val scope = module?.let {
-                            GlobalSearchScope.union(
-                                arrayOf(
-                                    GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(it), file.resolveScope
-                                )
-                            )
-                        } ?: file.resolveScope
-                        // Find all applicable candidates in the given scope
-                        for (candidate in ClassIndex.findCandidates(
-                            parameters.position.project, scope
-                        )) {
-                            ProgressManager.checkCanceled()
-                            // Match qualified, short, and nested-class name variants
-                            val lookupNames = ClassNameUtils.lookupNames(candidate)
-                            if (lookupNames.none(matcher::prefixMatches)) continue
-                            val project = parameters.position.project
-                            var lookupElement = LookupElementBuilder.create(candidate)
-                                .withIcon(AllIcons.Nodes.Class)
-                                .withExpensiveRenderer(object : LookupElementRenderer<LookupElement>() {
-                                    override fun renderElement(
-                                        element: LookupElement, presentation: LookupElementPresentation
-                                    ) {
-                                        presentation.itemText = candidate
-                                        presentation.icon = ClassIndex.findClass(project, scope, candidate)?.getIcon(0)
-                                            ?: AllIcons.Nodes.Class
-                                    }
-                                })
-                            for (lookupName in lookupNames) {
-                                lookupElement = lookupElement.withLookupString(lookupName)
-                            }
-                            scopedResult.addElement(
-                                lookupElement.withInsertHandler(
-                                    // Preserve string boundaries and raw-string handling on insertion
-                                    StringContentInsertHandler(target)
-                                )
-                            )
-                        }
+                        addTargetCompletions(parameters, result)
                     }
                 })
         }
+    }
+
+    private fun addTargetCompletions(parameters: CompletionParameters, result: CompletionResultSet) {
+        val position = parameters.originalFile.findElementAt(parameters.offset) ?: return
+        val target = IndirectMixinTargetString.find(position, parameters.offset) ?: return
+        result.stopHere()
+        val matcher = PlainPrefixMatcher(target.prefix.replace('/', '.'))
+        val scopedResult = result.withPrefixMatcher(matcher)
+        val scope = findSearchScope(parameters.originalFile)
+        val project = parameters.position.project
+        for (candidate in ClassIndex.findCandidates(project, scope)) {
+            ProgressManager.checkCanceled()
+            val lookupNames = ClassNameUtils.lookupNames(candidate)
+            if (lookupNames.none(matcher::prefixMatches)) continue
+            scopedResult.addElement(
+                createLookupElement(
+                    candidate, lookupNames, project, scope
+                ).withInsertHandler(StringContentInsertHandler(target))
+            )
+        }
+    }
+
+    private fun findSearchScope(file: PsiFile): GlobalSearchScope {
+        val module = ModuleUtilCore.findModuleForPsiElement(file) ?: return file.resolveScope
+        return GlobalSearchScope.union(
+            arrayOf(
+                GlobalSearchScope.moduleWithDependenciesAndLibrariesScope(module), file.resolveScope
+            )
+        )
+    }
+
+    private fun createLookupElement(
+        candidate: String, lookupNames: Collection<String>, project: Project, scope: GlobalSearchScope
+    ): LookupElementBuilder {
+        var lookupElement = LookupElementBuilder.create(candidate)
+            .withIcon(AllIcons.Nodes.Class)
+            .withExpensiveRenderer(object : LookupElementRenderer<LookupElement>() {
+                override fun renderElement(element: LookupElement, presentation: LookupElementPresentation) {
+                    presentation.itemText = candidate
+                    presentation.icon =
+                        ClassIndex.findClass(project, scope, candidate)?.getIcon(0) ?: AllIcons.Nodes.Class
+                }
+            })
+        for (lookupName in lookupNames) {
+            lookupElement = lookupElement.withLookupString(lookupName)
+        }
+        return lookupElement
     }
 }

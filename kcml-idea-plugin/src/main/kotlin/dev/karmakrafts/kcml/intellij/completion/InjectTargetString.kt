@@ -24,13 +24,18 @@ import dev.karmakrafts.kcml.intellij.util.annotationStringArgument
 import dev.karmakrafts.kcml.intellij.util.contentAt
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 
-internal data class InjectTargetString(
-    val annotation: KtAnnotationEntry, val argumentName: String, val content: StringTemplateContent
-) {
+internal data class InjectTargetString( // @formatter:off
+    val annotation: KtAnnotationEntry,
+    val argumentName: String,
+    val content: StringTemplateContent
+) { // @formatter:on
     companion object {
+        private const val NAME_PARAMETER: String = "name"
+        private const val DESCRIPTOR_PARAMETER: String = "descriptor"
+
         fun find(position: PsiElement, offset: Int): InjectTargetString? {
             (val annotation, val name, val expression) = position.annotationStringArgument(
-                TypeNames.INJECT, "name", "descriptor"
+                TypeNames.INJECT, NAME_PARAMETER, DESCRIPTOR_PARAMETER
             ) ?: return null
             val content = expression.contentAt(offset) ?: return null
             return InjectTargetString(annotation, name, content)

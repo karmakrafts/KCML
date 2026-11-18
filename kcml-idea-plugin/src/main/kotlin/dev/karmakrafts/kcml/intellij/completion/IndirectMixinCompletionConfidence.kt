@@ -22,7 +22,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.util.ThreeState
 
-class IndirectMixinCompletionConfidence : CompletionConfidence() {
+internal class IndirectMixinCompletionConfidence : CompletionConfidence() {
     override fun shouldSkipAutopopup(
         editor: Editor, contextElement: PsiElement, psiFile: PsiFile, offset: Int
     ): ThreeState =

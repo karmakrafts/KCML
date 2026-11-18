@@ -28,25 +28,29 @@ import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.annotationStringArgument
 import dev.karmakrafts.kcml.intellij.util.contentAt
+import org.jetbrains.kotlin.idea.KotlinLanguage
 
-internal data class PluginIdString(
+internal data class PluginIdString( // @formatter:off
     val prefix: String,
     val inAnnotation: Boolean,
     val insertHandler: InsertHandler<LookupElement>
-) {
+) { // @formatter:on
     companion object {
+        private const val ID_PARAMETER: String = "id"
+
         fun find(file: PsiFile, offset: Int): PluginIdString? {
             val position = file.findElementAt(offset) ?: return null
-            if (file.language.id == "kotlin") {
-                val content = position.annotationStringArgument(TypeNames.PLUGIN, "id")?.expression?.contentAt(offset)
-                    ?: return null
+            if (file.language === KotlinLanguage.INSTANCE) {
+                val content =
+                    position.annotationStringArgument(TypeNames.PLUGIN, ID_PARAMETER)?.expression?.contentAt(offset)
+                        ?: return null
                 return PluginIdString(content.prefix, true, StringContentInsertHandler(content))
             }
             val json = file as? JsonFile ?: return null
             if (!PluginIds.isMetadata(file)) return null
             val literal = PsiTreeUtil.getParentOfType(position, JsonStringLiteral::class.java, false) ?: return null
             val property = literal.parent as? JsonProperty ?: return null
-            if (property.name != "id" || property.value != literal || property.parent != json.topLevelValue) return null
+            if (property.name != ID_PARAMETER || property.value != literal || property.parent != json.topLevelValue) return null
             val range = ElementManipulators.getValueTextRange(literal)
             val relativeOffset = offset - literal.textRange.startOffset
             if (relativeOffset !in range.startOffset..range.endOffset) return null

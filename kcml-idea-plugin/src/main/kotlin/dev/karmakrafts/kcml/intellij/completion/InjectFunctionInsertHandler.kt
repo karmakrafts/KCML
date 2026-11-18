@@ -22,6 +22,7 @@ import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.argument
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
+import org.jetbrains.kotlin.psi.KtValueArgument
 
 internal class InjectFunctionInsertHandler(
     private val target: InjectTargetString,
@@ -32,34 +33,41 @@ internal class InjectFunctionInsertHandler(
         StringContentInsertHandler(target.content).handleInsert(context, item)
         context.tailOffset = context.editor.caretModel.offset
         if (!insertDescriptor) return
+        insertMethodDescriptor(context)
+    }
+
+    private fun insertMethodDescriptor(context: InsertionContext) {
         context.commitDocument()
         val annotation = PsiTreeUtil.getParentOfType(
             context.file.findElementAt(target.content.contentStart), KtAnnotationEntry::class.java, false
         ) ?: return
-        val descriptor = "\"${method.descriptor.replace("$", "\\$")}\""
         val name = annotation.argument("name", 0) ?: return
         val descriptorArgument = annotation.argument("descriptor", 1)
         val nameOffset = name.textRange.startOffset.takeIf {
             name.getArgumentName() == null && (descriptorArgument == null || descriptorArgument.getArgumentName() != null)
         }
-        val existing = descriptorArgument?.getArgumentExpression()
-        var end: Int
-        if (existing != null) {
-            val range = existing.textRange
-            context.document.replaceString(range.startOffset, range.endOffset, descriptor)
-            end = range.startOffset + descriptor.length - 1
-        }
-        else {
-            val offset = name.textRange.endOffset
-            val text = ", descriptor = $descriptor"
-            context.document.insertString(offset, text)
-            end = offset + text.length - 1
-        }
+        var end = insertOrReplaceDescriptor(context, name, descriptorArgument)
         if (nameOffset != null) {
             context.document.insertString(nameOffset, "name = ")
             if (nameOffset <= end) end += "name = ".length
         }
         context.editor.caretModel.moveToOffset(end)
         context.tailOffset = end
+    }
+
+    private fun insertOrReplaceDescriptor(
+        context: InsertionContext, name: KtValueArgument, descriptorArgument: KtValueArgument?
+    ): Int {
+        val descriptor = "\"${method.descriptor.replace("$", "\\$")}\""
+        val existing = descriptorArgument?.getArgumentExpression()
+        if (existing != null) {
+            val range = existing.textRange
+            context.document.replaceString(range.startOffset, range.endOffset, descriptor)
+            return range.startOffset + descriptor.length - 1
+        }
+        val offset = name.textRange.endOffset
+        val text = ", descriptor = $descriptor"
+        context.document.insertString(offset, text)
+        return offset + text.length - 1
     }
 }

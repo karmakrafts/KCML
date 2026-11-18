@@ -27,48 +27,61 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.patterns.PlatformPatterns
 import com.intellij.util.ProcessingContext
+import dev.karmakrafts.kcml.intellij.util.JvmMethod
 import dev.karmakrafts.kcml.intellij.util.argument
 import dev.karmakrafts.kcml.intellij.util.literalValue
 import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
-class InjectCompletionContributor : CompletionContributor() {
+internal class InjectCompletionContributor : CompletionContributor() {
+    companion object {
+        private const val NAME_PARAMETER: String = "name"
+    }
+
     init {
         for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
             extend(type, PlatformPatterns.psiElement(), object : CompletionProvider<CompletionParameters>() {
-                override fun addCompletions(
-                    parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet
-                ) {
-                    val target = InjectTargetString.find(parameters.originalFile, parameters.offset) ?: return
-                    result.stopHere()
-                    val methods = InjectTargetMethods.find(target.annotation)
-                    val isName = target.argumentName == "name"
-                    val name = if (isName) null
-                    else {
-                        val expression = target.annotation.argument("name", 0)
-                            ?.getArgumentExpression() as? KtStringTemplateExpression ?: return
-                        expression.literalValue() ?: return
-                    }
-                    val scopedResult = result.withPrefixMatcher(FunctionPrefixMatcher(target.content.prefix))
-                    val overloadCounts = methods.groupingBy { it.name }.eachCount()
-                    for (method in methods) {
-                        ProgressManager.checkCanceled()
-                        if (!isName && method.name != name) continue
-                        scopedResult.addElement(
-                            LookupElementBuilder.create(method, if (isName) method.name else method.descriptor)
-                                .withPresentableText(method.name)
-                                .withTailText(method.descriptor, true)
-                                .withIcon(AllIcons.Nodes.Method)
-                                .withInsertHandler(
-                                    InjectFunctionInsertHandler(
-                                        target, method, isName && overloadCounts.getValue(method.name) > 1
-                                    )
-                                )
-                        )
-                    }
+                override fun addCompletions( // @formatter:off
+                    parameters: CompletionParameters,
+                    context: ProcessingContext,
+                    result: CompletionResultSet
+                ) { // @formatter:on
+                    addTargetCompletions(parameters, result)
                 }
             })
         }
     }
+
+    private fun addTargetCompletions(parameters: CompletionParameters, result: CompletionResultSet) {
+        val target = InjectTargetString.find(parameters.originalFile, parameters.offset) ?: return
+        result.stopHere()
+        val methods = InjectTargetMethods.find(target.annotation)
+        val isName = target.argumentName == NAME_PARAMETER
+        val name = if (isName) null else findTargetName(target) ?: return
+        val scopedResult = result.withPrefixMatcher(FunctionPrefixMatcher(target.content.prefix))
+        val overloadCounts = methods.groupingBy(JvmMethod::name).eachCount()
+        for (method in methods) {
+            ProgressManager.checkCanceled()
+            if (!isName && method.name != name) continue
+            scopedResult.addElement(
+                createLookupElement(target, method, isName, isName && overloadCounts.getValue(method.name) > 1)
+            )
+        }
+    }
+
+    private fun findTargetName(target: InjectTargetString): String? {
+        val expression =
+            target.annotation.argument(NAME_PARAMETER, 0)?.getArgumentExpression() as? KtStringTemplateExpression
+                ?: return null
+        return expression.literalValue()
+    }
+
+    private fun createLookupElement(
+        target: InjectTargetString, method: JvmMethod, isName: Boolean, insertDescriptor: Boolean
+    ): LookupElementBuilder = LookupElementBuilder.create(method, if (isName) method.name else method.descriptor)
+        .withPresentableText(method.name)
+        .withTailText(method.descriptor, true)
+        .withIcon(AllIcons.Nodes.Method)
+        .withInsertHandler(InjectFunctionInsertHandler(target, method, insertDescriptor))
 
     private class FunctionPrefixMatcher(prefix: String) : PrefixMatcher(prefix) {
         override fun prefixMatches(name: String): Boolean = name.startsWith(prefix, ignoreCase = true)

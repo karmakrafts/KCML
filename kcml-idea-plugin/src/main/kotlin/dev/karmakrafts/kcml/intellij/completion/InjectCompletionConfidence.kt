@@ -22,7 +22,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.util.ThreeState
 
-class InjectCompletionConfidence : CompletionConfidence() {
+internal class InjectCompletionConfidence : CompletionConfidence() {
     override fun shouldSkipAutopopup(
         editor: Editor, contextElement: PsiElement, psiFile: PsiFile, offset: Int
     ): ThreeState = if (InjectTargetString.isTargetStringAt(psiFile, offset)) ThreeState.NO else ThreeState.UNSURE

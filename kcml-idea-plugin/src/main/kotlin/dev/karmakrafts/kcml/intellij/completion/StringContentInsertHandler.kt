@@ -25,7 +25,7 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal class StringContentInsertHandler(private val content: StringTemplateContent) : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
-        val (prefix, isRawString, contentStart, interpolationPrefixLength) = content
+        val (@Suppress("UNUSED_VARIABLE") prefix, isRawString, contentStart, interpolationPrefixLength) = content
         val insertedText = if (isRawString || interpolationPrefixLength > 1) item.lookupString
         else item.lookupString.replace("$", "\\$")
         context.commitDocument()
