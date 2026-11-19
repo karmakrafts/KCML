@@ -41,6 +41,18 @@
                          displayName="KCML mixin-only API usage"
                          groupName="KCML" enabledByDefault="true" level="WARNING"
                          implementationClass="dev.karmakrafts.kcml.intellij.inspection.OnlyInsideMixinUsageInspection"/>
+        <localInspection language="kotlin" shortName="KcmlTargetSpecificCode"
+                         displayName="KCML unguarded target-specific API usage"
+                         groupName="KCML" enabledByDefault="true" level="WARNING"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.TargetSpecificCodeInspection"/>
+        <localInspection language="kotlin" shortName="KcmlMismatchedTarget"
+                         displayName="KCML mismatched compilation target"
+                         groupName="KCML" enabledByDefault="true" level="ERROR"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.MismatchedTargetInspection"/>
+        <localInspection language="kotlin" shortName="KcmlOnlyOnType"
+                         displayName="KCML invalid target-specific type annotation"
+                         groupName="KCML" enabledByDefault="true" level="ERROR"
+                         implementationClass="dev.karmakrafts.kcml.intellij.inspection.OnlyOnTypeInspection"/>
 
         <!-- Implicit usage providers -->
         <implicitUsageProvider implementation="dev.karmakrafts.kcml.intellij.gutter.PluginImplicitUsageProvider"/>
