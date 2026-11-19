@@ -22,8 +22,8 @@ import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.util.InheritanceUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
+import dev.karmakrafts.kcml.intellij.util.lightClass
 import dev.karmakrafts.kcml.intellij.util.qualifiedName
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtVisitorVoid
 
@@ -36,7 +36,7 @@ class PluginDeclarationInspection : LocalInspectionTool() {
         object : KtVisitorVoid() {
             override fun visitClassOrObject(classOrObject: KtClassOrObject) {
                 val name = classOrObject.nameIdentifier ?: return
-                val psiClass = classOrObject.toLightClass() ?: return
+                val psiClass = classOrObject.lightClass() ?: return
                 if (psiClass.isInterface || psiClass.isAnnotationType) return
                 val annotated = classOrObject.annotationEntries.any { it.qualifiedName() == TypeNames.PLUGIN }
                 val implementsPlugin = InheritanceUtil.isInheritor(psiClass, TypeNames.COMPILER_PLUGIN)

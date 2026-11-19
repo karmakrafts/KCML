@@ -16,14 +16,10 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.InspectionFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 
-class ThisAwareImplementationInspectionTest : AnnotationFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        myFixture.enableInspections(MixinThisAwareImplementationInspection())
-    }
+class ThisAwareImplementationInspectionTest : InspectionFixtureTestCase(MixinThisAwareImplementationInspection()) {
 
     fun testNonMixinClassesAndObjects() = check(
         """
@@ -141,7 +137,6 @@ class ThisAwareImplementationInspectionTest : AnnotationFixtureTestCase() {
                 """.trimIndent()
             )
         }
-        myFixture.configureByText("Example.kt", "package sample\nimport dev.karmakrafts.kcml.api.mixin.*\n$text")
-        myFixture.checkHighlighting(true, false, false)
+        checkKotlinHighlighting(text, "package sample\nimport dev.karmakrafts.kcml.api.mixin.*")
     }
 }

@@ -75,7 +75,8 @@ internal object OnlyOnUsage {
 
                 override fun visitSimpleNameExpression(expression: KtSimpleNameExpression) {
                     ProgressManager.checkCanceled()
-                    computeProblem(expression)?.let { put(expression, it) }
+                    val problem = computeProblem(expression)
+                    if (problem != null) put(expression, problem)
                     super.visitSimpleNameExpression(expression)
                 }
             })
@@ -86,9 +87,8 @@ internal object OnlyOnUsage {
         val symbol = expression.mainReference.resolveToSymbol() ?: return null
         val restrictions = restrictions(symbol).toMutableList()
         if (symbol is KaConstructorSymbol) {
-            (expression.parent as? KtExpression)?.expressionType?.abbreviation?.symbol?.let {
-                restrictions += restrictions(it)
-            }
+            val abbreviation = (expression.parent as? KtExpression)?.expressionType?.abbreviation?.symbol
+            if (abbreviation != null) restrictions += restrictions(abbreviation)
         }
         if (symbol is KaPropertySymbol) {
             val access = accessExpression(expression)
@@ -98,14 +98,23 @@ internal object OnlyOnUsage {
                 write && assignment.operationToken != KtTokens.EQ || (access.parent as? KtUnaryExpression)?.operationToken in setOf(
                     KtTokens.PLUSPLUS, KtTokens.MINUSMINUS
                 )
-            if (!write || compound) symbol.getter?.let { restrictions += restrictions(it) }
-            if (write || compound) symbol.setter?.let { restrictions += restrictions(it) }
-            symbol.backingFieldSymbol?.let { restrictions += annotations(it) }
+            if (!write || compound) {
+                val getter = symbol.getter
+                if (getter != null) restrictions += restrictions(getter)
+            }
+            if (write || compound) {
+                val setter = symbol.setter
+                if (setter != null) restrictions += restrictions(setter)
+            }
+            val backingField = symbol.backingFieldSymbol
+            if (backingField != null) restrictions += annotations(backingField)
         }
         if (expression.parent is KtCallExpression && symbol is KaCallableSymbol) {
-            (symbol.returnType as? KaFunctionType)?.let { restrictions += annotations(it) }
+            val returnType = symbol.returnType as? KaFunctionType
+            if (returnType != null) restrictions += annotations(returnType)
             val call = (expression.parent as KtCallExpression).resolveToCall()?.singleFunctionCallOrNull()
-            (call?.dispatchReceiver?.type as? KaFunctionType)?.let { restrictions += annotations(it) }
+            val receiverType = call?.dispatchReceiver?.type as? KaFunctionType
+            if (receiverType != null) restrictions += annotations(receiverType)
         }
         if (restrictions.isEmpty()) return null
         val context = context(expression)
@@ -116,20 +125,29 @@ internal object OnlyOnUsage {
         }
     }
 
-    fun highlight(expression: KtSimpleNameExpression): PsiElement =
-        (expression.parent as? KtCallExpression)?.takeIf { it.calleeExpression == expression }
-            ?: (expression.parent as? KtUserType)?.takeIf { it.referenceExpression == expression } ?: expression
+    fun highlight(expression: KtSimpleNameExpression): PsiElement {
+        val parent = expression.parent
+        return when {
+            parent is KtCallExpression && parent.calleeExpression == expression -> parent
+            parent is KtUserType && parent.referenceExpression == expression -> parent
+            else -> expression
+        }
+    }
 
-    private fun accessExpression(expression: KtSimpleNameExpression): KtExpression =
-        (expression.parent as? KtQualifiedExpression)?.takeIf { it.selectorExpression == expression } ?: expression
+    private fun accessExpression(expression: KtSimpleNameExpression): KtExpression {
+        val parent = expression.parent
+        return if (parent is KtQualifiedExpression && parent.selectorExpression == expression) parent else expression
+    }
 
     private fun KaSession.restrictions(
         symbol: KaSymbol, visited: MutableSet<KaSymbol> = mutableSetOf()
     ): List<Set<Target>> {
         if (!visited.add(symbol)) return emptyList()
-        val result = (symbol as? KaAnnotated)?.let { annotations(it) }.orEmpty().toMutableList()
+        val result = mutableListOf<Set<Target>>()
+        if (symbol is KaAnnotated) result += annotations(symbol)
         if (symbol is KaTypeAliasSymbol) {
-            (symbol.expandedType as? KaClassType)?.symbol?.let { result += restrictions(it, visited) }
+            val expanded = (symbol.expandedType as? KaClassType)?.symbol
+            if (expanded != null) result += restrictions(expanded, visited)
         }
         val owner = (symbol as? KaDeclarationSymbol)?.containingDeclaration
         if (owner is KaClassSymbol) result += restrictions(owner, visited)
@@ -143,23 +161,33 @@ internal object OnlyOnUsage {
 
     private fun KaSession.targets(value: KaAnnotationValue): List<Target> = when (value) {
         is KaAnnotationValue.ArrayValue -> value.values.flatMap { targets(it) }
-        is KaAnnotationValue.ClassLiteralValue -> listOfNotNull((value.type as? KaClassType)?.symbol?.let { target(it) })
+        is KaAnnotationValue.ClassLiteralValue -> {
+            val symbol = (value.type as? KaClassType)?.symbol
+            if (symbol == null) emptyList() else listOfNotNull(target(symbol))
+        }
+
         else -> emptyList()
     }
 
     private fun KaSession.target(symbol: KaSymbol): Target? {
-        if (symbol is KaTypeAliasSymbol) return (symbol.expandedType as? KaClassType)?.symbol?.let { target(it) }
+        if (symbol is KaTypeAliasSymbol) {
+            val expanded = (symbol.expandedType as? KaClassType)?.symbol ?: return null
+            return target(expanded)
+        }
         val klass = symbol as? KaClassSymbol ?: return null
         val name = klass.classId?.asFqNameString() ?: return null
         val ancestors = mutableSetOf(name)
         fun collect(current: KaClassSymbol) {
             for (type in current.superTypes.filterIsInstance<KaClassType>()) {
-                if (ancestors.add(type.classId.asFqNameString())) (type.symbol as? KaClassSymbol)?.let(::collect)
+                if (!ancestors.add(type.classId.asFqNameString())) continue
+                val superClass = type.symbol as? KaClassSymbol ?: continue
+                collect(superClass)
             }
         }
         collect(klass)
         if (TypeNames.COMPILE_TARGET !in ancestors) {
-            return (klass.containingDeclaration as? KaClassSymbol)?.let { target(it) }
+            val owner = klass.containingDeclaration as? KaClassSymbol ?: return null
+            return target(owner)
         }
         return Target(name, ancestors)
     }
@@ -170,10 +198,17 @@ internal object OnlyOnUsage {
         while (current != null) {
             val constraints = when (current) {
                 is KtLambdaExpression -> lambdaContext(current)
-                is KtDeclaration -> (current.symbol as? KaAnnotated)?.let { annotations(it) }.orEmpty()
+                is KtDeclaration -> {
+                    val symbol = current.symbol as? KaAnnotated
+                    if (symbol == null) emptyList() else annotations(symbol)
+                }
+
                 else -> emptyList()
             }
-            for (constraint in constraints) result = result?.let { intersect(it, constraint) } ?: constraint
+            for (constraint in constraints) {
+                val previous = result
+                result = if (previous == null) constraint else intersect(previous, constraint)
+            }
             current = current.parent
         }
         return result
@@ -189,8 +224,11 @@ internal object OnlyOnUsage {
     }
 
     private fun KaSession.lambdaContext(lambda: KtLambdaExpression): List<Set<Target>> {
-        val result = lambda.expressionType?.let { annotations(it) }.orEmpty().toMutableList()
-        lambda.expectedType?.let { result += annotations(it) }
+        val result = mutableListOf<Set<Target>>()
+        val expressionType = lambda.expressionType
+        if (expressionType != null) result += annotations(expressionType)
+        val expectedType = lambda.expectedType
+        if (expectedType != null) result += annotations(expectedType)
         val call = generateSequence(lambda.parent) { it.parent }.filterIsInstance<KtCallExpression>().firstOrNull()
             ?: return result
         val resolved = call.resolveToCall()?.singleFunctionCallOrNull() ?: return result
@@ -212,7 +250,11 @@ internal object OnlyOnUsage {
     private fun KaSession.scopeTargets(expression: KtExpression, visited: MutableSet<PsiElement>): Set<Target>? {
         val value = KtPsiUtil.deparenthesize(expression) ?: return null
         if (!visited.add(value)) return null
-        (value.expressionType as? KaClassType)?.symbol?.let { target(it) }?.let { return setOf(it) }
+        val symbol = (value.expressionType as? KaClassType)?.symbol
+        if (symbol != null) {
+            val target = target(symbol)
+            if (target != null) return setOf(target)
+        }
         val elements = when (value) {
             is KtCollectionLiteralExpression -> value.innerExpressions.toList()
             is KtCallExpression -> {
@@ -227,7 +269,8 @@ internal object OnlyOnUsage {
             is KtNameReferenceExpression -> {
                 val property = value.mainReference.resolveToSymbol()?.psi as? KtProperty ?: return null
                 if (property.isVar) return null
-                return property.initializer?.let { scopeTargets(it, visited) }
+                val initializer = property.initializer ?: return null
+                return scopeTargets(initializer, visited)
             }
 
             else -> return null

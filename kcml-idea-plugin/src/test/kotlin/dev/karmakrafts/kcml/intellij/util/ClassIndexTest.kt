@@ -92,22 +92,33 @@ class ClassIndexTest : LightJavaCodeInsightFixtureTestCase() {
         assertNotNull(ClassIndex.compiledClass(file))
     }
 
-    private fun classFile(): VirtualFile = myFixture.tempDirFixture.createFile("cache/Outer\$Target.class").also {
-        WriteCommandAction.runWriteCommandAction(project) { it.setBinaryContent(bytecode("hidden")) }
+    private fun classFile(): VirtualFile {
+        val file = myFixture.tempDirFixture.createFile("cache/Outer\$Target.class")
+        WriteCommandAction.runWriteCommandAction(project) { file.setBinaryContent(bytecode("hidden")) }
+        return file
     }
 
-    private fun bytecode(methodName: String): ByteArray = ClassWriter(0).apply {
-        visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "cache/Outer\$Target", null, "cache/Parent", arrayOf("cache/Interface"))
-        visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).visitEnd()
-        visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null).visitEnd()
-        visitMethod(Opcodes.ACC_PRIVATE, methodName, "()V", null, null).visitEnd()
-        visitMethod(
+    private fun bytecode(methodName: String): ByteArray {
+        val writer = ClassWriter(0)
+        writer.visit(
+            Opcodes.V21,
+            Opcodes.ACC_PUBLIC,
+            "cache/Outer\$Target",
+            null,
+            "cache/Parent",
+            arrayOf("cache/Interface")
+        )
+        writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).visitEnd()
+        writer.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null).visitEnd()
+        writer.visitMethod(Opcodes.ACC_PRIVATE, methodName, "()V", null, null).visitEnd()
+        writer.visitMethod(
             Opcodes.ACC_PUBLIC or Opcodes.ACC_SYNTHETIC or Opcodes.ACC_BRIDGE,
             "value",
             "()Ljava/lang/Object;",
             null,
             null
         ).visitEnd()
-        visitEnd()
-    }.toByteArray()
+        writer.visitEnd()
+        return writer.toByteArray()
+    }
 }

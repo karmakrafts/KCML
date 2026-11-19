@@ -19,7 +19,6 @@ package dev.karmakrafts.kcml.intellij.gutter
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.roots.ModuleRootManager
 import com.intellij.psi.PsiElement
@@ -66,25 +65,17 @@ class PluginLineMarkerProvider : LineMarkerProvider {
             if (declaration.nameIdentifier != element) continue
             if (declaration.annotationEntries.none { it.qualifiedName() == TypeNames.PLUGIN }) continue
             val target = declaration.resolveMetadata()
-            result.add(object : LineMarkerInfo<PsiElement>(
-                element,
-                element.textRange,
-                Icons.kcml,
-                { "KCML plugin" },
-                target?.let {
-                    GutterIconNavigationHandler { _, source ->
-                        val current = (source.parent as? KtClassOrObject)?.resolveMetadata()
-                        current?.let { PsiNavigateUtil.navigate(it, true) }
-                    }
-                },
-                GutterIconRenderer.Alignment.LEFT,
-                { "KCML plugin" }) {
-                override fun createGutterRenderer(): GutterIconRenderer =
-                    object : LineMarkerGutterIconRenderer<PsiElement>(this) {
-                        override fun looksTheSameAs(renderer: LineMarkerGutterIconRenderer<*>): Boolean =
-                            super.looksTheSameAs(renderer) && isNavigateAction == renderer.isNavigateAction
-                    }
-            })
+            val navigationHandler = if (target == null) null
+            else GutterIconNavigationHandler<PsiElement> { _, source ->
+                val plugin = source.parent as? KtClassOrObject ?: return@GutterIconNavigationHandler
+                val current = plugin.resolveMetadata() ?: return@GutterIconNavigationHandler
+                PsiNavigateUtil.navigate(current, true)
+            }
+            result.add(
+                NavigationLineMarkerInfo(
+                    element, Icons.kcml, "KCML plugin", navigationHandler
+                )
+            )
         }
     }
 }

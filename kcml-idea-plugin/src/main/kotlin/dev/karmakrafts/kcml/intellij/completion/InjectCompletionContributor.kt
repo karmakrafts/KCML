@@ -18,15 +18,11 @@ package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
-import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
-import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.PrefixMatcher
 import com.intellij.codeInsight.lookup.LookupElementBuilder
 import com.intellij.icons.AllIcons
 import com.intellij.openapi.progress.ProgressManager
-import com.intellij.patterns.PlatformPatterns
-import com.intellij.util.ProcessingContext
 import dev.karmakrafts.kcml.intellij.util.JvmMethod
 import dev.karmakrafts.kcml.intellij.util.argument
 import dev.karmakrafts.kcml.intellij.util.literalValue
@@ -38,17 +34,7 @@ internal class InjectCompletionContributor : CompletionContributor() {
     }
 
     init {
-        for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
-            extend(type, PlatformPatterns.psiElement(), object : CompletionProvider<CompletionParameters>() {
-                override fun addCompletions( // @formatter:off
-                    parameters: CompletionParameters,
-                    context: ProcessingContext,
-                    result: CompletionResultSet
-                ) { // @formatter:on
-                    addTargetCompletions(parameters, result)
-                }
-            })
-        }
+        extendStringCompletion(::addTargetCompletions)
     }
 
     private fun addTargetCompletions(parameters: CompletionParameters, result: CompletionResultSet) {

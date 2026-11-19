@@ -17,16 +17,28 @@
 package dev.karmakrafts.kcml.intellij.util
 
 import com.intellij.psi.PsiClass
+import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
 import com.intellij.psi.util.PsiTreeUtil
+import org.jetbrains.kotlin.asJava.KotlinAsJavaSupport
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtTypeAlias
+import org.jetbrains.kotlin.psi.KtUserType
 import org.jetbrains.kotlin.psi.KtValueArgument
 
-internal fun KtAnnotationEntry.argument(name: String, position: Int): KtValueArgument? =
-    (valueArguments.firstOrNull { it.getArgumentName()?.asName?.identifier == name } ?: valueArguments.getOrNull(
-        position
-    )?.takeIf { it.getArgumentName() == null }) as? KtValueArgument
+internal fun PsiElement.resolveReference(): PsiElement? = references.firstNotNullOfOrNull { it.resolve() }
+
+internal fun KtClassOrObject.lightClass(): PsiClass? = KotlinAsJavaSupport.getInstance(project).getLightClass(this)
+
+internal fun KtTypeAlias.referencedType(): KtUserType? = getTypeReference()?.typeElement as? KtUserType
+
+internal fun KtAnnotationEntry.argument(name: String, position: Int): KtValueArgument? {
+    val named = valueArguments.firstOrNull { it.getArgumentName()?.asName?.identifier == name }
+    if (named != null) return named as? KtValueArgument
+    val positional = valueArguments.getOrNull(position) ?: return null
+    return if (positional.getArgumentName() == null) positional as? KtValueArgument else null
+}
 
 internal fun KtAnnotationEntry.isMixin(): Boolean {
     val name = qualifiedName()
@@ -38,8 +50,12 @@ internal fun PsiClass.isMixin(): Boolean {
 }
 
 internal fun KtAnnotationEntry.qualifiedName(): String? {
-    val resolved = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
-        ?: return null
+    var resolved = calleeExpression?.constructorReferenceExpression?.resolveReference() ?: return null
+    val visited = mutableSetOf<PsiElement>()
+    while (resolved is KtTypeAlias) {
+        if (!visited.add(resolved)) return null
+        resolved = resolved.referencedType()?.referenceExpression?.resolveReference() ?: return null
+    }
     return when (resolved) {
         is PsiClass -> resolved.qualifiedName
         is KtClassOrObject -> resolved.fqName?.asString()

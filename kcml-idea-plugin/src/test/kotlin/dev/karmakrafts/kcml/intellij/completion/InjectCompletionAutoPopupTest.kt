@@ -20,12 +20,15 @@ import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.testFramework.LightProjectDescriptor
-import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.testFramework.runInEdtAndWait
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationLibrary
+import dev.karmakrafts.kcml.intellij.testutil.CompletionAutoPopupFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.configureInjectCompletion
 
-class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
+class InjectCompletionAutoPopupTest : CompletionAutoPopupFixtureTestCase(
+    "dev.karmakrafts.kcml.api.mixin.Inject",
+    "dev.karmakrafts.kcml.api.mixin.IndirectMixin",
+    "dev.karmakrafts.kcml.api.mixin.DirectMixin"
+) {
     companion object {
         private val DESCRIPTOR = object : LightProjectDescriptor() {
             override fun getSdk(): Sdk =
@@ -33,40 +36,18 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
         }
     }
 
-    private lateinit var library: AnnotationLibrary
-
     override fun getProjectDescriptor(): LightProjectDescriptor = DESCRIPTOR
 
-    override fun runInDispatchThread(): Boolean = false
-
-    override fun setUp() {
-        super.setUp()
-        library = AnnotationLibrary(
-            "dev.karmakrafts.kcml.api.mixin.Inject",
-            "dev.karmakrafts.kcml.api.mixin.IndirectMixin",
-            "dev.karmakrafts.kcml.api.mixin.DirectMixin"
+    override fun configureAutoPopupProject() {
+        myFixture.addFileToProject(
+            "completion/PopupTarget.kt", """
+                package completion
+                class PopupTarget {
+                    private fun overloaded() {}
+                    fun overloaded(value: Int) {}
+                }
+            """.trimIndent()
         )
-        runInEdtAndWait {
-            library.attachTo(myFixture.module)
-            myFixture.addFileToProject(
-                "completion/PopupTarget.kt", """
-                    package completion
-                    class PopupTarget {
-                        private fun overloaded() {}
-                        fun overloaded(value: Int) {}
-                    }
-                """.trimIndent()
-            )
-        }
-    }
-
-    override fun tearDown() {
-        try {
-            super.tearDown()
-        }
-        finally {
-            if (::library.isInitialized) library.close()
-        }
     }
 
     fun testTypingNameShowsOverloadsAndEnterInsertsDescriptor() {
@@ -120,8 +101,7 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
         for (annotation in listOf(
             "@Other(\"ov<caret>\")", "@Inject(\"overloaded\", order = \"ov<caret>\")", "@Inject(\"ov<caret>\${value}\")"
         )) {
-            val tester = CompletionAutoPopupTester(myFixture)
-            tester.runWithAutoPopupEnabled {
+            withAutoPopup { tester ->
                 runInEdtAndWait { configure(annotation) }
                 tester.typeWithPauses("er")
                 runInEdtAndWait {
@@ -140,8 +120,7 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
         imports: String = "",
         mixin: String = "@IndirectMixin(\"completion.PopupTarget\")"
     ) {
-        val tester = CompletionAutoPopupTester(myFixture)
-        tester.runWithAutoPopupEnabled {
+        withAutoPopup { tester ->
             runInEdtAndWait { configure(annotation, imports, mixin) }
             tester.typeWithPauses(typed)
             runInEdtAndWait {
@@ -167,16 +146,6 @@ class InjectCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
     private fun configure(
         annotation: String, imports: String = "", mixin: String = "@IndirectMixin(\"completion.PopupTarget\")"
     ) {
-        myFixture.configureByText(
-            "Mixin.kt", """
-                import dev.karmakrafts.kcml.api.mixin.*
-                $imports
-                $mixin
-                class Example {
-                    $annotation
-                    fun inject() {}
-                }
-            """.trimIndent()
-        )
+        myFixture.configureInjectCompletion(annotation, mixin, imports)
     }
 }

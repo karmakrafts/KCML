@@ -17,14 +17,16 @@
 package dev.karmakrafts.kcml.intellij.gutter
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.IconLoader
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
-import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.assertMarkersByTooltip
+import dev.karmakrafts.kcml.intellij.testutil.assertNavigatesToFile
+import dev.karmakrafts.kcml.intellij.testutil.collectSingleMarker
+import dev.karmakrafts.kcml.intellij.testutil.declarationAtCaret
+import dev.karmakrafts.kcml.intellij.testutil.replaceTextAndCommit
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtClassOrObject
 
@@ -108,13 +110,13 @@ class MixinLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val unresolvedRenderer = unresolved.createGutterRenderer()!!
         assertNull(unresolvedRenderer.clickAction)
 
-        replaceTarget("example.Missing", "example.Target")
+        myFixture.replaceTextAndCommit("example.Missing", "example.Target")
         val resolved = collectMarker()
         val resolvedRenderer = resolved.createGutterRenderer()!!
         assertNotNull(resolvedRenderer.clickAction)
         assertFalse("The gutter must refresh when navigation becomes available", unresolvedRenderer == resolvedRenderer)
 
-        replaceTarget("example.Target", "example.Missing")
+        myFixture.replaceTextAndCommit("example.Target", "example.Missing")
         val missingRenderer = collectMarker().createGutterRenderer()!!
         assertNull(missingRenderer.clickAction)
         assertFalse("The gutter must refresh when navigation becomes unavailable", resolvedRenderer == missingRenderer)
@@ -125,9 +127,8 @@ class MixinLineMarkerProviderTest : AnnotationFixtureTestCase() {
         myFixture.addFileToProject("example/First.kt", "package example\nclass First")
         val target = myFixture.addFileToProject("example/Other.kt", "package example\nobject Other")
         val marker = configureMarker("@IndirectMixin(\"example.First\") class <caret>Example")
-        replaceTarget("example.First", "example.Other")
-        marker.navigationHandler!!.navigate(null, marker.element!!)
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+        myFixture.replaceTextAndCommit("example.First", "example.Other")
+        project.assertNavigatesToFile(marker, target)
     }
 
     fun testUnresolvedTargetHasNoNavigation() {
@@ -226,31 +227,15 @@ class MixinLineMarkerProviderTest : AnnotationFixtureTestCase() {
         return collectMarker()
     }
 
-    private fun replaceTarget(old: String, new: String) {
-        val document = myFixture.editor.document
-        WriteCommandAction.runWriteCommandAction(project) {
-            val start = document.text.indexOf(old)
-            document.replaceString(start, start + old.length, new)
-            PsiDocumentManager.getInstance(project).commitDocument(document)
-        }
-    }
-
-    private fun collectMarker(): LineMarkerInfo<PsiElement> {
-        val declaration = PsiTreeUtil.getParentOfType(
-            myFixture.file.findElementAt(myFixture.caretOffset), KtClassOrObject::class.java
-        )!!
-        val markers = mutableListOf<LineMarkerInfo<*>>()
-        MixinLineMarkerProvider().collectSlowLineMarkers(listOf(declaration.nameIdentifier!!), markers)
-        @Suppress("UNCHECKED_CAST") return markers.single() as LineMarkerInfo<PsiElement>
-    }
+    private fun collectMarker(): LineMarkerInfo<PsiElement> =
+        MixinLineMarkerProvider().collectSingleMarker(myFixture.declarationAtCaret<KtClassOrObject>())
 
     private fun assertNavigation(text: String, target: PsiFile, targetName: String) {
         val marker = configureMarker(text)
         val handler = marker.navigationHandler
         assertNotNull("Mixin marker should navigate to its target", handler)
-        handler!!.navigate(null, marker.element!!)
+        project.assertNavigatesToFile(marker, target)
         val editor = FileEditorManager.getInstance(project).selectedTextEditor!!
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
         assertEquals(
             targetName, editor.document.charsSequence.subSequence(
                 editor.caretModel.offset, editor.caretModel.offset + targetName.length
@@ -262,12 +247,11 @@ class MixinLineMarkerProviderTest : AnnotationFixtureTestCase() {
         myFixture.configureByText(
             "Mixin.kt", "import dev.karmakrafts.kcml.api.mixin.*\n$text"
         )
-        val markers = myFixture.findAllGutters().filter { it.tooltipText == "KCML mixin" }
-        assertEquals(expected, markers.size)
-        if (expected == 0) return
-        val icon =
-            IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/mixin.svg", MixinLineMarkerProvider::class.java)
-        assertEquals(icon, markers.single().icon)
-        assertTrue(myFixture.findGuttersAtCaret().any { it.tooltipText == "KCML mixin" })
+        myFixture.assertMarkersByTooltip(expected, "KCML mixin") { markers ->
+            val icon = IconLoader.getIcon(
+                "/icons/dev/karmakrafts/kcml/intellij/mixin.svg", MixinLineMarkerProvider::class.java
+            )
+            assertEquals(icon, markers.single().icon)
+        }
     }
 }

@@ -20,7 +20,6 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.builtins.jvm.JavaToKotlinClassMap
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassLiteralExpression
@@ -31,11 +30,12 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 internal fun PsiElement.asPsiClass(): PsiClass? = when (this) {
     is PsiClass -> this
     is KtClassOrObject -> {
-        val javaClass = fqName?.let { JavaToKotlinClassMap.mapKotlinToJava(it.toUnsafe()) }
+        val name = fqName
+        val javaClass = if (name == null) null else JavaToKotlinClassMap.mapKotlinToJava(name.toUnsafe())
         if (javaClass != null) JavaPsiFacade.getInstance(project).findClass(
             javaClass.asSingleFqName().asString(), resolveScope
         )
-        else toLightClass()
+        else lightClass()
     }
 
     else -> null
@@ -48,7 +48,7 @@ internal fun KtAnnotationEntry.resolveMixinTarget(): PsiElement? {
         is KtClassLiteralExpression -> {
             val receiver = expression.receiverExpression
             val reference = (receiver as? KtDotQualifiedExpression)?.selectorExpression ?: receiver
-            reference?.references?.firstNotNullOfOrNull { it.resolve() }
+            reference?.resolveReference()
         }
 
         is KtStringTemplateExpression -> {

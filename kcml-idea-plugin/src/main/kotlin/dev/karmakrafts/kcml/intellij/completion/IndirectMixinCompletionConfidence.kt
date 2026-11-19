@@ -25,6 +25,5 @@ import com.intellij.util.ThreeState
 internal class IndirectMixinCompletionConfidence : CompletionConfidence() {
     override fun shouldSkipAutopopup(
         editor: Editor, contextElement: PsiElement, psiFile: PsiFile, offset: Int
-    ): ThreeState =
-        if (IndirectMixinTargetString.find(contextElement, offset) != null) ThreeState.NO else ThreeState.UNSURE
+    ): ThreeState = stringCompletionConfidence(IndirectMixinTargetString.find(contextElement, offset) != null)
 }

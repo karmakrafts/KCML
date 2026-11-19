@@ -39,7 +39,13 @@ internal object OnlyOnAnalysis {
         val scheduled = AtomicBoolean()
 
         @Synchronized
-        fun compute(action: () -> T): T = result ?: action().also { result = it }
+        fun compute(action: () -> T): T {
+            val cached = result
+            if (cached != null) return cached
+            val computed = action()
+            result = computed
+            return computed
+        }
     }
 
     fun <T : Any> key(name: String): Key<CachedValue<State<T>>> = Key.create(name)
@@ -58,7 +64,8 @@ internal object OnlyOnAnalysis {
         val project = file.project
         if (project.isDisposed || !file.isValid) return null
         val state = state(file, key)
-        state.result?.let { return it }
+        val cached = state.result
+        if (cached != null) return cached
         if (!ApplicationManager.getApplication().isDispatchThread && !DumbService.isDumb(project)) {
             return state.compute(compute)
         }

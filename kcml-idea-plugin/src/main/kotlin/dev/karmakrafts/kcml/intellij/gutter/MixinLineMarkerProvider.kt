@@ -19,7 +19,6 @@ package dev.karmakrafts.kcml.intellij.gutter
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.psi.PsiElement
 import com.intellij.util.PsiNavigateUtil
 import dev.karmakrafts.kcml.intellij.icon.Icons
@@ -37,26 +36,18 @@ class MixinLineMarkerProvider : LineMarkerProvider {
             val annotations = declaration.annotationEntries.filter { it.isMixin() }
             if (annotations.isEmpty()) continue
             val target = annotations.firstNotNullOfOrNull { it.resolveMixinTarget() }
-            result.add(object : LineMarkerInfo<PsiElement>(
-                element,
-                element.textRange,
-                Icons.mixin,
-                { "KCML mixin" },
-                target?.let {
-                    GutterIconNavigationHandler { _, source ->
-                        val current =
-                            (source.parent as? KtClassOrObject)?.annotationEntries?.firstNotNullOfOrNull { it.resolveMixinTarget() }
-                        current?.let { PsiNavigateUtil.navigate(it.navigationElement, true) }
-                    }
-                },
-                GutterIconRenderer.Alignment.LEFT,
-                { "KCML mixin" }) {
-                override fun createGutterRenderer(): GutterIconRenderer =
-                    object : LineMarkerGutterIconRenderer<PsiElement>(this) {
-                        override fun looksTheSameAs(renderer: LineMarkerGutterIconRenderer<*>): Boolean =
-                            super.looksTheSameAs(renderer) && isNavigateAction == renderer.isNavigateAction
-                    }
-            })
+            val navigationHandler = if (target == null) null
+            else GutterIconNavigationHandler<PsiElement> { _, source ->
+                val mixin = source.parent as? KtClassOrObject ?: return@GutterIconNavigationHandler
+                val current = mixin.annotationEntries.firstNotNullOfOrNull { it.resolveMixinTarget() }
+                    ?: return@GutterIconNavigationHandler
+                PsiNavigateUtil.navigate(current.navigationElement, true)
+            }
+            result.add(
+                NavigationLineMarkerInfo(
+                    element, Icons.mixin, "KCML mixin", navigationHandler
+                )
+            )
         }
     }
 }

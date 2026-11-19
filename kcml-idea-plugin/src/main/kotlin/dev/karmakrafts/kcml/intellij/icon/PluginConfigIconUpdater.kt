@@ -60,7 +60,9 @@ class PluginConfigIconUpdater(private val project: Project) : Disposable {
             IconDeferrer.getInstance().clearCache()
             ProjectView.getInstance(project).refresh()
             val editors = FileEditorManager.getInstance(project)
-            files.filter { editors.isFileOpen(it) }.forEach { editors.updateFilePresentation(it) }
+            for (file in files) {
+                if (editors.isFileOpen(file)) editors.updateFilePresentation(file)
+            }
         })
     }
 

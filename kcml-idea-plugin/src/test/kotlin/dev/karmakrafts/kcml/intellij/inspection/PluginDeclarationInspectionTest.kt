@@ -16,10 +16,10 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.InspectionFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 
-class PluginDeclarationInspectionTest : AnnotationFixtureTestCase() {
+class PluginDeclarationInspectionTest : InspectionFixtureTestCase(PluginDeclarationInspection()) {
     override fun setUp() {
         super.setUp()
         addAnnotationSource(
@@ -28,7 +28,6 @@ class PluginDeclarationInspectionTest : AnnotationFixtureTestCase() {
                 annotation class Plugin(val id: String)
             """.trimIndent()
         )
-        myFixture.enableInspections(PluginDeclarationInspection())
     }
 
     fun testAnnotatedClassMustImplementCompilerPlugin() = check(
@@ -150,7 +149,6 @@ class PluginDeclarationInspectionTest : AnnotationFixtureTestCase() {
                 """.trimIndent()
             )
         }
-        myFixture.configureByText("Example.kt", "import dev.karmakrafts.kcml.api.plugin.*\n$text")
-        myFixture.checkHighlighting(true, false, false)
+        checkKotlinHighlighting(text, "import dev.karmakrafts.kcml.api.plugin.*")
     }
 }

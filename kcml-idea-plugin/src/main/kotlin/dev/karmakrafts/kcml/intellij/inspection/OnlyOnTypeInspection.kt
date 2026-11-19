@@ -20,14 +20,13 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.progress.ProgressManager
-import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.qualifiedName
+import dev.karmakrafts.kcml.intellij.util.resolveReference
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
-import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtFunctionType
 import org.jetbrains.kotlin.psi.KtNullableType
@@ -62,7 +61,7 @@ class OnlyOnTypeInspection : LocalInspectionTool() {
         file.accept(object : KtTreeVisitorVoid() {
             override fun visitTypeReference(typeReference: KtTypeReference) {
                 ProgressManager.checkCanceled()
-                val annotations = typeReference.annotationEntries.filter { it.isOnlyOn() }
+                val annotations = typeReference.annotationEntries.filter { it.qualifiedName() == TypeNames.ONLY_ON }
                 if (annotations.isNotEmpty() && !isFunctionType(typeReference.typeElement, mutableSetOf())) {
                     addAll(annotations)
                 }
@@ -71,28 +70,13 @@ class OnlyOnTypeInspection : LocalInspectionTool() {
         })
     }
 
-    private fun KtAnnotationEntry.isOnlyOn(): Boolean {
-        if (qualifiedName() == TypeNames.ONLY_ON) return true
-        var target = calleeExpression?.constructorReferenceExpression?.references?.firstNotNullOfOrNull { it.resolve() }
-        val visited = mutableSetOf<PsiElement>()
-        while (target is KtTypeAlias && visited.add(target)) {
-            val reference = (target.getTypeReference()?.typeElement as? KtUserType)?.referenceExpression ?: return false
-            target = reference.references.firstNotNullOfOrNull { it.resolve() }
-        }
-        return when (target) {
-            is KtClassOrObject -> target.fqName?.asString() == TypeNames.ONLY_ON
-            is PsiClass -> target.qualifiedName == TypeNames.ONLY_ON
-            else -> false
-        }
-    }
-
     private fun isFunctionType(type: KtTypeElement?, visited: MutableSet<PsiElement>): Boolean {
         if (type == null || !visited.add(type)) return false
         return when (type) {
             is KtFunctionType -> true
             is KtNullableType -> isFunctionType(type.innerType, visited)
             is KtUserType -> {
-                val alias = type.referenceExpression?.references?.firstNotNullOfOrNull { it.resolve() } as? KtTypeAlias
+                val alias = type.referenceExpression?.resolveReference() as? KtTypeAlias
                 isFunctionType(alias?.getTypeReference()?.typeElement, visited)
             }
 

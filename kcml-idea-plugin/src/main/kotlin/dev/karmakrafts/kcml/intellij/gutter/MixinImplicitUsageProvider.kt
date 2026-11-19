@@ -23,10 +23,7 @@ import dev.karmakrafts.kcml.intellij.util.isMixin
 
 class MixinImplicitUsageProvider : ImplicitUsageProvider {
     override fun isImplicitUsage(element: PsiElement): Boolean {
-        return when (element) {
-            is PsiClass if element.isMixin() -> true
-            else -> false
-        }
+        return element is PsiClass && element.isMixin()
     }
 
     override fun isImplicitRead(element: PsiElement): Boolean = false

@@ -25,15 +25,17 @@ import org.jetbrains.kotlin.psi.KtStringTemplateExpression
 
 internal class StringContentInsertHandler(private val content: StringTemplateContent) : InsertHandler<LookupElement> {
     override fun handleInsert(context: InsertionContext, item: LookupElement) {
-        val (@Suppress("UNUSED_VARIABLE") prefix, isRawString, contentStart, interpolationPrefixLength) = content
-        val insertedText = if (isRawString || interpolationPrefixLength > 1) item.lookupString
+        val isRawString = content.isRawString
+        val contentStart = content.contentStart
+        val insertedText = if (isRawString || content.interpolationPrefixLength > 1) item.lookupString
         else item.lookupString.replace("$", "\\$")
         context.commitDocument()
         val expression = PsiTreeUtil.getParentOfType(
             context.file.findElementAt(contentStart), KtStringTemplateExpression::class.java, false
         )
         val delimiterLength = if (isRawString) 3 else 1
-        val contentEnd = expression?.let { it.textRange.endOffset - delimiterLength } ?: context.tailOffset
+        val contentEnd =
+            if (expression == null) context.tailOffset else expression.textRange.endOffset - delimiterLength
         context.document.replaceString(contentStart, contentEnd, insertedText)
         context.editor.caretModel.moveToOffset(contentStart + insertedText.length)
     }

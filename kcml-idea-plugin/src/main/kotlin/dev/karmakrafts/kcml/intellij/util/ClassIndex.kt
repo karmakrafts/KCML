@@ -18,11 +18,11 @@ package dev.karmakrafts.kcml.intellij.util
 
 import com.intellij.ide.highlighter.JavaClassFileType
 import com.intellij.openapi.progress.ProgressManager
+import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.roots.ProjectRootModificationTracker
 import com.intellij.openapi.util.Key
-import com.intellij.openapi.util.ModificationTracker
 import com.intellij.openapi.vfs.VfsUtilCore
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.VirtualFileManager
@@ -43,7 +43,6 @@ import com.intellij.psi.util.CachedValue
 import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.TypeConversionUtil
-import com.intellij.util.indexing.FileBasedIndex
 import com.intellij.util.indexing.IdFilter
 import org.jetbrains.kotlin.idea.stubindex.KotlinFullClassNameIndex
 import org.jetbrains.kotlin.psi.KtClassBody
@@ -73,10 +72,10 @@ internal object ClassIndex {
     fun findClass(project: Project, scope: GlobalSearchScope, binaryName: String): PsiElement? {
         ProgressManager.checkCanceled()
         val sourceName = binaryName.replace('$', '.')
-        return KotlinFullClassNameIndex[sourceName, project, scope].firstOrNull() ?: JavaPsiFacade.getInstance(project)
-            .let {
-                it.findClass(binaryName, scope) ?: it.findClass(sourceName, scope)
-            }
+        val kotlinClass = KotlinFullClassNameIndex.Helper[sourceName, project, scope].firstOrNull()
+        if (kotlinClass != null) return kotlinClass
+        val facade = JavaPsiFacade.getInstance(project)
+        return facade.findClass(binaryName, scope) ?: facade.findClass(sourceName, scope)
     }
 
     fun findCandidates(project: Project, scope: GlobalSearchScope): Sequence<String> = sequence {
@@ -94,11 +93,12 @@ internal object ClassIndex {
             for (psiClass in StubIndex.getElements(
                 JavaStubIndexKeys.CLASS_SHORT_NAMES, shortName, project, sourceScope, PsiClass::class.java
             )) {
-                psiClass.binaryName()?.let { yield(it) }
+                val binaryName = psiClass.binaryName() ?: continue
+                yield(binaryName)
             }
         }
 
-        val kotlinClassIndex = KotlinFullClassNameIndex
+        val kotlinClassIndex = KotlinFullClassNameIndex.Helper
         val kotlinClassNames = buildList<String> {
             kotlinClassIndex.processAllKeys(sourceScope, sourceFiles) {
                 ProgressManager.checkCanceled()
@@ -108,7 +108,8 @@ internal object ClassIndex {
         for (className in kotlinClassNames) {
             ProgressManager.checkCanceled()
             for (declaration in kotlinClassIndex[className, project, sourceScope]) {
-                declaration.binaryName()?.let { yield(it) }
+                val binaryName = declaration.binaryName() ?: continue
+                yield(binaryName)
             }
         }
 
@@ -124,9 +125,8 @@ internal object ClassIndex {
                 ConcurrentHashMap<GlobalSearchScope, List<String>>(),
                 ProjectRootModificationTracker.getInstance(project),
                 VirtualFileManager.VFS_STRUCTURE_MODIFICATIONS,
-                ModificationTracker {
-                    FileBasedIndex.getInstance().getIndexModificationStamp(FileTypeIndex.NAME, project)
-                })
+                DumbService.getInstance(project).modificationTracker
+            )
         }, false)
         return cache.computeIfAbsent(scope) {
             val projectFileIndex = ProjectFileIndex.getInstance(project)
@@ -154,7 +154,8 @@ internal object ClassIndex {
         ProgressManager.checkCanceled()
         if (!file.isValid) return null
         val stamp = file.modificationStamp
-        file.getUserData(compiledClassKey)?.get()?.takeIf { it.stamp == stamp }?.let { return it.metadata }
+        val cached = file.getUserData(compiledClassKey)?.get()
+        if (cached != null && cached.stamp == stamp) return cached.metadata
         val metadata = readClass(file)
         file.putUserData(compiledClassKey, SoftReference(StampedClass(stamp, metadata)))
         return metadata
@@ -171,21 +172,23 @@ internal object ClassIndex {
             val file = type.containingFile?.virtualFile
             if (type is PsiCompiledElement || file?.extension == "class") {
                 val fileName = "${binaryName.substringAfterLast('.')}.class"
-                val classFile = if (file?.name == fileName) file else file?.parent?.findChild(fileName)
-                (val compiledBinaryName = binaryName, val superNames, val compiledMethods = methods) = classFile?.let(::compiledClass)
-                    ?: return
-                if (compiledBinaryName != binaryName) return
-                methods += compiledMethods
-                for (superName in superNames) {
+                val classFile = (if (file?.name == fileName) file else file?.parent?.findChild(fileName)) ?: return
+                val compiled = compiledClass(classFile) ?: return
+                if (compiled.binaryName != binaryName) return
+                methods += compiled.methods
+                for (superName in compiled.superNames) {
                     ProgressManager.checkCanceled()
                     if (superName in visited) continue
-                    facade.findClass(superName.replace('$', '.'), target.resolveScope)?.let(::collect)
+                    val superClass = facade.findClass(superName.replace('$', '.'), target.resolveScope) ?: continue
+                    collect(superClass)
                 }
             }
             else {
                 for (method in type.methods) {
                     ProgressManager.checkCanceled()
-                    if (!method.isConstructor) method.descriptor()?.let { methods += JvmMethod(method.name, it) }
+                    if (method.isConstructor) continue
+                    val descriptor = method.descriptor() ?: continue
+                    methods += JvmMethod(method.name, descriptor)
                 }
                 type.supers.forEach(::collect)
             }
@@ -240,11 +243,18 @@ internal object ClassIndex {
     private fun PsiType.descriptor(allowUnresolved: Boolean): String? {
         ProgressManager.checkCanceled()
         return when (val erased = TypeConversionUtil.erasure(this)) {
-            is PsiArrayType -> erased.componentType.descriptor(allowUnresolved)?.let { "[$it" }
+            is PsiArrayType -> {
+                val component = erased.componentType.descriptor(allowUnresolved) ?: return null
+                "[$component"
+            }
+
             is PsiClassType -> {
-                val name = erased.resolve()?.binaryName() ?: erased.rawType().canonicalText.takeIf {
-                    allowUnresolved && '.' in it
-                } ?: return null
+                var name = erased.resolve()?.binaryName()
+                if (name == null) {
+                    val unresolvedName = erased.rawType().canonicalText
+                    if (!allowUnresolved || '.' !in unresolvedName) return null
+                    name = unresolvedName
+                }
                 "L${name.replace('.', '/')};"
             }
 
@@ -268,7 +278,9 @@ internal object ClassIndex {
     private fun PsiClass.binaryName(): String? {
         ProgressManager.checkCanceled()
         val outer = containingClass ?: return qualifiedName
-        return outer.binaryName()?.let { "${it}$${name ?: return null}" }
+        val outerName = outer.binaryName() ?: return null
+        val className = name ?: return null
+        return "${outerName}$$className"
     }
 
     private fun KtClassOrObject.binaryName(): String? {

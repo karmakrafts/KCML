@@ -18,13 +18,16 @@ package dev.karmakrafts.kcml.intellij.gutter
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.psi.PsiFile
 import com.intellij.testFramework.PsiTestUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.assertMarkersByTooltip
+import dev.karmakrafts.kcml.intellij.testutil.assertNavigatesToFile
+import dev.karmakrafts.kcml.intellij.testutil.collectSingleMarker
+import dev.karmakrafts.kcml.intellij.testutil.firstDescendant
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -36,8 +39,7 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val target = addResource("META-INF/example.json")
         val marker = configureMarker("@Plugin(\"example\") class <caret>Example")
         assertNotNull(marker.createGutterRenderer()!!.clickAction)
-        marker.navigationHandler!!.navigate(null, marker.element!!)
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+        project.assertNavigatesToFile(marker, target)
     }
 
     fun testNamedIdOnAliasedAnnotationNavigatesToMetadata() {
@@ -46,8 +48,7 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val marker = configureMarker(
             "import dev.karmakrafts.kcml.api.plugin.Plugin as CompilerPlugin\n" + "@CompilerPlugin(id = \"example\") object <caret>Example"
         )
-        marker.navigationHandler!!.navigate(null, marker.element!!)
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+        project.assertNavigatesToFile(marker, target)
     }
 
     fun testMissingMetadataHasNoNavigation() {
@@ -117,8 +118,7 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         PsiTestUtil.addSourceRoot(module, source.virtualFile.parent, true)
         myFixture.configureFromExistingVirtualFile(source.virtualFile)
         val marker = collectMarker()
-        marker.navigationHandler!!.navigate(null, marker.element!!)
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+        project.assertNavigatesToFile(marker, target)
     }
 
     fun testNavigationReadsCurrentId() {
@@ -127,8 +127,7 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val target = myFixture.addFileToProject("resources/META-INF/other.json", "{}")
         val marker = configureMarker("@Plugin(\"example\") class <caret>Example")
         replaceId("example", "other")
-        marker.navigationHandler!!.navigate(null, marker.element!!)
-        assertEquals(target.virtualFile, FileEditorManager.getInstance(project).selectedFiles.single())
+        project.assertNavigatesToFile(marker, target)
     }
 
     fun testNavigationAvailabilityRefreshesAfterEditingId() {
@@ -146,8 +145,10 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         assertFalse(resolved == missingAgain)
     }
 
-    private fun addResource(path: String) = myFixture.addFileToProject("resources/$path", "{}").also {
+    private fun addResource(path: String): PsiFile {
+        val file = myFixture.addFileToProject("resources/$path", "{}")
         PsiTestUtil.addSourceRoot(module, myFixture.findFileInTempDir("resources"), JavaResourceRootType.RESOURCE)
+        return file
     }
 
     private fun configureMarker(text: String): LineMarkerInfo<PsiElement> {
@@ -155,12 +156,8 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
         return collectMarker()
     }
 
-    private fun collectMarker(): LineMarkerInfo<PsiElement> {
-        val declaration = PsiTreeUtil.findChildOfType(myFixture.file, KtClassOrObject::class.java)!!
-        val result = mutableListOf<LineMarkerInfo<*>>()
-        PluginLineMarkerProvider().collectSlowLineMarkers(listOf<PsiElement>(declaration.nameIdentifier!!), result)
-        @Suppress("UNCHECKED_CAST") return result.single() as LineMarkerInfo<PsiElement>
-    }
+    private fun collectMarker(): LineMarkerInfo<PsiElement> =
+        PluginLineMarkerProvider().collectSingleMarker(myFixture.file.firstDescendant<KtClassOrObject>())
 
     private fun replaceId(old: String, new: String) {
         WriteCommandAction.runWriteCommandAction(project) {
@@ -248,11 +245,9 @@ class PluginLineMarkerProviderTest : AnnotationFixtureTestCase() {
 
     private fun assertMarkers(text: String, expected: Int) {
         myFixture.configureByText("Plugin.kt", "import dev.karmakrafts.kcml.api.plugin.*\n$text")
-        val markers = myFixture.findAllGutters().filter { it.tooltipText == "KCML plugin" }
-        assertEquals(expected, markers.size)
-        if (expected == 0) return
-        val icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/kcml.svg", javaClass)
-        assertTrue(markers.all { it.icon == icon })
-        assertTrue(myFixture.findGuttersAtCaret().any { it.tooltipText == "KCML plugin" })
+        myFixture.assertMarkersByTooltip(expected, "KCML plugin") { markers ->
+            val icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/kcml.svg", javaClass)
+            assertTrue(markers.all { it.icon == icon })
+        }
     }
 }

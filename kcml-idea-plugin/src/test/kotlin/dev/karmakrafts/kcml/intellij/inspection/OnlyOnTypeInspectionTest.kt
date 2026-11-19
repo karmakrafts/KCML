@@ -16,21 +16,18 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
-import com.intellij.codeInspection.InspectionManager
-import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.PsiDocumentManager
-import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.PlatformTestUtil
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.InspectionFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.collectProblems
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtTypeReference
 
-class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
+class OnlyOnTypeInspectionTest : InspectionFixtureTestCase(OnlyOnTypeInspection()) {
     override fun setUp() {
         super.setUp()
-        myFixture.enableInspections(OnlyOnTypeInspection())
         addAnnotationSource(
             "dev/karmakrafts/kcml/api/target/Targets.kt", """
                 package dev.karmakrafts.kcml.api.target
@@ -54,17 +51,14 @@ class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
 
     fun testEdtTypeValidationIsDeferredAndInvalidatedByAliasEdit() {
         val alias = myFixture.addFileToProject("sample/Alias.kt", "package sample\ntypealias Alias = String")
-        myFixture.configureByText("Example.kt", """
+        myFixture.configureByText(
+            "Example.kt", """
             package sample
             import dev.karmakrafts.kcml.api.target.*
             fun use(value: @OnlyOn(JvmCompileTarget::class) Alias) = Unit
-        """.trimIndent())
-        fun problems(): Int {
-            val holder = ProblemsHolder(InspectionManager.getInstance(project), myFixture.file, true)
-            val visitor = OnlyOnTypeInspection().buildVisitor(holder, true)
-            PsiTreeUtil.findChildrenOfType(myFixture.file, KtTypeReference::class.java).forEach { it.accept(visitor) }
-            return holder.results.size
-        }
+        """.trimIndent()
+        )
+        fun problems() = myFixture.collectProblems<KtTypeReference>(OnlyOnTypeInspection()).size
         assertTrue(ApplicationManager.getApplication().isDispatchThread)
         assertEquals(0, problems())
         PlatformTestUtil.waitWithEventsDispatching("OnlyOn background type validation", { problems() == 1 }, 10)
@@ -72,7 +66,7 @@ class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(alias)!!
-            document.setText("package sample\ntypealias Alias = () -> Unit")
+            document.text = "package sample\ntypealias Alias = () -> Unit"
             documents.commitDocument(document)
         }
         assertEquals(0, problems())
@@ -188,8 +182,7 @@ class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
 
     private fun check(text: String) {
         myFixture.withAnnotationLibrary("java.io.Serializable", "java.lang.Object") {
-            myFixture.configureByText("Example.kt", "package sample\nimport dev.karmakrafts.kcml.api.target.*\n$text")
-            myFixture.checkHighlighting(true, false, false)
+            checkKotlinHighlighting(text, "package sample\nimport dev.karmakrafts.kcml.api.target.*")
         }
     }
 }

@@ -21,36 +21,16 @@ import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.ModuleRootModificationUtil
-import com.intellij.testFramework.fixtures.CompletionAutoPopupTester
-import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.PathUtil
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationLibrary
+import dev.karmakrafts.kcml.intellij.testutil.CompletionAutoPopupFixtureTestCase
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 
-class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase() {
-    private lateinit var library: AnnotationLibrary
-
-    override fun runInDispatchThread(): Boolean = false
-
-    override fun setUp() {
-        super.setUp()
-        library = AnnotationLibrary("dev.karmakrafts.kcml.api.mixin.IndirectMixin")
-        runInEdtAndWait {
-            library.attachTo(myFixture.module)
-            myFixture.addFileToProject(
-                "completion/targets/Target.kt", "package completion.targets; class Target; class TargetOther"
-            )
-        }
-    }
-
-    override fun tearDown() {
-        try {
-            super.tearDown()
-        }
-        finally {
-            if (::library.isInitialized) library.close()
-        }
+class IndirectMixinCompletionAutoPopupTest : CompletionAutoPopupFixtureTestCase("dev.karmakrafts.kcml.api.mixin.IndirectMixin") {
+    override fun configureAutoPopupProject() {
+        myFixture.addFileToProject(
+            "completion/targets/Target.kt", "package completion.targets; class Target; class TargetOther"
+        )
     }
 
     fun testTypingInTargetStringShowsCompletionLookup() {
@@ -135,8 +115,7 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
     private fun assertRawNestedCompletion(
         dollars: String, prefix: String, typed: String, quotes: String = "\"\"\"", suffix: String = ""
     ) {
-        val tester = CompletionAutoPopupTester(myFixture)
-        tester.runWithAutoPopupEnabled {
+        withAutoPopup { tester ->
             runInEdtAndWait {
                 myFixture.addFileToProject(
                     "completion/targets/Nested.kt",
@@ -187,8 +166,7 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
             "@IndirectMixin(\"completion.targets.Tar<caret>\${value}\") class Example",
             "@IndirectMixin(target = \"valid\", priority = \"completion.targets.Tar<caret>\") class Example"
         )) {
-            val tester = CompletionAutoPopupTester(myFixture)
-            tester.runWithAutoPopupEnabled {
+            withAutoPopup { tester ->
                 runInEdtAndWait {
                     myFixture.configureByText(
                         "Unrelated.kt", "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n$text"
@@ -214,8 +192,7 @@ class IndirectMixinCompletionAutoPopupTest : LightJavaCodeInsightFixtureTestCase
     }
 
     private fun assertTypingShowsLookup(text: String, typed: String) {
-        val tester = CompletionAutoPopupTester(myFixture)
-        tester.runWithAutoPopupEnabled {
+        withAutoPopup { tester ->
             runInEdtAndWait {
                 myFixture.configureByText("Mixin.kt", "import dev.karmakrafts.kcml.api.mixin.IndirectMixin\n$text")
             }

@@ -16,9 +16,9 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
-import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.assertUsage
+import dev.karmakrafts.kcml.intellij.testutil.namedDescendant
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
@@ -87,11 +87,11 @@ class PluginImplicitUsageProviderTest : AnnotationFixtureTestCase() {
                 }
             """.trimIndent()
         )
-        assertUsage(declaration, true)
-        assertUsage(declaration.fields.single(), false)
-        assertUsage(declaration.findMethodsByName("method", false).single(), false)
-        assertUsage(declaration.nameIdentifier!!, false)
-        assertUsage(declaration.containingFile, false)
+        provider.assertUsage(declaration, true)
+        provider.assertUsage(declaration.fields.single(), false)
+        provider.assertUsage(declaration.findMethodsByName("method", false).single(), false)
+        provider.assertUsage(declaration.nameIdentifier!!, false)
+        provider.assertUsage(declaration.containingFile, false)
     }
 
     private fun addAnnotation() {
@@ -105,16 +105,10 @@ class PluginImplicitUsageProviderTest : AnnotationFixtureTestCase() {
 
     private fun assertClassUsage(text: String, expected: Boolean) {
         val file = myFixture.configureByText("Plugin.kt", "import dev.karmakrafts.kcml.api.plugin.*\n$text")
-        val declaration = PsiTreeUtil.findChildrenOfType(file, KtClassOrObject::class.java).single { it.name == "Example" }
-        assertUsage(declaration.toLightClass()!!, expected)
-        assertUsage(declaration, false)
-        assertUsage(declaration.nameIdentifier!!, false)
-        assertUsage(file, false)
-    }
-
-    private fun assertUsage(element: PsiElement, expected: Boolean) {
-        assertEquals(expected, provider.isImplicitUsage(element))
-        assertFalse(provider.isImplicitRead(element))
-        assertFalse(provider.isImplicitWrite(element))
+        val declaration = file.namedDescendant<KtClassOrObject>("Example")
+        provider.assertUsage(declaration.toLightClass()!!, expected)
+        provider.assertUsage(declaration, false)
+        provider.assertUsage(declaration.nameIdentifier!!, false)
+        provider.assertUsage(file, false)
     }
 }

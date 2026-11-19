@@ -23,6 +23,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.replaceService
@@ -114,7 +115,7 @@ class PluginConfigIconProviderTest : AnnotationFixtureTestCase() {
         fun edit(declaration: String, matches: Boolean, matchesOther: Boolean) {
             val before = refreshes
             WriteCommandAction.runWriteCommandAction(project) {
-                document.setText("import dev.karmakrafts.kcml.api.plugin.Plugin\n$declaration")
+                document.text = "import dev.karmakrafts.kcml.api.plugin.Plugin\n$declaration"
                 PsiDocumentManager.getInstance(project).commitDocument(document)
             }
             PlatformTestUtil.waitWithEventsDispatching("Metadata icon presentation refresh", { refreshes > before }, 5)
@@ -129,9 +130,7 @@ class PluginConfigIconProviderTest : AnnotationFixtureTestCase() {
         val before = refreshes
         WriteCommandAction.runWriteCommandAction(project) { source.delete() }
         PlatformTestUtil.waitWithEventsDispatching(
-            "Deleted plugin icon presentation refresh",
-            { refreshes > before },
-            5
+            "Deleted plugin icon presentation refresh", { refreshes > before }, 5
         )
         assertNull(provider.getIcon(file, 0, project))
     }
@@ -152,8 +151,10 @@ class PluginConfigIconProviderTest : AnnotationFixtureTestCase() {
         "Example.kt", (if (imports) "import dev.karmakrafts.kcml.api.plugin.Plugin\n" else "") + text
     )
 
-    private fun addResource(path: String) = myFixture.addFileToProject("resources/$path", "{}").also {
+    private fun addResource(path: String): PsiFile {
+        val file = myFixture.addFileToProject("resources/$path", "{}")
         PsiTestUtil.addSourceRoot(module, myFixture.findFileInTempDir("resources"), JavaResourceRootType.RESOURCE)
+        return file
     }
 
     private fun icon(path: String) = PluginConfigIconProvider().getIcon(addResource(path).virtualFile, 0, project)

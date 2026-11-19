@@ -25,5 +25,5 @@ import com.intellij.util.ThreeState
 class PluginIdCompletionConfidence : CompletionConfidence() {
     override fun shouldSkipAutopopup(
         editor: Editor, contextElement: PsiElement, psiFile: PsiFile, offset: Int
-    ): ThreeState = if (PluginIdString.find(psiFile, offset) != null) ThreeState.NO else ThreeState.UNSURE
+    ): ThreeState = stringCompletionConfidence(PluginIdString.find(psiFile, offset) != null)
 }

@@ -41,9 +41,15 @@ internal data class InjectTargetString( // @formatter:off
             return InjectTargetString(annotation, name, content)
         }
 
-        fun find(file: PsiFile, offset: Int): InjectTargetString? =
-            file.findElementAt(offset)?.let { find(it, offset) } ?: file.findElementAt((offset - 1).coerceAtLeast(0))
-                ?.let { find(it, offset) }
+        fun find(file: PsiFile, offset: Int): InjectTargetString? {
+            val position = file.findElementAt(offset)
+            if (position != null) {
+                val target = find(position, offset)
+                if (target != null) return target
+            }
+            val previous = file.findElementAt((offset - 1).coerceAtLeast(0)) ?: return null
+            return find(previous, offset)
+        }
 
         fun isTargetStringAt(file: PsiFile, offset: Int): Boolean = find(file, offset) != null
     }

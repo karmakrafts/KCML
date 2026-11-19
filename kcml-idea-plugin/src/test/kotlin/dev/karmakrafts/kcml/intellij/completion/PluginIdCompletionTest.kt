@@ -22,6 +22,7 @@ import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.PsiFile
 import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.util.ThreeState
@@ -84,7 +85,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(metadata)!!
-            document.setText("""{"id":"updated"}""")
+            document.text = """{"id":"updated"}"""
             documents.commitDocument(document)
         }
         waitForIds(setOf("updated")) { PluginIds.fromMetadata(myFixture.file) }
@@ -99,7 +100,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(source)!!
-            document.setText(source.text.replace("\"example\"", "\"updated\""))
+            document.text = source.text.replace("\"example\"", "\"updated\"")
             documents.commitDocument(document)
         }
         waitForIds(setOf("updated")) { PluginIds.fromAnnotations(myFixture.file) }
@@ -277,14 +278,15 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         if (test) "testResources" else "resources", "META-INF/$name.json", """{"id":"$id"}""", test
     )
 
-    private fun addResource(root: String, path: String, text: String, test: Boolean = false) =
-        myFixture.addFileToProject("$root/$path", text).also {
-            PsiTestUtil.addSourceRoot(
-                module,
-                myFixture.findFileInTempDir(root),
-                if (test) JavaResourceRootType.TEST_RESOURCE else JavaResourceRootType.RESOURCE
-            )
-        }
+    private fun addResource(root: String, path: String, text: String, test: Boolean = false): PsiFile {
+        val file = myFixture.addFileToProject("$root/$path", text)
+        PsiTestUtil.addSourceRoot(
+            module,
+            myFixture.findFileInTempDir(root),
+            if (test) JavaResourceRootType.TEST_RESOURCE else JavaResourceRootType.RESOURCE
+        )
+        return file
+    }
 
     private fun configureAnnotation(text: String) {
         myFixture.configureByText("Example.kt", "import dev.karmakrafts.kcml.api.plugin.Plugin\n$text")

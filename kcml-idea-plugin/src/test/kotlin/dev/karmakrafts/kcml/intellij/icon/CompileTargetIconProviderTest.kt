@@ -65,18 +65,22 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testInheritedTargetAndAlias() {
-        val file = kotlinFile("""
+        val file = kotlinFile(
+            """
             import dev.karmakrafts.kcml.api.target.JvmCompileTarget as Target
             open class Base : Target
             class Example : Base()
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertKotlinTargetIcon(provider.getIcon(file.declarations.last() as KtClassOrObject, 0))
     }
 
     fun testBaseCompileTargetAndPlatformInterfaces() {
-        for (name in listOf("CompileTarget", "JvmCompileTarget", "JsCompileTarget", "WasmCompileTarget", "NativeCompileTarget")) {
-            val declaration = myFixture.findClass("dev.karmakrafts.kcml.api.target.$name")
-                .navigationElement as KtClassOrObject
+        for (name in listOf(
+            "CompileTarget", "JvmCompileTarget", "JsCompileTarget", "WasmCompileTarget", "NativeCompileTarget"
+        )) {
+            val declaration =
+                myFixture.findClass("dev.karmakrafts.kcml.api.target.$name").navigationElement as KtClassOrObject
             assertKotlinTargetIcon(provider.getIcon(declaration, 0))
             assertKotlinTargetIcon(provider.getIcon(declaration.toLightClass()!!, 0))
             assertKotlinTargetIcon(provider.getIcon(declaration.containingFile, 0))
@@ -84,14 +88,16 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testRecursiveSubtypesOfBaseCompileTarget() {
-        val file = kotlinFile("""
+        val file = kotlinFile(
+            """
             interface Direct : CompileTarget
             interface Indirect : Direct
             abstract class Base : Indirect
             open class Intermediate : Base()
             class Example : Intermediate()
             object Singleton : Intermediate()
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertKotlinTargetIcon(provider.getIcon(file, 0))
         file.declarations.filterIsInstance<KtClassOrObject>().forEach {
             assertKotlinTargetIcon(provider.getIcon(it, 0))
@@ -162,8 +168,8 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
         assertFalse(IconLayerProvider.EP_NAME.extensionList.any { it.javaClass == provider.javaClass })
         val file = kotlinFile("class Example : JvmCompileTarget")
         val declaration = file.declarations.single() as KtClassOrObject
-        val registered = IconProvider.EXTENSION_POINT_NAME.extensionList
-            .filterIsInstance<CompileTargetIconProvider>().single()
+        val registered =
+            IconProvider.EXTENSION_POINT_NAME.extensionList.filterIsInstance<CompileTargetIconProvider>().single()
         assertKotlinTargetIcon(registered.getIcon(file, 0))
         assertKotlinTargetIcon(registered.getIcon(declaration, Iconable.ICON_FLAG_VISIBILITY))
         val classIcon = declaration.getIcon(Iconable.ICON_FLAG_VISIBILITY)
@@ -173,7 +179,8 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testKotlinCompletionUsesTargetIcons() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             import dev.karmakrafts.kcml.api.target.*
             interface CompletionDirect : CompileTarget
             open class CompletionBase : CompletionDirect
@@ -181,7 +188,8 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
             object CompletionSingleton : CompletionBase()
             class CompletionOrdinary
             fun use(value: Completion<caret>) {}
-        """.trimIndent())
+        """.trimIndent()
+        )
         val items = myFixture.complete(CompletionType.BASIC).orEmpty()
         for (name in listOf("CompletionDirect", "CompletionBase", "CompletionTarget", "CompletionSingleton")) {
             val item = items.single { it.lookupString == name }
@@ -191,11 +199,13 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testUnimportedBaseAndPlatformCompletionUsesTargetIcons() {
-        myFixture.addFileToProject("other/Targets.kt", """
+        myFixture.addFileToProject(
+            "other/Targets.kt", """
             package other
             class CompileTargetOther
             class JvmCompileTargetOther
-        """.trimIndent())
+        """.trimIndent()
+        )
         myFixture.configureByText("Completion.kt", "fun use(value: CompileTar<caret>) {}")
         val items = myFixture.complete(CompletionType.BASIC, 2).orEmpty()
         assertKotlinTargetIcon(render(items.single { it.lookupString == "CompileTarget" }).icon)
@@ -205,33 +215,39 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testExpressionCompletionPreservesInsertion() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             import dev.karmakrafts.kcml.api.target.*
             class CompletionTarget : JvmCompileTarget
             class CompletionOrdinary
             fun use() { Completion<caret> }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val items = myFixture.complete(CompletionType.BASIC).orEmpty()
         val target = items.single { it.lookupString == "CompletionTarget" }
         assertKotlinTargetIcon(render(target).icon)
         myFixture.lookup.currentItem = target
         myFixture.finishLookup('\n')
-        myFixture.checkResult("""
+        myFixture.checkResult(
+            """
             import dev.karmakrafts.kcml.api.target.*
             class CompletionTarget : JvmCompileTarget
             class CompletionOrdinary
             fun use() { CompletionTarget<caret> }
-        """.trimIndent())
+        """.trimIndent()
+        )
     }
 
     fun testSmartCompletionUsesTargetIcons() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             import dev.karmakrafts.kcml.api.target.*
             interface CompletionDirect : CompileTarget
             class CompletionTarget : CompletionDirect
             class CompletionOther : CompletionDirect
             fun use(): CompletionDirect = Completion<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         val items = myFixture.complete(CompletionType.SMART).orEmpty()
         for (name in listOf("CompletionTarget", "CompletionOther")) {
             assertKotlinTargetIcon(render(items.single { it.lookupString == name }).icon)
@@ -239,14 +255,16 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testJavaCompletionUsesTargetIcons() {
-        myFixture.configureByText("Completion.java", """
+        myFixture.configureByText(
+            "Completion.java", """
             import dev.karmakrafts.kcml.api.target.CompileTarget;
             interface CompletionDirect extends CompileTarget {}
             class CompletionBase implements CompletionDirect {}
             class CompletionTarget extends CompletionBase {}
             class CompletionOrdinary {}
             class Usage { Completion<caret> value; }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val items = myFixture.complete(CompletionType.BASIC).orEmpty()
         for (name in listOf("CompletionDirect", "CompletionBase", "CompletionTarget")) {
             assertTrue(name, containsTarget(render(items.single { it.lookupString == name }).icon))
@@ -257,9 +275,9 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     private fun render(item: LookupElement): LookupElementPresentation {
         val presentation = LookupElementPresentation()
         item.renderElement(presentation)
-        @Suppress("UNCHECKED_CAST")
-        val renderer = item.expensiveRenderer as? LookupElementRenderer<LookupElement>
-        ProgressManager.getInstance().runProcess({ renderer?.renderElement(item, presentation) }, EmptyProgressIndicator())
+        @Suppress("UNCHECKED_CAST") val renderer = item.expensiveRenderer as? LookupElementRenderer<LookupElement>
+        ProgressManager.getInstance()
+            .runProcess({ renderer?.renderElement(item, presentation) }, EmptyProgressIndicator())
         return presentation
     }
 

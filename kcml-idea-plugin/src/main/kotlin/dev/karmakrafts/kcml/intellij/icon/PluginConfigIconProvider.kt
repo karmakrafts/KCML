@@ -48,7 +48,8 @@ class PluginConfigIconProvider : FileIconProvider {
 
     override fun getIcon(file: VirtualFile, flags: Int, project: Project?): Icon? {
         if (project == null || project.isDisposed || file.isDirectory || file.extension != "json") return null
-        val metaInf = file.parent?.takeIf { it.name == "META-INF" } ?: return null
+        val metaInf = file.parent ?: return null
+        if (metaInf.name != "META-INF") return null
         val module = ModuleUtilCore.findModuleForFile(file, project) ?: return null
         val roots = ModuleRootManager.getInstance(module)
         val root = metaInf.parent ?: return null
@@ -56,7 +57,7 @@ class PluginConfigIconProvider : FileIconProvider {
         if (!isTest && root !in roots.getSourceRoots(JavaResourceRootType.RESOURCE)) return null
         project.service<PluginConfigIconUpdater>().track(file)
         if (DumbService.isDumb(project)) return null
-        (val first, val second) = CachedValuesManager.getManager(project).getCachedValue(module, idsKey, {
+        val cachedIds = CachedValuesManager.getManager(project).getCachedValue(module, idsKey, {
             val production = mutableSetOf<String>()
             val all = mutableSetOf<String>()
             val scope = GlobalSearchScope.moduleScope(module)
@@ -77,6 +78,7 @@ class PluginConfigIconProvider : FileIconProvider {
                 DumbService.getInstance(project).modificationTracker
             )
         }, false)
-        return icon.takeIf { file.nameWithoutExtension in if (isTest) second else first }
+        val ids = if (isTest) cachedIds.second else cachedIds.first
+        return if (file.nameWithoutExtension in ids) icon else null
     }
 }

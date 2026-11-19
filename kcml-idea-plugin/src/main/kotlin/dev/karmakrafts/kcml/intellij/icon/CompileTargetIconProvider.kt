@@ -25,8 +25,8 @@ import com.intellij.psi.util.InheritanceUtil
 import com.intellij.ui.LayeredIcon
 import com.intellij.util.IconUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
+import dev.karmakrafts.kcml.intellij.util.lightClass
 import org.jetbrains.kotlin.asJava.classes.KtLightClass
-import org.jetbrains.kotlin.asJava.toLightClass
 import org.jetbrains.kotlin.idea.KotlinIcons
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
@@ -43,10 +43,10 @@ class CompileTargetIconProvider : IconProvider() {
     override fun getIcon(element: PsiElement, flags: Int): Icon? {
         if (!element.isValid || element.project.isDisposed || DumbService.isDumb(element.project)) return null
         val matches = when (element) {
-            is KtClassOrObject -> element.toLightClass()?.isCompileTarget() == true
+            is KtClassOrObject -> element.lightClass()?.isCompileTarget() == true
             is PsiClass -> element.isCompileTarget()
             is KtFile -> element.declarations.filterIsInstance<KtClassOrObject>().any {
-                it.toLightClass()?.isCompileTarget() == true
+                it.lightClass()?.isCompileTarget() == true
             }
 
             is PsiClassOwner -> element.classes.any { it.isCompileTarget() }

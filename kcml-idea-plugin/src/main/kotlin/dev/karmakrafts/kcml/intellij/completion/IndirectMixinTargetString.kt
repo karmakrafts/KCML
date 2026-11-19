@@ -31,7 +31,9 @@ internal object IndirectMixinTargetString {
     fun isTargetString(position: PsiElement): Boolean =
         position.annotationStringArgument(TypeNames.INDIRECT_MIXIN, "target", allowRawDollarNames = true) != null
 
-    fun isTargetStringAt(file: PsiFile, offset: Int): Boolean =
-        file.findElementAt(offset)?.let(::isTargetString) == true
+    fun isTargetStringAt(file: PsiFile, offset: Int): Boolean {
+        val position = file.findElementAt(offset) ?: return false
+        return isTargetString(position)
+    }
 }
 

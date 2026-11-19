@@ -19,7 +19,6 @@ package dev.karmakrafts.kcml.intellij.completion
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupElement
-import com.intellij.codeInsight.lookup.LookupElementPresentation
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.Sdk
@@ -28,12 +27,13 @@ import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.completionPresentation
+import dev.karmakrafts.kcml.intellij.testutil.configureInjectCompletion
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
-import org.jetbrains.org.objectweb.asm.ClassWriter
+import dev.karmakrafts.kcml.intellij.testutil.writeCompletionClass
 import org.jetbrains.org.objectweb.asm.Opcodes
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
 class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
@@ -120,7 +120,7 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             val items = complete(type)
             assertTrue("Expected target methods for $type", items.isNotEmpty())
             for (item in items) {
-                val rendered = presentation(item)
+                val rendered = completionPresentation(item)
                 assertTrue("Unexpected completion: ${item.lookupString}", item.`object` is InjectTargetMethod)
                 val method = item.`object` as InjectTargetMethod
                 assertEquals(method.name, item.lookupString)
@@ -351,27 +351,14 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     private fun configure(
         annotation: String, mixin: String = "@DirectMixin(completion.Target::class)", imports: String = ""
     ) {
-        myFixture.configureByText(
-            "Mixin.kt", """
-                import dev.karmakrafts.kcml.api.mixin.*
-                $imports
-                $mixin
-                class Example {
-                    $annotation
-                    fun inject() {}
-                }
-            """.trimIndent()
-        )
+        myFixture.configureInjectCompletion(annotation, mixin, imports)
     }
 
     private fun complete(type: CompletionType = CompletionType.SMART): List<LookupElement> =
         myFixture.complete(type).orEmpty().toList()
 
-    private fun presentation(item: LookupElement): LookupElementPresentation =
-        LookupElementPresentation().also(item::renderElement)
-
     private fun signatures(items: List<LookupElement>): Set<String> = items.mapNotNull { item ->
-        val rendered = presentation(item)
+        val rendered = completionPresentation(item)
         val descriptor = rendered.tailText ?: return@mapNotNull null
         if (!descriptor.startsWith("(")) return@mapNotNull null
         assertNotNull(rendered.icon)
@@ -381,7 +368,10 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     private fun select(name: String, descriptor: String) {
         val items = complete()
         if (items.isEmpty() && myFixture.lookup == null) return // A single result may be inserted automatically.
-        val selected = items.single { presentation(it).let { p -> p.itemText == name && p.tailText == descriptor } }
+        val selected = items.single { item ->
+            val presentation = completionPresentation(item)
+            presentation.itemText == name && presentation.tailText == descriptor
+        }
         myFixture.lookup.currentItem = selected
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
     }
@@ -389,28 +379,25 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     private fun addCompiledTarget() {
         library = Files.createTempDirectory(Path.of("build"), "kcml-inject-completion-").resolve("target.jar")
         JarOutputStream(Files.newOutputStream(library!!)).use { output ->
-            val writer = ClassWriter(0)
-            writer.visit(Opcodes.V21, Opcodes.ACC_PUBLIC, "completion/CompiledTarget", null, "java/lang/Object", null)
-            for ((access, name, descriptor) in listOf(
-                Triple(Opcodes.ACC_PRIVATE, "hidden", "()V"),
-                Triple(Opcodes.ACC_STATIC or Opcodes.ACC_SYNTHETIC, "access\$hidden", "(Lcompletion/CompiledTarget;)V"),
-                Triple(Opcodes.ACC_PUBLIC, "value", "()Ljava/lang/String;"),
-                Triple(
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_BRIDGE or Opcodes.ACC_SYNTHETIC, "value", "()Ljava/lang/Object;"
+            output.writeCompletionClass("completion/CompiledTarget") { writer ->
+                writer.visit(
+                    Opcodes.V21, Opcodes.ACC_PUBLIC, "completion/CompiledTarget", null, "java/lang/Object", null
                 )
-            )) writer.visitMethod(access, name, descriptor, null, null).visitEnd()
-            writer.visitEnd()
-            output.putNextEntry(JarEntry("completion/CompiledTarget.class"))
-            output.write(writer.toByteArray())
-            output.closeEntry()
-            val child = ClassWriter(0)
-            child.visit(
-                Opcodes.V21, Opcodes.ACC_PUBLIC, "completion/CompiledChild", null, "completion/CompiledTarget", null
-            )
-            child.visitEnd()
-            output.putNextEntry(JarEntry("completion/CompiledChild.class"))
-            output.write(child.toByteArray())
-            output.closeEntry()
+                for ((access, name, descriptor) in listOf(
+                    Triple(Opcodes.ACC_PRIVATE, "hidden", "()V"), Triple(
+                        Opcodes.ACC_STATIC or Opcodes.ACC_SYNTHETIC, "access\$hidden", "(Lcompletion/CompiledTarget;)V"
+                    ), Triple(Opcodes.ACC_PUBLIC, "value", "()Ljava/lang/String;"), Triple(
+                        Opcodes.ACC_PUBLIC or Opcodes.ACC_BRIDGE or Opcodes.ACC_SYNTHETIC,
+                        "value",
+                        "()Ljava/lang/Object;"
+                    )
+                )) writer.visitMethod(access, name, descriptor, null, null).visitEnd()
+            }
+            output.writeCompletionClass("completion/CompiledChild") { child ->
+                child.visit(
+                    Opcodes.V21, Opcodes.ACC_PUBLIC, "completion/CompiledChild", null, "completion/CompiledTarget", null
+                )
+            }
         }
         WriteCommandAction.runWriteCommandAction(project) {
             ModuleRootModificationUtil.addModuleLibrary(myFixture.module, "jar://${library!!.toAbsolutePath()}!/")

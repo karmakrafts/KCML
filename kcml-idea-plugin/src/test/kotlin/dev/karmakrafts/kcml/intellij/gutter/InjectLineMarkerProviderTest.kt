@@ -17,15 +17,18 @@
 package dev.karmakrafts.kcml.intellij.gutter
 
 import com.intellij.codeInsight.daemon.LineMarkerInfo
-import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.util.IconLoader
 import com.intellij.psi.JavaPsiFacade
-import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.assertMarkersByIcon
+import dev.karmakrafts.kcml.intellij.testutil.assertNavigatesToFile
+import dev.karmakrafts.kcml.intellij.testutil.collectSingleMarker
+import dev.karmakrafts.kcml.intellij.testutil.declarationAtCaret
+import dev.karmakrafts.kcml.intellij.testutil.firstDescendant
+import dev.karmakrafts.kcml.intellij.testutil.replaceTextAndCommit
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtNamedFunction
 
@@ -44,9 +47,7 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
             "example/Target.kt", "package example\nclass Target { private fun target() {} }"
         )
         assertNavigation(
-            "@IndirectMixin(\"example/Target\")",
-            "\"target\"",
-            PsiTreeUtil.findChildOfType(target, KtNamedFunction::class.java)!!
+            "@IndirectMixin(\"example/Target\")", "\"target\"", target.firstDescendant<KtNamedFunction>()
         )
     }
 
@@ -134,7 +135,7 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val marker = configureMarker(
             "@DirectMixin(example.Target::class) class Example { @Inject(\"first\") fun <caret>inject() {} }"
         )
-        replaceText("first", "second")
+        myFixture.replaceTextAndCommit("first", "second")
         assertNavigation(marker, target.methods.single { it.name == "second" })
     }
 
@@ -144,7 +145,7 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
         val unresolved = configureMarker(
             "@DirectMixin(example.Target::class) class Example { @Inject(\"missing\") fun <caret>inject() {} }"
         ).createGutterRenderer()!!
-        replaceText("missing", "target")
+        myFixture.replaceTextAndCommit("missing", "target")
         val resolved = collectMarker().createGutterRenderer()!!
         assertNotNull(resolved.clickAction)
         assertFalse(unresolved == resolved)
@@ -158,7 +159,7 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
         )
         val resolved = marker.createGutterRenderer()!!
         assertNotNull(resolved.clickAction)
-        replaceText("()V", "(I)V")
+        myFixture.replaceTextAndCommit("()V", "(I)V")
         val unresolved = collectMarker().createGutterRenderer()!!
         assertNull(unresolved.clickAction)
         assertFalse(resolved == unresolved)
@@ -272,23 +273,8 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
         return collectMarker()
     }
 
-    private fun collectMarker(): LineMarkerInfo<PsiElement> {
-        val declaration = PsiTreeUtil.getParentOfType(
-            myFixture.file.findElementAt(myFixture.caretOffset), KtNamedFunction::class.java
-        )!!
-        val markers = mutableListOf<LineMarkerInfo<*>>()
-        InjectLineMarkerProvider().collectSlowLineMarkers(listOf(declaration.nameIdentifier!!), markers)
-        @Suppress("UNCHECKED_CAST") return markers.single() as LineMarkerInfo<PsiElement>
-    }
-
-    private fun replaceText(old: String, new: String) {
-        val document = myFixture.editor.document
-        WriteCommandAction.runWriteCommandAction(project) {
-            val start = document.text.indexOf(old)
-            document.replaceString(start, start + old.length, new)
-            PsiDocumentManager.getInstance(project).commitDocument(document)
-        }
-    }
+    private fun collectMarker(): LineMarkerInfo<PsiElement> =
+        InjectLineMarkerProvider().collectSingleMarker(myFixture.declarationAtCaret<KtNamedFunction>())
 
     private fun assertNavigation(mixin: String, arguments: String, target: PsiElement) {
         assertNavigation(configureMarker("$mixin class Example { @Inject($arguments) fun <caret>inject() {} }"), target)
@@ -297,19 +283,14 @@ class InjectLineMarkerProviderTest : AnnotationFixtureTestCase() {
     private fun assertNavigation(marker: LineMarkerInfo<PsiElement>, target: PsiElement) {
         assertNotNull("Injection marker should navigate to its target", marker.navigationHandler)
         assertNotNull(marker.createGutterRenderer()!!.clickAction)
-        marker.navigationHandler!!.navigate(null, marker.element!!)
+        project.assertNavigatesToFile(marker, target.containingFile)
         val manager = FileEditorManager.getInstance(project)
-        assertEquals(target.containingFile.virtualFile, manager.selectedFiles.single())
         assertEquals(target.navigationElement.textOffset, manager.selectedTextEditor!!.caretModel.offset)
     }
 
     private fun assertMarkers(text: String, expected: Int) {
         myFixture.configureByText("Injection.kt", "import dev.karmakrafts.kcml.api.mixin.*\n$text")
         val icon = IconLoader.getIcon("/icons/dev/karmakrafts/kcml/intellij/injection.svg", javaClass)
-        val markers = myFixture.findAllGutters().filter { it.icon == icon }
-        assertEquals(expected, markers.size)
-        assertTrue(markers.all { it.tooltipText == "KCML plugin" })
-        val caretMarkers = myFixture.findGuttersAtCaret().filter { it.icon == icon }
-        assertEquals(if (expected == 0) 0 else 1, caretMarkers.size)
+        myFixture.assertMarkersByIcon(expected, icon, "KCML plugin")
     }
 }

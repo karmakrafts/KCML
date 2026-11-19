@@ -19,7 +19,6 @@ package dev.karmakrafts.kcml.intellij.gutter
 import com.intellij.codeInsight.daemon.GutterIconNavigationHandler
 import com.intellij.codeInsight.daemon.LineMarkerInfo
 import com.intellij.codeInsight.daemon.LineMarkerProvider
-import com.intellij.openapi.editor.markup.GutterIconRenderer
 import com.intellij.openapi.project.IndexNotReadyException
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
@@ -45,26 +44,17 @@ class InjectLineMarkerProvider : LineMarkerProvider {
             if (declaration.nameIdentifier != element) continue
             if (declaration.annotationEntries.none { it.qualifiedName() == TypeNames.INJECT }) continue
             val target = declaration.resolveInjectionSite()
-            result.add(object : LineMarkerInfo<PsiElement>(
-                element,
-                element.textRange,
-                Icons.injection,
-                { "KCML plugin" },
-                target?.let {
-                    GutterIconNavigationHandler { _, source ->
-                        (source.parent as? KtNamedFunction)?.resolveInjectionSite()?.let {
-                            PsiNavigateUtil.navigate(it.navigationElement, true)
-                        }
-                    }
-                },
-                GutterIconRenderer.Alignment.LEFT,
-                { "KCML plugin" }) {
-                override fun createGutterRenderer(): GutterIconRenderer =
-                    object : LineMarkerGutterIconRenderer<PsiElement>(this) {
-                        override fun looksTheSameAs(renderer: LineMarkerGutterIconRenderer<*>): Boolean =
-                            super.looksTheSameAs(renderer) && isNavigateAction == renderer.isNavigateAction
-                    }
-            })
+            val navigationHandler = if (target == null) null
+            else GutterIconNavigationHandler<PsiElement> { _, source ->
+                val function = source.parent as? KtNamedFunction ?: return@GutterIconNavigationHandler
+                val current = function.resolveInjectionSite() ?: return@GutterIconNavigationHandler
+                PsiNavigateUtil.navigate(current.navigationElement, true)
+            }
+            result.add(
+                NavigationLineMarkerInfo(
+                    element, Icons.injection, "KCML plugin", navigationHandler
+                )
+            )
         }
     }
 

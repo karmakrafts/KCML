@@ -37,8 +37,11 @@ internal fun KtStringTemplateEntry.literalValue(): String? = when (this) {
     else -> null
 }
 
-private fun KtStringTemplateEntry.completionValue(allowRawDollarNames: Boolean): String? =
-    literalValue() ?: text.takeIf { allowRawDollarNames && this is KtSimpleNameStringTemplateEntry }
+private fun KtStringTemplateEntry.completionValue(allowRawDollarNames: Boolean): String? {
+    val literal = literalValue()
+    if (literal != null) return literal
+    return if (allowRawDollarNames && this is KtSimpleNameStringTemplateEntry) text else null
+}
 
 internal fun KtStringTemplateExpression.literalValue(): String? = buildString {
     for (entry in entries) {

@@ -21,18 +21,16 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.util.PsiTreeUtil
 import com.intellij.testFramework.PlatformTestUtil
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.InspectionFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 
-class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        myFixture.enableInspections(TargetSpecificCodeInspection(), MismatchedTargetInspection())
-    }
+class OnlyOnUsageInspectionTest : InspectionFixtureTestCase(
+    TargetSpecificCodeInspection(), MismatchedTargetInspection()
+) {
 
     private fun addApi(compiled: Boolean) {
-        addAnnotationSource("dev/karmakrafts/kcml/api/target/Targets.kt", """
+        val source = """
             package dev.karmakrafts.kcml.api.target
             import kotlin.reflect.KClass
             @Target(AnnotationTarget.CLASS, AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY,
@@ -49,12 +47,14 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             interface CompileTargetProvider
             fun CompileTargetProvider.whenCompilingFor(vararg types: CompileTargetType, block: () -> Unit) = block()
             fun <R> CompileTargetProvider.whenCompilingFor(default: R, vararg types: CompileTargetType, block: () -> R): R = block()
-        """.trimIndent().let { source ->
-            if (!compiled) source else source
-                .replace(Regex("@Target[\\s\\S]*?annotation class OnlyOn[^\\n]*"), "")
-                .replace("interface NativeCompileTarget : CompileTarget { companion object Type : CompileTargetType }", "")
-        })
-        addAnnotationSource("sample/Api.kt", """
+        """.trimIndent()
+        val targetsSource = if (!compiled) source
+        else source.replace(Regex("@Target[\\s\\S]*?annotation class OnlyOn[^\\n]*"), "").replace(
+            "interface NativeCompileTarget : CompileTarget { companion object Type : CompileTargetType }", ""
+        )
+        addAnnotationSource("dev/karmakrafts/kcml/api/target/Targets.kt", targetsSource)
+        addAnnotationSource(
+            "sample/Api.kt", """
             package sample
             import dev.karmakrafts.kcml.api.target.*
             @OnlyOn(JvmCompileTarget::class) fun jvm() = Unit
@@ -62,16 +62,19 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             @OnlyOn(JvmCompileTarget::class, JsCompileTarget::class) fun shared() = Unit
             @OnlyOn(NativeCompileTarget::class) fun native() = Unit
             @OnlyOn(WasmCompileTarget::class) fun wasm() = Unit
-        """.trimIndent())
+        """.trimIndent()
+        )
     }
 
     fun testEdtLookupIsDeferredCachedAndInvalidated() {
         addApi(false)
-        myFixture.configureByText("Example.kt", """
+        myFixture.configureByText(
+            "Example.kt", """
             package sample
             import dev.karmakrafts.kcml.api.target.*
             fun use() { jvm() }
-        """.trimIndent())
+        """.trimIndent()
+        )
         fun reference() = PsiTreeUtil.findChildrenOfType(myFixture.file, KtSimpleNameExpression::class.java)
             .single { it.text == "jvm" }
         assertTrue(ApplicationManager.getApplication().isDispatchThread)
@@ -92,7 +95,8 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
         assertEquals(OnlyOnUsage.Problem.MISMATCHED, OnlyOnUsage.problem(reference()))
     }
 
-    fun testRootAndMatchingScopes() = check("""
+    fun testRootAndMatchingScopes() = check(
+        """
         fun CompileTargetProvider.use() {
             <warning descr="$WARNING">jvm()</warning>
             whenCompilingFor(JvmCompileTarget) { jvm(); shared(); <error descr="$ERROR">js()</error> }
@@ -100,9 +104,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             whenCompilingFor(NativeCompileTarget) { native(); <error descr="$ERROR">wasm()</error> }
             whenCompilingFor(WasmCompileTarget) { wasm(); <error descr="$ERROR">native()</error> }
         }
-    """)
+    """
+    )
 
-    fun testMultipleAndNestedTargets() = check("""
+    fun testMultipleAndNestedTargets() = check(
+        """
         fun CompileTargetProvider.use() {
             whenCompilingFor(JvmCompileTarget, JsCompileTarget) {
                 shared()
@@ -114,9 +120,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             }
             whenCompilingFor { jvm(); js() }
         }
-    """)
+    """
+    )
 
-    fun testAnnotatedBodies() = check("""
+    fun testAnnotatedBodies() = check(
+        """
         @OnlyOn(JvmCompileTarget::class)
         fun CompileTargetProvider.annotated() {
             jvm()
@@ -128,9 +136,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             val value = jvm()
             fun use() { jvm(); <error descr="$ERROR">js()</error> }
         }
-    """)
+    """
+    )
 
-    fun testResolvedCallsAndNamedArguments() = check("""
+    fun testResolvedCallsAndNamedArguments() = check(
+        """
         import dev.karmakrafts.kcml.api.target.whenCompilingFor as onTarget
         fun CompileTargetProvider.use() {
             onTarget(JvmCompileTarget.Type, block = { jvm() })
@@ -138,9 +148,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             whenCompilingFor("not a scope") { <warning descr="$WARNING">jvm()</warning> }
         }
         fun whenCompilingFor(value: String, block: () -> Unit) = block()
-    """)
+    """
+    )
 
-    fun testClassesMembersAndAliases() = check("""
+    fun testClassesMembersAndAliases() = check(
+        """
         @OnlyOn(JvmCompileTarget::class) class Restricted<T> { fun member() = Unit }
         @OnlyOn(JvmCompileTarget::class) typealias Alias = String
         fun outside(value: <warning descr="$WARNING">Restricted<String></warning>) {
@@ -151,9 +163,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
         }
         @OnlyOn(JvmCompileTarget::class)
         fun inside(value: Restricted<String>) { Restricted<String>(); value.member(); val alias: Alias = "" }
-    """)
+    """
+    )
 
-    fun testAccessorsAndFields() = check("""
+    fun testAccessorsAndFields() = check(
+        """
         @get:OnlyOn(JvmCompileTarget::class)
         @set:OnlyOn(JsCompileTarget::class)
         var value: Int = 0
@@ -170,9 +184,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             }
             whenCompilingFor(JsCompileTarget) { value = 2; val read = <error descr="$ERROR">value</error> }
         }
-    """)
+    """
+    )
 
-    fun testClosureContextsAndInvocation() = check("""
+    fun testClosureContextsAndInvocation() = check(
+        """
         fun withJvm(block: @OnlyOn(JvmCompileTarget::class) () -> Unit) = Unit
         fun CompileTargetProvider.use() {
             withJvm { jvm(); <error descr="$ERROR">js()</error> }
@@ -181,9 +197,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             whenCompilingFor(JvmCompileTarget) { block() }
             whenCompilingFor(JsCompileTarget) { <error descr="$ERROR">block()</error> }
         }
-    """)
+    """
+    )
 
-    fun testSuppressionIsIndependent() = check("""
+    fun testSuppressionIsIndependent() = check(
+        """
         @Suppress("KCML_TARGET_SPECIFIC_CODE")
         fun CompileTargetProvider.suppressWarning() {
             jvm()
@@ -194,9 +212,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             <warning descr="$WARNING">jvm()</warning>
             whenCompilingFor(JsCompileTarget) { jvm() }
         }
-    """)
+    """
+    )
 
-    fun testSubtypeCompatibility() = check("""
+    fun testSubtypeCompatibility() = check(
+        """
         interface CustomTarget : JvmCompileTarget { companion object : CompileTargetType }
         @OnlyOn(CustomTarget::class) fun custom() = Unit
         @OnlyOn(CompileTarget::class) fun anyTarget() = Unit
@@ -206,9 +226,11 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             whenCompilingFor(CustomTarget) { jvm(); custom(); anyTarget() }
             whenCompilingFor(JvmCompileTarget) { <error descr="$ERROR">custom()</error>; anyTarget() }
         }
-    """)
+    """
+    )
 
-    fun testUnknownTargetArgumentsRemainConservative() = check("""
+    fun testUnknownTargetArgumentsRemainConservative() = check(
+        """
         fun CompileTargetProvider.use(target: CompileTargetType) {
             whenCompilingFor(target) { <warning descr="$WARNING">jvm()</warning> }
             whenCompilingFor(JvmCompileTarget, target) { <warning descr="$WARNING">jvm()</warning> }
@@ -217,17 +239,21 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             val knownArray = arrayOf(JvmCompileTarget, JsCompileTarget)
             whenCompilingFor(*knownArray) { shared(); <error descr="$ERROR">jvm()</error> }
         }
-    """)
+    """
+    )
 
-    fun testClosureExplicitInvocation() = check("""
+    fun testClosureExplicitInvocation() = check(
+        """
         fun CompileTargetProvider.use(block: @OnlyOn(JvmCompileTarget::class) () -> Unit) {
             block.<warning descr="$WARNING">invoke()</warning>
             whenCompilingFor(JvmCompileTarget) { block.invoke() }
             whenCompilingFor(JsCompileTarget) { block.<error descr="$ERROR">invoke()</error> }
         }
-    """)
+    """
+    )
 
-    fun testAliasedConstructorsAndInheritedMembers() = check("""
+    fun testAliasedConstructorsAndInheritedMembers() = check(
+        """
         class Ordinary
         @OnlyOn(JvmCompileTarget::class) typealias RestrictedAlias = Ordinary
         @OnlyOn(JvmCompileTarget::class) open class Base { fun member() = Unit }
@@ -241,7 +267,8 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
                 value.<error descr="$ERROR">member()</error>
             }
         }
-    """)
+    """
+    )
 
     fun testCompiledAnnotationAndApi() {
         myFixture.withAnnotationLibrary(
@@ -251,21 +278,24 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             "dev.karmakrafts.kcml.api.target.NativeCompileTarget\$DefaultImpls",
             "dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration"
         ) {
-            check("""
+            check(
+                """
                 fun CompileTargetProvider.use(value: NativeCompileTarget) {
                     val root = value.<warning descr="$WARNING">architecture</warning>
                     whenCompilingFor(NativeCompileTarget) { val allowed = value.architecture }
                     whenCompilingFor(JvmCompileTarget) { val denied = value.<error descr="$ERROR">architecture</error> }
                 }
-            """, true)
+            """, true
+            )
         }
     }
 
     private fun check(text: String, compiled: Boolean = false) {
         addApi(compiled)
         myFixture.withAnnotationLibrary("java.io.Serializable", "java.lang.Object") {
-            myFixture.configureByText("Example.kt", "package sample\nimport dev.karmakrafts.kcml.api.target.*\n${text.trimIndent()}")
-            myFixture.checkHighlighting(true, false, false)
+            checkKotlinHighlighting(
+                text.trimIndent(), "package sample\nimport dev.karmakrafts.kcml.api.target.*"
+            )
         }
     }
 

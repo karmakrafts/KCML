@@ -28,6 +28,8 @@ import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.isMixin
 import dev.karmakrafts.kcml.intellij.util.qualifiedName
+import dev.karmakrafts.kcml.intellij.util.referencedType
+import dev.karmakrafts.kcml.intellij.util.resolveReference
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCallableReferenceExpression
@@ -52,41 +54,48 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
         object : KtVisitorVoid() {
             override fun visitSimpleNameExpression(expression: KtSimpleNameExpression) {
                 if (PsiTreeUtil.getParentOfType(expression, KtImportDirective::class.java) != null) return
-                val target = expression.references.firstNotNullOfOrNull { it.resolve() } ?: return
+                val target = expression.resolveReference() ?: return
                 if (!isRestricted(target, mutableSetOf())) return
                 val usageReceiver = when (val parent = expression.parent) {
-                    is KtCallableReferenceExpression -> parent.receiverExpression.takeIf {
-                        parent.callableReference == expression
-                    }
+                    is KtCallableReferenceExpression -> if (parent.callableReference == expression) parent.receiverExpression else null
 
                     else -> {
                         val call = (parent as? KtCallExpression) ?: expression
-                        (call.parent as? KtQualifiedExpression)?.takeIf { it.selectorExpression == call }?.receiverExpression
+                        val qualified = call.parent as? KtQualifiedExpression
+                        if (qualified != null && qualified.selectorExpression == call) qualified.receiverExpression else null
                     }
                 }
                 val receiverReference = (usageReceiver as? KtQualifiedExpression)?.selectorExpression ?: usageReceiver
                 if (receiverReference?.references?.any {
-                        it.resolve()?.let { resolved -> isRestricted(resolved, mutableSetOf()) } == true
+                        val resolved = it.resolve()
+                        resolved != null && isRestricted(resolved, mutableSetOf())
                     } == true) return
                 val containingClass = PsiTreeUtil.getParentOfType(expression, KtClassOrObject::class.java)
                 if (containingClass?.annotationEntries?.any { it.isMixin() } == true) return
                 val parent = expression.parent
-                val receiver =
-                    (parent as? KtQualifiedExpression)?.takeIf { it.selectorExpression == expression } ?: expression
-                val qualifiedCall = (receiver.parent as? KtQualifiedExpression)?.takeIf {
-                    it.receiverExpression == receiver && it.selectorExpression is KtCallExpression
-                }
-                val call = (parent as? KtCallExpression)?.takeIf { it.calleeExpression == expression }
+                val receiver = if (parent is KtQualifiedExpression && parent.selectorExpression == expression) parent
+                else expression
+                val receiverParent = receiver.parent
+                val qualifiedCall =
+                    if (receiverParent is KtQualifiedExpression && receiverParent.receiverExpression == receiver && receiverParent.selectorExpression is KtCallExpression) receiverParent else null
+                val call = if (parent is KtCallExpression && parent.calleeExpression == expression) parent else null
                 val owner = when (target) {
                     is PsiMember -> target.containingClass
                     is KtDeclaration -> (target.parent as? KtClassBody)?.parent
                     else -> null
                 }
-                val qualifiedMemberCall = (call?.parent as? KtQualifiedExpression)?.takeIf {
-                    it.selectorExpression == call && owner?.let { owner -> isRestricted(owner, mutableSetOf()) } == true
+                val callParent = call?.parent
+                val qualifiedMemberCall =
+                    if (callParent is KtQualifiedExpression && callParent.selectorExpression == call && owner != null && isRestricted(
+                            owner,
+                            mutableSetOf()
+                        )
+                    ) callParent
+                    else null
+                val highlight = qualifiedMemberCall ?: call ?: qualifiedCall ?: when {
+                    parent is KtUserType && parent.referenceExpression == expression -> parent
+                    else -> expression
                 }
-                val highlight = qualifiedMemberCall ?: call ?: qualifiedCall
-                ?: (parent as? KtUserType)?.takeIf { it.referenceExpression == expression } ?: expression
                 val startOffset = if (highlight == qualifiedMemberCall) highlight.textRange.startOffset
                 else expression.textRange.startOffset
                 holder.registerProblem(
@@ -107,16 +116,22 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
         return when (target) {
             is KtConstructor<*> -> isRestricted(target.getContainingClassOrObject(), visited)
             is KtTypeAlias -> {
-                val reference = (target.getTypeReference()?.typeElement as? KtUserType)?.referenceExpression
+                val reference = target.referencedType()?.referenceExpression
                 reference?.references?.any {
-                    it.resolve()?.let { resolved -> isRestricted(resolved, visited) } == true
+                    val resolved = it.resolve()
+                    resolved != null && isRestricted(resolved, visited)
                 } == true
             }
 
-            is PsiMember -> target.containingClass?.let { isRestricted(it, visited) } == true
-            is KtDeclaration -> ((target.parent as? KtClassBody)?.parent)?.let {
-                isRestricted(it, visited)
-            } == true
+            is PsiMember -> {
+                val containingClass = target.containingClass ?: return false
+                isRestricted(containingClass, visited)
+            }
+
+            is KtDeclaration -> {
+                val owner = (target.parent as? KtClassBody)?.parent ?: return false
+                isRestricted(owner, visited)
+            }
 
             else -> false
         }

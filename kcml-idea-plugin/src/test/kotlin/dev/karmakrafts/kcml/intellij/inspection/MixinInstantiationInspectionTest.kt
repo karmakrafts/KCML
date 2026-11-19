@@ -16,19 +16,13 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
-import com.intellij.codeInspection.InspectionManager
-import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.openapi.util.TextRange
-import com.intellij.psi.util.PsiTreeUtil
-import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.InspectionFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.collectProblems
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.psi.KtCallExpression
 
-class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
-    override fun setUp() {
-        super.setUp()
-        myFixture.enableInspections(MixinInstantiationInspection())
-    }
+class MixinInstantiationInspectionTest : InspectionFixtureTestCase(MixinInstantiationInspection()) {
 
     fun testExplicitConstructorCallRangesIncludeParentheses() {
         check(
@@ -42,13 +36,9 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
             """.trimIndent()
         )
         for (isOnTheFly in listOf(true, false)) {
-            val holder = ProblemsHolder(InspectionManager.getInstance(project), myFixture.file, isOnTheFly)
-            val visitor = MixinInstantiationInspection().buildVisitor(holder, isOnTheFly)
-            PsiTreeUtil.collectElementsOfType(myFixture.file, KtCallExpression::class.java).forEach {
-                it.accept(visitor)
-            }
-            assertEquals(4, holder.results.size)
-            for (problem in holder.results) {
+            val problems = myFixture.collectProblems<KtCallExpression>(MixinInstantiationInspection(), isOnTheFly)
+            assertEquals(4, problems.size)
+            for (problem in problems) {
                 assertTrue(problem.psiElement is KtCallExpression)
                 assertEquals(TextRange(0, problem.psiElement.textLength), problem.textRangeInElement)
             }
@@ -231,8 +221,7 @@ class MixinInstantiationInspectionTest : AnnotationFixtureTestCase() {
                 """.trimIndent()
             )
         }
-        myFixture.configureByText("Example.kt", "package sample\nimport dev.karmakrafts.kcml.api.mixin.*\n$text")
-        myFixture.checkHighlighting(true, false, false)
+        checkKotlinHighlighting(text, "package sample\nimport dev.karmakrafts.kcml.api.mixin.*")
     }
 }
 

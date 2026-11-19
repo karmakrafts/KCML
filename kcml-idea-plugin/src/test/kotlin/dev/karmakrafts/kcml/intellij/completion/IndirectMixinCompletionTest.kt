@@ -32,9 +32,10 @@ import com.intellij.openapi.roots.OrderRootType
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.completionPresentation
+import dev.karmakrafts.kcml.intellij.testutil.writeCompletionClass
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.org.objectweb.asm.ClassWriter
 import org.jetbrains.org.objectweb.asm.Opcodes
 import java.nio.file.Files
 import java.nio.file.Path
@@ -43,8 +44,7 @@ import java.util.jar.JarOutputStream
 
 class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     private fun render(item: LookupElement): LookupElementPresentation {
-        val presentation = LookupElementPresentation()
-        item.renderElement(presentation)
+        val presentation = completionPresentation(item)
         assertEquals(AllIcons.Nodes.Class, presentation.icon)
         assertNotNull("Declaration icons should be resolved lazily", item.expensiveRenderer)
         @Suppress("UNCHECKED_CAST") val renderer = item.expensiveRenderer as LookupElementRenderer<LookupElement>
@@ -147,7 +147,8 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         )
 
         val kotlinLanguage = checkNotNull(Language.findLanguageByID("kotlin"))
-        val contributors = CompletionContributor.forLanguage(kotlinLanguage)
+        val contributors =
+            CompletionContributor.EP.extensionList.filter { it.language == kotlinLanguage.id }.map { it.instance }
         assertTrue(
             contributors.joinToString { it.javaClass.name },
             contributors.any { it is IndirectMixinCompletionContributor })
@@ -278,8 +279,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             assertTrue(variants.any { it.lookupString == "completion.library.LibraryOuter\$1" })
             assertTrue(variants.any { it.lookupString == "completion.library.LibraryOuter\$PrivateNested" })
             for (item in variants.filter { it.lookupString.startsWith("completion.library.") }) {
-                val presentation = LookupElementPresentation()
-                item.renderElement(presentation)
+                val presentation = completionPresentation(item)
                 assertNotNull(item.lookupString, presentation.icon)
             }
         }
@@ -540,19 +540,16 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
         JarOutputStream(Files.newOutputStream(jar)).use { output ->
             for (name in listOf("LibraryOuter", "LibraryOuter\$1", "LibraryOuter\$PrivateNested")) {
                 val internalName = "completion/library/$name"
-                val classWriter = ClassWriter(0)
-                classWriter.visit(
-                    Opcodes.V21,
-                    Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER or Opcodes.ACC_SYNTHETIC,
-                    internalName,
-                    null,
-                    "java/lang/Object",
-                    null
-                )
-                classWriter.visitEnd()
-                output.putNextEntry(JarEntry("$internalName.class"))
-                output.write(classWriter.toByteArray())
-                output.closeEntry()
+                output.writeCompletionClass(internalName) { classWriter ->
+                    classWriter.visit(
+                        Opcodes.V21,
+                        Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER or Opcodes.ACC_SYNTHETIC,
+                        internalName,
+                        null,
+                        "java/lang/Object",
+                        null
+                    )
+                }
             }
         }
         return jar
@@ -568,7 +565,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                 javaClass.classLoader.getResourceAsStream(classFile)!!.use { it.copyTo(output) }
                 output.closeEntry()
             }
-            else writeClass(output, "dev/karmakrafts/kcml/api/mixin/IndirectMixin") { classWriter ->
+            else output.writeCompletionClass("dev/karmakrafts/kcml/api/mixin/IndirectMixin") { classWriter ->
                 classWriter.visit(
                     Opcodes.V21,
                     Opcodes.ACC_PUBLIC or Opcodes.ACC_INTERFACE or Opcodes.ACC_ABSTRACT or Opcodes.ACC_ANNOTATION,
@@ -582,13 +579,12 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                 ).visitEnd()
                 val priority =
                     classWriter.visitMethod(Opcodes.ACC_PUBLIC or Opcodes.ACC_ABSTRACT, "priority", "()I", null, null)
-                priority.visitAnnotationDefault().apply {
-                    visit(null, 0)
-                    visitEnd()
-                }
+                val defaultValue = priority.visitAnnotationDefault()
+                defaultValue.visit(null, 0)
+                defaultValue.visitEnd()
                 priority.visitEnd()
             }
-            writeClass(output, "completion/provided/ProvidedTarget") { classWriter ->
+            output.writeCompletionClass("completion/provided/ProvidedTarget") { classWriter ->
                 classWriter.visit(
                     Opcodes.V21,
                     Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
@@ -598,7 +594,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                     null
                 )
             }
-            writeClass(output, "completion/provided/ProvidedOuter") { classWriter ->
+            output.writeCompletionClass("completion/provided/ProvidedOuter") { classWriter ->
                 classWriter.visit(
                     Opcodes.V21,
                     Opcodes.ACC_PUBLIC or Opcodes.ACC_SUPER,
@@ -614,7 +610,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                     Opcodes.ACC_PRIVATE or Opcodes.ACC_STATIC
                 )
             }
-            writeClass(output, "completion/provided/ProvidedOuter\$1") { classWriter ->
+            output.writeCompletionClass("completion/provided/ProvidedOuter\$1") { classWriter ->
                 classWriter.visit(
                     Opcodes.V21,
                     Opcodes.ACC_SUPER or Opcodes.ACC_SYNTHETIC,
@@ -624,7 +620,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
                     null
                 )
             }
-            writeClass(output, "completion/provided/ProvidedOuter\$PrivateNested") { classWriter ->
+            output.writeCompletionClass("completion/provided/ProvidedOuter\$PrivateNested") { classWriter ->
                 classWriter.visit(
                     Opcodes.V21,
                     Opcodes.ACC_SUPER,
@@ -642,14 +638,5 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
             }
         }
         return jar
-    }
-
-    private fun writeClass(output: JarOutputStream, internalName: String, configure: (ClassWriter) -> Unit) {
-        val classWriter = ClassWriter(0)
-        configure(classWriter)
-        classWriter.visitEnd()
-        output.putNextEntry(JarEntry("$internalName.class"))
-        output.write(classWriter.toByteArray())
-        output.closeEntry()
     }
 }

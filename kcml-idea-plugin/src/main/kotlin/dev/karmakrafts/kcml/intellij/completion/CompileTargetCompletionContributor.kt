@@ -32,15 +32,11 @@ internal class CompileTargetCompletionContributor : CompletionContributor() {
     override fun fillCompletionVariants(parameters: CompletionParameters, result: CompletionResultSet) {
         result.runRemainingContributors(parameters) { completion ->
             val item = completion.lookupElement
-            val icon = item.psiElement?.let { iconProvider.getIcon(it, 0) }
-            result.passResult(
-                if (icon == null) completion
-                else completion.withLookupElement(
-                    TargetLookupElement(
-                        item, icon
-                    )
-                )
-            )
+            val element = item.psiElement
+            val icon = if (element == null) null else iconProvider.getIcon(element, 0)
+            val decorated = if (icon == null) completion
+            else completion.withLookupElement(TargetLookupElement(item, icon))
+            result.passResult(decorated)
         }
     }
 

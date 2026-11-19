@@ -18,9 +18,7 @@ package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionParameters
-import com.intellij.codeInsight.completion.CompletionProvider
 import com.intellij.codeInsight.completion.CompletionResultSet
-import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.completion.PlainPrefixMatcher
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementBuilder
@@ -30,25 +28,14 @@ import com.intellij.icons.AllIcons
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
-import com.intellij.patterns.PlatformPatterns
 import com.intellij.psi.PsiFile
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.util.ProcessingContext
 import dev.karmakrafts.kcml.intellij.util.ClassIndex
 import dev.karmakrafts.kcml.intellij.util.ClassNameUtils
 
 internal class IndirectMixinCompletionContributor : CompletionContributor() {
     init {
-        for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
-            extend(
-                type, PlatformPatterns.psiElement(), object : CompletionProvider<CompletionParameters>() {
-                    override fun addCompletions(
-                        parameters: CompletionParameters, context: ProcessingContext, result: CompletionResultSet
-                    ) {
-                        addTargetCompletions(parameters, result)
-                    }
-                })
-        }
+        extendStringCompletion(::addTargetCompletions)
     }
 
     private fun addTargetCompletions(parameters: CompletionParameters, result: CompletionResultSet) {

@@ -43,9 +43,9 @@ internal class InjectFunctionInsertHandler(
         ) ?: return
         val name = annotation.argument("name", 0) ?: return
         val descriptorArgument = annotation.argument("descriptor", 1)
-        val nameOffset = name.textRange.startOffset.takeIf {
+        val needsName =
             name.getArgumentName() == null && (descriptorArgument == null || descriptorArgument.getArgumentName() != null)
-        }
+        val nameOffset = if (needsName) name.textRange.startOffset else null
         var end = insertOrReplaceDescriptor(context, name, descriptorArgument)
         if (nameOffset != null) {
             context.document.insertString(nameOffset, "name = ")

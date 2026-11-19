@@ -16,9 +16,9 @@
 
 package dev.karmakrafts.kcml.intellij.gutter
 
-import com.intellij.psi.PsiElement
-import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.testutil.assertUsage
+import dev.karmakrafts.kcml.intellij.testutil.firstDescendant
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
 import org.jetbrains.kotlin.asJava.toLightMethods
 import org.jetbrains.kotlin.psi.KtNamedFunction
@@ -76,12 +76,12 @@ class InjectImplicitUsageProviderTest : AnnotationFixtureTestCase() {
                 }
             """.trimIndent()
         )
-        assertUsage(declaration.findMethodsByName("inject", false).single(), true)
-        assertUsage(declaration.findMethodsByName("unannotated", false).single(), false)
-        assertUsage(declaration, false)
-        assertUsage(declaration.fields.single(), false)
-        assertUsage(declaration.nameIdentifier!!, false)
-        assertUsage(declaration.containingFile, false)
+        provider.assertUsage(declaration.findMethodsByName("inject", false).single(), true)
+        provider.assertUsage(declaration.findMethodsByName("unannotated", false).single(), false)
+        provider.assertUsage(declaration, false)
+        provider.assertUsage(declaration.fields.single(), false)
+        provider.assertUsage(declaration.nameIdentifier!!, false)
+        provider.assertUsage(declaration.containingFile, false)
     }
 
     private fun addAnnotation() {
@@ -95,16 +95,10 @@ class InjectImplicitUsageProviderTest : AnnotationFixtureTestCase() {
 
     private fun assertFunctionUsage(text: String, expected: Boolean) {
         val file = myFixture.configureByText("Injection.kt", "import dev.karmakrafts.kcml.api.mixin.*\n$text")
-        val function = PsiTreeUtil.findChildOfType(file, KtNamedFunction::class.java)!!
-        assertUsage(function.toLightMethods().single(), expected)
-        assertUsage(function, false)
-        assertUsage(function.nameIdentifier!!, false)
-        assertUsage(file, false)
-    }
-
-    private fun assertUsage(element: PsiElement, expected: Boolean) {
-        assertEquals(expected, provider.isImplicitUsage(element))
-        assertFalse(provider.isImplicitRead(element))
-        assertFalse(provider.isImplicitWrite(element))
+        val function = file.firstDescendant<KtNamedFunction>()
+        provider.assertUsage(function.toLightMethods().single(), expected)
+        provider.assertUsage(function, false)
+        provider.assertUsage(function.nameIdentifier!!, false)
+        provider.assertUsage(file, false)
     }
 }

@@ -45,8 +45,13 @@ internal object PluginIds {
         val scheduled = AtomicBoolean()
 
         @Synchronized
-        fun compute(module: Module, scan: (Module) -> PluginIdIndex.Ids): PluginIdIndex.Ids =
-            ids ?: scan(module).also { ids = it }
+        fun compute(module: Module, scan: (Module) -> PluginIdIndex.Ids): PluginIdIndex.Ids {
+            val cached = ids
+            if (cached != null) return cached
+            val computed = scan(module)
+            ids = computed
+            return computed
+        }
     }
 
     fun isMetadata(file: PsiFile): Boolean {
