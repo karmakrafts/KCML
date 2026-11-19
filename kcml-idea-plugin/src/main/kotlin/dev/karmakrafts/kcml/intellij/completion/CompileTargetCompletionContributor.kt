@@ -37,8 +37,7 @@ internal class CompileTargetCompletionContributor : CompletionContributor() {
                 if (icon == null) completion
                 else completion.withLookupElement(
                     TargetLookupElement(
-                        item,
-                        icon
+                        item, icon
                     )
                 )
             )
@@ -46,8 +45,7 @@ internal class CompileTargetCompletionContributor : CompletionContributor() {
     }
 
     private class TargetLookupElement(
-        delegate: LookupElement,
-        private val icon: Icon
+        delegate: LookupElement, private val icon: Icon
     ) : LookupElementDecorator<LookupElement>(delegate) {
         override fun renderElement(presentation: LookupElementPresentation) {
             super.renderElement(presentation)

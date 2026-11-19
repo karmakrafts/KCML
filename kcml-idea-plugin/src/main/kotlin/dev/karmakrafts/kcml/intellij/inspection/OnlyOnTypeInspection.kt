@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.inspection
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemHighlightType
 import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
@@ -27,8 +28,10 @@ import dev.karmakrafts.kcml.intellij.util.qualifiedName
 import org.jetbrains.annotations.NonNls
 import org.jetbrains.kotlin.psi.KtAnnotationEntry
 import org.jetbrains.kotlin.psi.KtClassOrObject
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtFunctionType
 import org.jetbrains.kotlin.psi.KtNullableType
+import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
 import org.jetbrains.kotlin.psi.KtTypeAlias
 import org.jetbrains.kotlin.psi.KtTypeElement
 import org.jetbrains.kotlin.psi.KtTypeReference
@@ -43,17 +46,30 @@ class OnlyOnTypeInspection : LocalInspectionTool() {
     override fun buildVisitor(holder: ProblemsHolder, isOnTheFly: Boolean): PsiElementVisitor =
         object : KtVisitorVoid() {
             override fun visitTypeReference(typeReference: KtTypeReference) {
-                val annotations = typeReference.annotationEntries.filter { it.isOnlyOn() }
-                if (annotations.isEmpty() || isFunctionType(typeReference.typeElement, mutableSetOf())) return
-                for (annotation in annotations) {
+                if (typeReference.annotationEntries.isEmpty()) return
+                val file = typeReference.containingFile as? KtFile ?: return
+                val invalid = OnlyOnAnalysis.lookup(file, key) { invalidAnnotations(file) } ?: return
+                for (annotation in typeReference.annotationEntries) {
+                    if (annotation !in invalid) continue
                     holder.registerProblem(
-                        annotation,
-                        "@OnlyOn is only allowed on function types",
-                        ProblemHighlightType.GENERIC_ERROR
+                        annotation, "@OnlyOn is only allowed on function types", ProblemHighlightType.GENERIC_ERROR
                     )
                 }
             }
         }
+
+    private fun invalidAnnotations(file: KtFile): Set<KtAnnotationEntry> = buildSet {
+        file.accept(object : KtTreeVisitorVoid() {
+            override fun visitTypeReference(typeReference: KtTypeReference) {
+                ProgressManager.checkCanceled()
+                val annotations = typeReference.annotationEntries.filter { it.isOnlyOn() }
+                if (annotations.isNotEmpty() && !isFunctionType(typeReference.typeElement, mutableSetOf())) {
+                    addAll(annotations)
+                }
+                super.visitTypeReference(typeReference)
+            }
+        })
+    }
 
     private fun KtAnnotationEntry.isOnlyOn(): Boolean {
         if (qualifiedName() == TypeNames.ONLY_ON) return true
@@ -82,5 +98,9 @@ class OnlyOnTypeInspection : LocalInspectionTool() {
 
             else -> false
         }
+    }
+
+    companion object {
+        private val key = OnlyOnAnalysis.key<Set<KtAnnotationEntry>>("kcml.onlyOn.types")
     }
 }

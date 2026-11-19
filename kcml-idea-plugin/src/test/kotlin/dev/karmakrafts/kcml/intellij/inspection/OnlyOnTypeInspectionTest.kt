@@ -16,8 +16,16 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
+import com.intellij.codeInspection.InspectionManager
+import com.intellij.codeInspection.ProblemsHolder
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.testFramework.PlatformTestUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.kotlin.psi.KtTypeReference
 
 class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
     override fun setUp() {
@@ -42,6 +50,34 @@ class OnlyOnTypeInspectionTest : AnnotationFixtureTestCase() {
                 annotation class OnlyOn(vararg val targets: kotlin.reflect.KClass<out CompileTarget>)
             """.trimIndent()
         )
+    }
+
+    fun testEdtTypeValidationIsDeferredAndInvalidatedByAliasEdit() {
+        val alias = myFixture.addFileToProject("sample/Alias.kt", "package sample\ntypealias Alias = String")
+        myFixture.configureByText("Example.kt", """
+            package sample
+            import dev.karmakrafts.kcml.api.target.*
+            fun use(value: @OnlyOn(JvmCompileTarget::class) Alias) = Unit
+        """.trimIndent())
+        fun problems(): Int {
+            val holder = ProblemsHolder(InspectionManager.getInstance(project), myFixture.file, true)
+            val visitor = OnlyOnTypeInspection().buildVisitor(holder, true)
+            PsiTreeUtil.findChildrenOfType(myFixture.file, KtTypeReference::class.java).forEach { it.accept(visitor) }
+            return holder.results.size
+        }
+        assertTrue(ApplicationManager.getApplication().isDispatchThread)
+        assertEquals(0, problems())
+        PlatformTestUtil.waitWithEventsDispatching("OnlyOn background type validation", { problems() == 1 }, 10)
+        assertEquals(1, problems())
+        WriteCommandAction.runWriteCommandAction(project) {
+            val documents = PsiDocumentManager.getInstance(project)
+            val document = documents.getDocument(alias)!!
+            document.setText("package sample\ntypealias Alias = () -> Unit")
+            documents.commitDocument(document)
+        }
+        assertEquals(0, problems())
+        myFixture.checkHighlighting(true, false, false)
+        assertEquals(0, problems())
     }
 
     fun testNonFunctionTypes() = check(

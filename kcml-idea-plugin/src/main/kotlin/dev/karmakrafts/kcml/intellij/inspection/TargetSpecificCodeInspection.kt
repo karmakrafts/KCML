@@ -33,8 +33,7 @@ class TargetSpecificCodeInspection : LocalInspectionTool() {
             override fun visitSimpleNameExpression(expression: KtSimpleNameExpression) {
                 if (OnlyOnUsage.problem(expression) != OnlyOnUsage.Problem.UNGUARDED) return
                 holder.registerProblem(
-                    OnlyOnUsage.highlight(expression),
-                    "API marked @OnlyOn should be used in a matching target context"
+                    OnlyOnUsage.highlight(expression), "API marked @OnlyOn should be used in a matching target context"
                 )
             }
         }

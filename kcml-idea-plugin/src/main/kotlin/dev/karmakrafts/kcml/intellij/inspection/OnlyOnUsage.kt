@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.psi.PsiElement
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
@@ -40,6 +41,7 @@ import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCollectionLiteralExpression
 import org.jetbrains.kotlin.psi.KtDeclaration
 import org.jetbrains.kotlin.psi.KtExpression
+import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtImportDirective
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
@@ -47,11 +49,14 @@ import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiUtil
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
 import org.jetbrains.kotlin.psi.KtSimpleNameExpression
+import org.jetbrains.kotlin.psi.KtTreeVisitorVoid
 import org.jetbrains.kotlin.psi.KtUnaryExpression
 import org.jetbrains.kotlin.psi.KtUserType
 
 internal object OnlyOnUsage {
     enum class Problem { UNGUARDED, MISMATCHED }
+
+    private val key = OnlyOnAnalysis.key<Map<KtSimpleNameExpression, Problem>>("kcml.onlyOn.usage")
 
     private data class Target(val name: String, val ancestors: Set<String>) {
         fun accepts(other: Target): Boolean = name in other.ancestors
@@ -59,48 +64,68 @@ internal object OnlyOnUsage {
 
     fun problem(expression: KtSimpleNameExpression): Problem? {
         if (PsiTreeUtil.getParentOfType(expression, KtImportDirective::class.java) != null) return null
-        return analyze(expression) {
-            val symbol = expression.mainReference.resolveToSymbol() ?: return@analyze null
-            val restrictions = restrictions(symbol).toMutableList()
-            if (symbol is KaConstructorSymbol) {
-                (expression.parent as? KtExpression)?.expressionType?.abbreviation?.symbol?.let {
-                    restrictions += restrictions(it)
+        val file = expression.containingFile as? KtFile ?: return null
+        return OnlyOnAnalysis.lookup(file, key) { problems(file) }?.get(expression)
+    }
+
+    private fun problems(file: KtFile): Map<KtSimpleNameExpression, Problem> = analyze(file) {
+        buildMap {
+            file.accept(object : KtTreeVisitorVoid() {
+                override fun visitImportDirective(importDirective: KtImportDirective) = Unit
+
+                override fun visitSimpleNameExpression(expression: KtSimpleNameExpression) {
+                    ProgressManager.checkCanceled()
+                    computeProblem(expression)?.let { put(expression, it) }
+                    super.visitSimpleNameExpression(expression)
                 }
+            })
+        }
+    }
+
+    private fun KaSession.computeProblem(expression: KtSimpleNameExpression): Problem? {
+        val symbol = expression.mainReference.resolveToSymbol() ?: return null
+        val restrictions = restrictions(symbol).toMutableList()
+        if (symbol is KaConstructorSymbol) {
+            (expression.parent as? KtExpression)?.expressionType?.abbreviation?.symbol?.let {
+                restrictions += restrictions(it)
             }
-            if (symbol is KaPropertySymbol) {
-                val access = accessExpression(expression)
-                val assignment = access.parent as? KtBinaryExpression
-                val write = assignment?.left == access && assignment.operationToken in KtTokens.ALL_ASSIGNMENTS
-                val compound = write && assignment.operationToken != KtTokens.EQ ||
-                    (access.parent as? KtUnaryExpression)?.operationToken in setOf(KtTokens.PLUSPLUS, KtTokens.MINUSMINUS)
-                if (!write || compound) symbol.getter?.let { restrictions += restrictions(it) }
-                if (write || compound) symbol.setter?.let { restrictions += restrictions(it) }
-                symbol.backingFieldSymbol?.let { restrictions += annotations(it) }
-            }
-            if (expression.parent is KtCallExpression && symbol is KaCallableSymbol) {
-                (symbol.returnType as? KaFunctionType)?.let { restrictions += annotations(it) }
-                val call = (expression.parent as KtCallExpression).resolveToCall()?.singleFunctionCallOrNull()
-                (call?.dispatchReceiver?.type as? KaFunctionType)?.let { restrictions += annotations(it) }
-            }
-            if (restrictions.isEmpty()) return@analyze null
-            val context = context(expression)
-            when {
-                context == null -> Problem.UNGUARDED
-                context.any { target -> restrictions.any { allowed -> allowed.none { it.accepts(target) } } } -> Problem.MISMATCHED
-                else -> null
-            }
+        }
+        if (symbol is KaPropertySymbol) {
+            val access = accessExpression(expression)
+            val assignment = access.parent as? KtBinaryExpression
+            val write = assignment?.left == access && assignment.operationToken in KtTokens.ALL_ASSIGNMENTS
+            val compound =
+                write && assignment.operationToken != KtTokens.EQ || (access.parent as? KtUnaryExpression)?.operationToken in setOf(
+                    KtTokens.PLUSPLUS, KtTokens.MINUSMINUS
+                )
+            if (!write || compound) symbol.getter?.let { restrictions += restrictions(it) }
+            if (write || compound) symbol.setter?.let { restrictions += restrictions(it) }
+            symbol.backingFieldSymbol?.let { restrictions += annotations(it) }
+        }
+        if (expression.parent is KtCallExpression && symbol is KaCallableSymbol) {
+            (symbol.returnType as? KaFunctionType)?.let { restrictions += annotations(it) }
+            val call = (expression.parent as KtCallExpression).resolveToCall()?.singleFunctionCallOrNull()
+            (call?.dispatchReceiver?.type as? KaFunctionType)?.let { restrictions += annotations(it) }
+        }
+        if (restrictions.isEmpty()) return null
+        val context = context(expression)
+        return when {
+            context == null -> Problem.UNGUARDED
+            context.any { target -> restrictions.any { allowed -> allowed.none { it.accepts(target) } } } -> Problem.MISMATCHED
+            else -> null
         }
     }
 
     fun highlight(expression: KtSimpleNameExpression): PsiElement =
         (expression.parent as? KtCallExpression)?.takeIf { it.calleeExpression == expression }
-            ?: (expression.parent as? KtUserType)?.takeIf { it.referenceExpression == expression }
-            ?: expression
+            ?: (expression.parent as? KtUserType)?.takeIf { it.referenceExpression == expression } ?: expression
 
     private fun accessExpression(expression: KtSimpleNameExpression): KtExpression =
         (expression.parent as? KtQualifiedExpression)?.takeIf { it.selectorExpression == expression } ?: expression
 
-    private fun KaSession.restrictions(symbol: KaSymbol, visited: MutableSet<KaSymbol> = mutableSetOf()): List<Set<Target>> {
+    private fun KaSession.restrictions(
+        symbol: KaSymbol, visited: MutableSet<KaSymbol> = mutableSetOf()
+    ): List<Set<Target>> {
         if (!visited.add(symbol)) return emptyList()
         val result = (symbol as? KaAnnotated)?.let { annotations(it) }.orEmpty().toMutableList()
         if (symbol is KaTypeAliasSymbol) {
@@ -174,8 +199,9 @@ internal object OnlyOnUsage {
         }?.value ?: return result
         result += annotations(parameter.returnType)
         val symbol = resolved.signature.symbol
-        if (symbol.callableId?.asSingleFqName()?.asString() != "dev.karmakrafts.kcml.api.target.whenCompilingFor" ||
-            parameter.name.asString() != "block") return result
+        if (symbol.callableId?.asSingleFqName()
+                ?.asString() != "dev.karmakrafts.kcml.api.target.whenCompilingFor" || parameter.name.asString() != "block"
+        ) return result
         val types = resolved.valueArgumentMapping.filterValues { it.name.asString() == "types" }.keys
         val targets = mutableSetOf<Target>()
         for (argument in types) targets += scopeTargets(argument, mutableSetOf()) ?: return result
@@ -188,7 +214,7 @@ internal object OnlyOnUsage {
         if (!visited.add(value)) return null
         (value.expressionType as? KaClassType)?.symbol?.let { target(it) }?.let { return setOf(it) }
         val elements = when (value) {
-            is KtCollectionLiteralExpression -> value.getInnerExpressions().toList()
+            is KtCollectionLiteralExpression -> value.innerExpressions.toList()
             is KtCallExpression -> {
                 val call = value.resolveToCall()?.singleFunctionCallOrNull() ?: return null
                 when (call.signature.callableId?.asSingleFqName()?.asString()) {
@@ -197,11 +223,13 @@ internal object OnlyOnUsage {
                     else -> return null
                 }
             }
+
             is KtNameReferenceExpression -> {
                 val property = value.mainReference.resolveToSymbol()?.psi as? KtProperty ?: return null
                 if (property.isVar) return null
                 return property.initializer?.let { scopeTargets(it, visited) }
             }
+
             else -> return null
         }
         return buildSet {

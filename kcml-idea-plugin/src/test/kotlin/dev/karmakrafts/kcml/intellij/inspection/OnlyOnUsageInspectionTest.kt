@@ -16,8 +16,14 @@
 
 package dev.karmakrafts.kcml.intellij.inspection
 
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.psi.PsiDocumentManager
+import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.testFramework.PlatformTestUtil
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.withAnnotationLibrary
+import org.jetbrains.kotlin.psi.KtSimpleNameExpression
 
 class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
     override fun setUp() {
@@ -57,6 +63,33 @@ class OnlyOnUsageInspectionTest : AnnotationFixtureTestCase() {
             @OnlyOn(NativeCompileTarget::class) fun native() = Unit
             @OnlyOn(WasmCompileTarget::class) fun wasm() = Unit
         """.trimIndent())
+    }
+
+    fun testEdtLookupIsDeferredCachedAndInvalidated() {
+        addApi(false)
+        myFixture.configureByText("Example.kt", """
+            package sample
+            import dev.karmakrafts.kcml.api.target.*
+            fun use() { jvm() }
+        """.trimIndent())
+        fun reference() = PsiTreeUtil.findChildrenOfType(myFixture.file, KtSimpleNameExpression::class.java)
+            .single { it.text == "jvm" }
+        assertTrue(ApplicationManager.getApplication().isDispatchThread)
+        assertNull(OnlyOnUsage.problem(reference()))
+        PlatformTestUtil.waitWithEventsDispatching("OnlyOn background analysis", {
+            OnlyOnUsage.problem(reference()) == OnlyOnUsage.Problem.UNGUARDED
+        }, 10)
+        assertEquals(OnlyOnUsage.Problem.UNGUARDED, OnlyOnUsage.problem(reference()))
+        WriteCommandAction.runWriteCommandAction(project) {
+            val document = myFixture.editor.document
+            document.insertString(document.text.indexOf("fun use"), "@OnlyOn(JsCompileTarget::class) ")
+            PsiDocumentManager.getInstance(project).commitDocument(document)
+        }
+        assertNull(OnlyOnUsage.problem(reference()))
+        PlatformTestUtil.waitWithEventsDispatching("OnlyOn cache invalidation", {
+            OnlyOnUsage.problem(reference()) == OnlyOnUsage.Problem.MISMATCHED
+        }, 10)
+        assertEquals(OnlyOnUsage.Problem.MISMATCHED, OnlyOnUsage.problem(reference()))
     }
 
     fun testRootAndMatchingScopes() = check("""
