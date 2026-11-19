@@ -57,7 +57,7 @@ class PluginConfigIconProvider : FileIconProvider {
         if (!isTest && root !in roots.getSourceRoots(JavaResourceRootType.RESOURCE)) return null
         project.service<PluginConfigIconUpdater>().track(file)
         if (DumbService.isDumb(project)) return null
-        val cachedIds = CachedValuesManager.getManager(project).getCachedValue(module, idsKey, {
+        (val first, val second) = CachedValuesManager.getManager(project).getCachedValue(module, idsKey, {
             val production = mutableSetOf<String>()
             val all = mutableSetOf<String>()
             val scope = GlobalSearchScope.moduleScope(module)
@@ -78,7 +78,7 @@ class PluginConfigIconProvider : FileIconProvider {
                 DumbService.getInstance(project).modificationTracker
             )
         }, false)
-        val ids = if (isTest) cachedIds.second else cachedIds.first
+        val ids = if (isTest) second else first
         return if (file.nameWithoutExtension in ids) icon else null
     }
 }

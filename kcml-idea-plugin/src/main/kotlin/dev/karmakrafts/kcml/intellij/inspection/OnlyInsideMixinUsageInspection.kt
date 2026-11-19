@@ -24,6 +24,7 @@ import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
 import com.intellij.psi.PsiMember
 import com.intellij.psi.PsiModifierListOwner
+import com.intellij.psi.PsiReference
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.isMixin
@@ -87,8 +88,7 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
                 val callParent = call?.parent
                 val qualifiedMemberCall =
                     if (callParent is KtQualifiedExpression && callParent.selectorExpression == call && owner != null && isRestricted(
-                            owner,
-                            mutableSetOf()
+                            owner, mutableSetOf()
                         )
                     ) callParent
                     else null
@@ -107,33 +107,40 @@ class OnlyInsideMixinUsageInspection : LocalInspectionTool() {
             }
         }
 
-    private fun isRestricted(target: PsiElement, visited: MutableSet<PsiElement>): Boolean {
-        if (!visited.add(target)) return false
-        if (target is KtModifierListOwner && target.annotationEntries.any {
-                it.qualifiedName() == TypeNames.ONLY_INSIDE_MIXIN
-            }) return true
-        if (target is PsiModifierListOwner && target.hasAnnotation(TypeNames.ONLY_INSIDE_MIXIN)) return true
-        return when (target) {
-            is KtConstructor<*> -> isRestricted(target.getContainingClassOrObject(), visited)
-            is KtTypeAlias -> {
-                val reference = target.referencedType()?.referenceExpression
-                reference?.references?.any {
-                    val resolved = it.resolve()
-                    resolved != null && isRestricted(resolved, visited)
-                } == true
-            }
+    private tailrec fun isRestricted(
+        target: PsiElement, visited: MutableSet<PsiElement>, pending: ArrayDeque<Iterator<PsiReference>> = ArrayDeque()
+    ): Boolean {
+        if (visited.add(target)) {
+            if (target is KtModifierListOwner && target.annotationEntries.any {
+                    it.qualifiedName() == TypeNames.ONLY_INSIDE_MIXIN
+                }) return true
+            if (target is PsiModifierListOwner && target.hasAnnotation(TypeNames.ONLY_INSIDE_MIXIN)) return true
+            when (target) {
+                is KtConstructor<*> -> return isRestricted(target.getContainingClassOrObject(), visited, pending)
+                is KtTypeAlias -> target.referencedType()?.referenceExpression?.references?.let {
+                    pending.addLast(it.iterator())
+                }
 
-            is PsiMember -> {
-                val containingClass = target.containingClass ?: return false
-                isRestricted(containingClass, visited)
-            }
+                is PsiMember -> {
+                    val containingClass = target.containingClass
+                    if (containingClass != null) return isRestricted(containingClass, visited, pending)
+                }
 
-            is KtDeclaration -> {
-                val owner = (target.parent as? KtClassBody)?.parent ?: return false
-                isRestricted(owner, visited)
+                is KtDeclaration -> {
+                    val owner = (target.parent as? KtClassBody)?.parent
+                    if (owner != null) return isRestricted(owner, visited, pending)
+                }
             }
-
-            else -> false
         }
+        while (pending.isNotEmpty()) {
+            val references = pending.last()
+            if (!references.hasNext()) {
+                pending.removeLast()
+                continue
+            }
+            val resolved = references.next().resolve() ?: continue
+            return isRestricted(resolved, visited, pending)
+        }
+        return false
     }
 }

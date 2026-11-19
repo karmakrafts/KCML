@@ -22,6 +22,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiMethod
+import com.intellij.psi.PsiReference
 import dev.karmakrafts.kcml.intellij.util.referencedType
 import dev.karmakrafts.kcml.intellij.util.resolveReference
 import org.jetbrains.kotlin.psi.KtCallElement
@@ -63,23 +64,39 @@ internal class ConstructorUsageVisitor(
         )
     }
 
-    private fun isRestrictedConstructor(target: PsiElement, visited: MutableSet<PsiElement>): Boolean {
-        if (!visited.add(target)) return false
-        return when (target) {
-            is KtConstructor<*> -> isRestrictedConstructor(target.getContainingClassOrObject(), visited)
-            is KtClassOrObject, is PsiClass -> isRestrictedClass(target)
-            is PsiMethod -> {
-                if (!target.isConstructor) return false
-                val containingClass = target.containingClass ?: return false
-                isRestrictedConstructor(containingClass, visited)
+    private tailrec fun isRestrictedConstructor(
+        target: PsiElement, visited: MutableSet<PsiElement>, pending: ArrayDeque<Iterator<PsiReference>> = ArrayDeque()
+    ): Boolean {
+        if (visited.add(target)) {
+            when (target) {
+                is KtConstructor<*> -> return isRestrictedConstructor(
+                    target.getContainingClassOrObject(),
+                    visited,
+                    pending
+                )
+
+                is KtClassOrObject, is PsiClass -> if (isRestrictedClass(target)) return true
+                is PsiMethod -> {
+                    val containingClass = target.containingClass
+                    if (target.isConstructor && containingClass != null) {
+                        return isRestrictedConstructor(containingClass, visited, pending)
+                    }
+                }
+
+                is KtTypeAlias -> target.referencedType()?.referenceExpression?.references?.let {
+                    pending.addLast(it.iterator())
+                }
             }
-
-            is KtTypeAlias -> target.referencedType()?.referenceExpression?.references?.any {
-                val resolved = it.resolve()
-                resolved != null && isRestrictedConstructor(resolved, visited)
-            } == true
-
-            else -> false
         }
+        while (pending.isNotEmpty()) {
+            val references = pending.last()
+            if (!references.hasNext()) {
+                pending.removeLast()
+                continue
+            }
+            val resolved = references.next().resolve() ?: continue
+            return isRestrictedConstructor(resolved, visited, pending)
+        }
+        return false
     }
 }

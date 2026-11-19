@@ -276,7 +276,9 @@ internal object OnlyOnUsage {
             else -> return null
         }
         return buildSet {
-            for (element in elements) addAll(scopeTargets(element, visited) ?: return null)
+            for (element in elements) {
+                addAll(scopeTargets(element, visited) ?: return null)
+            }
         }
     }
 }

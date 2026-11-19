@@ -70,7 +70,7 @@ class OnlyOnTypeInspection : LocalInspectionTool() {
         })
     }
 
-    private fun isFunctionType(type: KtTypeElement?, visited: MutableSet<PsiElement>): Boolean {
+    private tailrec fun isFunctionType(type: KtTypeElement?, visited: MutableSet<PsiElement>): Boolean {
         if (type == null || !visited.add(type)) return false
         return when (type) {
             is KtFunctionType -> true

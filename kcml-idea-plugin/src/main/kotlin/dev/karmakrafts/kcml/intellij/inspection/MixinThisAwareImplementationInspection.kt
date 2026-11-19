@@ -23,6 +23,7 @@ import com.intellij.openapi.util.TextRange
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiElementVisitor
+import com.intellij.psi.PsiReference
 import com.intellij.psi.util.InheritanceUtil
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.intellij.util.isMixin
@@ -62,27 +63,35 @@ class MixinThisAwareImplementationInspection : LocalInspectionTool() {
             }
         }
 
-    private fun isThisAware(target: PsiElement, visited: MutableSet<PsiElement>): Boolean {
-        if (!visited.add(target)) return false
-        return when (target) {
-            is KtClassOrObject -> {
-                val psiClass = target.lightClass() ?: return false
-                isThisAware(psiClass, visited)
+    private tailrec fun isThisAware(
+        target: PsiElement, visited: MutableSet<PsiElement>, pending: ArrayDeque<Iterator<PsiReference>> = ArrayDeque()
+    ): Boolean {
+        if (visited.add(target)) {
+            when (target) {
+                is KtClassOrObject -> {
+                    val psiClass = target.lightClass()
+                    if (psiClass != null) return isThisAware(psiClass, visited, pending)
+                }
+
+                is PsiClass -> if (target.qualifiedName == TypeNames.THIS_AWARE || InheritanceUtil.isInheritor(
+                        target, TypeNames.THIS_AWARE
+                    )
+                ) return true
+
+                is KtTypeAlias -> target.referencedType()?.referenceExpression?.references?.let {
+                    pending.addLast(it.iterator())
+                }
             }
-
-            is PsiClass -> target.qualifiedName == TypeNames.THIS_AWARE || InheritanceUtil.isInheritor(
-                target, TypeNames.THIS_AWARE
-            )
-
-            is KtTypeAlias -> {
-                val reference = target.referencedType()?.referenceExpression
-                reference?.references?.any {
-                    val resolved = it.resolve()
-                    resolved != null && isThisAware(resolved, visited)
-                } == true
-            }
-
-            else -> false
         }
+        while (pending.isNotEmpty()) {
+            val references = pending.last()
+            if (!references.hasNext()) {
+                pending.removeLast()
+                continue
+            }
+            val resolved = references.next().resolve() ?: continue
+            return isThisAware(resolved, visited, pending)
+        }
+        return false
     }
 }
