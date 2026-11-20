@@ -21,6 +21,7 @@ import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.runInEdtAndWait
 import com.intellij.util.PathUtil
 import dev.karmakrafts.kcml.intellij.testutil.CompletionAutoPopupFixtureTestCase
@@ -185,6 +186,7 @@ class IndirectMixinCompletionAutoPopupTest : CompletionAutoPopupFixtureTestCase(
     private fun addCompilerLibrary() {
         val compilerLibrary = PathUtil.getJarPathForClass(KtAnnotationEntry::class.java)
         runInEdtAndWait {
+            VfsRootAccess.allowRootAccess(testRootDisposable, compilerLibrary)
             WriteCommandAction.runWriteCommandAction(project) {
                 ModuleRootModificationUtil.addModuleLibrary(myFixture.module, "jar://$compilerLibrary!/")
             }

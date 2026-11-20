@@ -23,6 +23,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.LightProjectDescriptor
@@ -378,6 +379,7 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
 
     private fun addCompiledTarget() {
         library = Files.createTempDirectory(Path.of("build"), "kcml-inject-completion-").resolve("target.jar")
+        VfsRootAccess.allowRootAccess(testRootDisposable, library!!.parent.toAbsolutePath().toString())
         JarOutputStream(Files.newOutputStream(library!!)).use { output ->
             output.writeCompletionClass("completion/CompiledTarget") { writer ->
                 writer.visit(

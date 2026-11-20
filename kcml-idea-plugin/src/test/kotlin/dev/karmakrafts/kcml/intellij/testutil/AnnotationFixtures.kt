@@ -20,6 +20,8 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.OrderRootType
+import com.intellij.openapi.util.Disposer
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.fixtures.JavaCodeInsightTestFixture
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
@@ -32,9 +34,11 @@ internal class AnnotationLibrary(vararg classNames: String) : AutoCloseable {
     private val directory = Files.createTempDirectory(Path.of("build"), "kcml-annotation-library-")
     private val jar = directory.resolve("annotations.jar")
     private val url = "jar://${jar.toAbsolutePath()}!/"
+    private val disposable = Disposer.newDisposable("KCML annotation library")
 
     init {
         try {
+            VfsRootAccess.allowRootAccess(disposable, directory.toAbsolutePath().toString())
             JarOutputStream(Files.newOutputStream(jar)).use { output ->
                 for (name in classNames) {
                     val classFile = "${name.replace('.', '/')}.class"
@@ -65,7 +69,12 @@ internal class AnnotationLibrary(vararg classNames: String) : AutoCloseable {
     }
 
     override fun close() {
-        directory.toFile().deleteRecursively()
+        try {
+            directory.toFile().deleteRecursively()
+        }
+        finally {
+            Disposer.dispose(disposable)
+        }
     }
 }
 

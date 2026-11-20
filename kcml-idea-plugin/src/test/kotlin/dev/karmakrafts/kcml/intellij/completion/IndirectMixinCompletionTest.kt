@@ -29,6 +29,7 @@ import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.roots.DependencyScope
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.roots.OrderRootType
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
@@ -536,6 +537,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
 
     private fun createAnonymousClassLibrary(): Path {
         val directory = Files.createTempDirectory(Path.of("build"), "kcml-completion-library-")
+        VfsRootAccess.allowRootAccess(testRootDisposable, directory.toAbsolutePath().toString())
         val jar = directory.resolve("library.jar")
         JarOutputStream(Files.newOutputStream(jar)).use { output ->
             for (name in listOf("LibraryOuter", "LibraryOuter\$1", "LibraryOuter\$PrivateNested")) {
@@ -557,6 +559,7 @@ class IndirectMixinCompletionTest : LightJavaCodeInsightFixtureTestCase() {
 
     private fun createProvidedLibrary(kotlinAnnotation: Boolean = false): Path {
         val directory = Files.createTempDirectory(Path.of("build"), "kcml-provided-completion-library-")
+        VfsRootAccess.allowRootAccess(testRootDisposable, directory.toAbsolutePath().toString())
         val jar = directory.resolve("library.jar")
         JarOutputStream(Files.newOutputStream(jar)).use { output ->
             if (kotlinAnnotation) {

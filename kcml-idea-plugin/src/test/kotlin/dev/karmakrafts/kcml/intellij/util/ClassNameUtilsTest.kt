@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.util
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.extensions.ProjectExtensionPointName
 import com.intellij.openapi.roots.ModuleRootModificationUtil
+import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.PsiClass
 import com.intellij.psi.PsiField
 import com.intellij.psi.PsiMethod
@@ -39,6 +40,7 @@ class ClassNameUtilsTest : LightJavaCodeInsightFixtureTestCase() {
     fun testLibraryCandidatesAreReusedAcrossEditsAndInvalidatedByClasspathChanges() {
         val directory = createTempDirectory(Path("build"), "kcml-class-name-cache-")
         try {
+            VfsRootAccess.allowRootAccess(testRootDisposable, directory.toAbsolutePath().toString())
             fun addLibrary(name: String) {
                 val jar = directory.resolve("$name.jar")
                 val className = "completion/library/$name"
