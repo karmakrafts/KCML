@@ -23,6 +23,7 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlNativeTarget
+import kotlinx.serialization.SerializationException
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -30,14 +31,34 @@ import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import java.nio.file.Files
+import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 import java.util.*
+import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 @OptIn(CompilerConfiguration.Internals::class, KCMLHookApi::class)
 class NativeTargetConfigurationTest {
+    private val descriptorFiles = mutableListOf<Path>()
+
+    private fun descriptorFile(payload: String = descriptor()): String {
+        val path = Files.createTempFile(Path.of("build"), "native target ü-", ".json").toAbsolutePath()
+        descriptorFiles.add(path)
+        Files.writeString(path, payload, Charsets.UTF_8)
+        return path.toString()
+    }
+
+    @AfterTest
+    fun cleanupDescriptorFiles() {
+        descriptorFiles.forEach { Files.deleteIfExists(it) }
+    }
+
     private val target = object : NativeCompileTarget {
         override val name = "configured_native"
         override val konanTarget = KonanTarget.LINUX_X64
@@ -54,6 +75,38 @@ class NativeTargetConfigurationTest {
          "family":{"name":"LINUX","exeSuffix":"${Family.LINUX.exeSuffix}","dynamicPrefix":"${Family.LINUX.dynamicPrefix}","dynamicSuffix":"${Family.LINUX.dynamicSuffix}","staticPrefix":"${Family.LINUX.staticPrefix}","staticSuffix":"${Family.LINUX.staticSuffix}"},
          "architecture":{"name":"X64","bitness":$bitness},"llvm":$llvm}
     """.trimIndent()
+
+    @Test
+    fun `Native descriptors default absent LLVM settings and explicit target flag`() {
+        val config = CompilerConfiguration().apply {
+            kcmlNativeTarget = descriptorFile(descriptor().replace(",\"llvm\":{}", ""))
+        }
+        val resolved = checkNotNull(NativeTargetConfiguration.get(config))
+        assertSame(KonanTarget.LINUX_X64, resolved.target)
+        assertTrue(resolved.explicitTarget)
+        with(resolved.architecture) {
+            assertNull(targetTriple)
+            assertNull(cpu)
+            assertNull(features)
+            assertNull(dataLayout)
+            assertNull(binaryFormat)
+            assertNull(supports64BitAtomics)
+            assertNull(supportsUnalignedAccess)
+            assertEquals(emptyMap(), properties)
+        }
+    }
+
+    @Test
+    fun `Native descriptors ignore unknown fields at every level`() {
+        val payload = descriptor("""{"cpu":"haswell","futureLlvm":{"value":true}}""")
+            .replace("\"name\":\"linux_x64\"", "\"name\":\"linux_x64\",\"futureTarget\":[1,2]")
+            .replace("\"name\":\"LINUX\"", "\"name\":\"LINUX\",\"futureFamily\":true")
+            .replace("\"name\":\"X64\"", "\"name\":\"X64\",\"futureArchitecture\":null")
+        val config = CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(payload) }
+        val resolved = checkNotNull(NativeTargetConfiguration.get(config))
+        assertSame(KonanTarget.LINUX_X64, resolved.target)
+        assertEquals("haswell", resolved.architecture.cpu)
+    }
 
     @Test
     fun `plugin architecture settings merge with compiler property overrides`() {
@@ -76,7 +129,7 @@ class NativeTargetConfigurationTest {
     @Test
     fun `explicit Gradle architecture overrides preserve unspecified plugin settings`() {
         val config = CompilerConfiguration().apply {
-            kcmlNativeTarget = descriptor("""{"cpu":"haswell","properties":{"flag":"a;b=c"}}""")
+            kcmlNativeTarget = descriptorFile(descriptor("""{"cpu":"haswell","properties":{"flag":"a;b=c"}}"""))
         }
         val configured = NativeTargetConfiguration.configure(target, config)
         assertSame(target, configured)
@@ -95,9 +148,9 @@ class NativeTargetConfigurationTest {
     fun `Native families are reused across configurations only when their properties match`() {
         val familyName = "KCML_CONFIGURATION_${UUID.randomUUID().toString().replace('-', '_')}"
         val customDescriptor = descriptor().replace("\"name\":\"LINUX\"", "\"name\":\"$familyName\"")
-        for (encoded in listOf(descriptor(), customDescriptor)) {
-            fun decode(value: String = encoded): NativeTargetConfiguration = checkNotNull(
-                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = value })
+        for (payload in listOf(descriptor(), customDescriptor)) {
+            fun decode(value: String = payload): NativeTargetConfiguration = checkNotNull(
+                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(value) })
             )
 
             val first = decode()
@@ -114,7 +167,7 @@ class NativeTargetConfigurationTest {
                 "staticPrefix" to family.staticPrefix,
                 "staticSuffix" to family.staticSuffix
             )) {
-                val conflicting = encoded.replace("\"$property\":\"$value\"", "\"$property\":\"wrong\"")
+                val conflicting = payload.replace("\"$property\":\"$value\"", "\"$property\":\"wrong\"")
                 val error = assertFailsWith<IllegalArgumentException> { decode(conflicting) }
                 assertEquals("Conflicting definition of Native family '${family.name}'", error.message)
                 assertSame(family, decode().target.family)
@@ -123,15 +176,16 @@ class NativeTargetConfigurationTest {
     }
 
     @Test
-    fun `encoded Native options preserve arbitrary property punctuation`() {
-        val json = descriptor("""{"features":"","properties":{"flag":"a,b;c=d:e"}}""")
+    fun `Native descriptor files preserve arbitrary property punctuation and UTF-8`() {
+        val json = descriptor("""{"features":"","properties":{"flag":"a,b;c=d:e","unicode":"Grüße 世界"}}""")
         val config = CompilerConfiguration().apply {
-            kcmlNativeTarget = Base64.getUrlEncoder().withoutPadding().encodeToString(json.toByteArray(Charsets.UTF_8))
+            kcmlNativeTarget = descriptorFile(json)
         }
         val configured = NativeTargetConfiguration.configure(target, config)
         assertSame(target, configured)
         assertEquals("", NativeTargetConfiguration.architecture(config)?.features)
         assertEquals("a,b;c=d:e", config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("flag"))
+        assertEquals("Grüße 世界", config[NativeConfigurationKeys.OVERRIDE_KONAN_PROPERTIES]?.get("unicode"))
     }
 
     @Test
@@ -140,9 +194,9 @@ class NativeTargetConfigurationTest {
             override val konanTarget = KonanTarget.LINUX_ARM64
         }
         val config = CompilerConfiguration().apply {
-            kcmlNativeTarget = descriptor("""{"cpu":"generic"}""").replace(
+            kcmlNativeTarget = descriptorFile(descriptor("""{"cpu":"generic"}""").replace(
                 "\"name\":\"linux_x64\"", "\"explicitTarget\":false,\"name\":\"linux_x64\""
-            )
+            ))
         }
         val configured = NativeTargetConfiguration.configure(pluginTarget, config)
         assertSame(KonanTarget.LINUX_ARM64, configured.konanTarget)
@@ -153,7 +207,7 @@ class NativeTargetConfigurationTest {
     fun `explicit Native descriptors do not require a plugin factory`() {
         val config = CompilerConfiguration().apply {
             kcmlCompileTarget = "standalone_custom_native"
-            kcmlNativeTarget = descriptor()
+            kcmlNativeTarget = descriptorFile()
         }
         val configured = CompileTargetRegistryImpl().createTarget(config) as NativeCompileTarget
         assertSame(KonanTarget.LINUX_X64, configured.konanTarget)
@@ -165,7 +219,7 @@ class NativeTargetConfigurationTest {
         try {
             val config = CompilerConfiguration().apply {
                 kcmlCompileTarget = "standalone_custom_native"
-                kcmlNativeTarget = descriptor("""{"cpu":"haswell"}""")
+                kcmlNativeTarget = descriptorFile(descriptor("""{"cpu":"haswell"}"""))
             }
             PluginLoaderImpl.loadAndInvokeStandalone(config, emptyList())
             val target = PluginLoaderImpl.compileTargetOrNull as NativeCompileTarget
@@ -181,7 +235,7 @@ class NativeTargetConfigurationTest {
 
     @Test
     fun `descriptor rejects conflicting enums and invalid settings`() {
-        for (encoded in listOf(
+        for (payload in listOf(
             descriptor(bitness = 32),
             descriptor(bitness = 0),
             descriptor().replace("\"exeSuffix\":\"${Family.LINUX.exeSuffix}\"", "\"exeSuffix\":\"wrong\""),
@@ -189,10 +243,28 @@ class NativeTargetConfigurationTest {
             descriptor("""{"cpu":" "}"""),
             descriptor("""{"properties":{" ":"value"}}""")
         )) {
-            assertFailsWith<IllegalArgumentException>(encoded) {
-                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = encoded })
+            assertFailsWith<IllegalArgumentException>(payload) {
+                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(payload) })
             }
         }
+    }
+
+    @Test
+    fun `missing Native descriptor file reports its path`() {
+        val path = descriptorFile()
+        Files.delete(Path.of(path))
+        val config = CompilerConfiguration().apply { kcmlNativeTarget = path }
+        val failure = assertFailsWith<NoSuchFileException> { NativeTargetConfiguration.get(config) }
+        assertEquals(path, failure.file)
+    }
+
+    @Test
+    fun `malformed Native descriptor file is rejected without caching the failure`() {
+        val path = descriptorFile("{\"name\":")
+        val config = CompilerConfiguration().apply { kcmlNativeTarget = path }
+        assertFailsWith<SerializationException> { NativeTargetConfiguration.get(config) }
+        Files.writeString(Path.of(path), descriptor(), Charsets.UTF_8)
+        assertSame(KonanTarget.LINUX_X64, NativeTargetConfiguration.get(config)?.target)
     }
 
     @Test

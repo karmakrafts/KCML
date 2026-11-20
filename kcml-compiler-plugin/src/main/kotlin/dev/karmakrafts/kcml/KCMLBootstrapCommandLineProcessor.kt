@@ -73,8 +73,8 @@ class KCMLBootstrapCommandLineProcessor : CommandLineProcessor {
         ),
         CliOption(
             optionName = NATIVE_TARGET,
-            valueDescription = "<base64-json>",
-            description = "Custom Kotlin/Native target and LLVM architecture configuration",
+            valueDescription = "<path>",
+            description = "Path to a UTF-8 JSON descriptor of the custom Kotlin/Native target and LLVM architecture configuration",
             required = false
         ),
         CliOption(

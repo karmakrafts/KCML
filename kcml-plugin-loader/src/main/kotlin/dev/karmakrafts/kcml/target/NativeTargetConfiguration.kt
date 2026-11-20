@@ -19,13 +19,9 @@ package dev.karmakrafts.kcml.target
 import dev.karmakrafts.kcml.api.target.KonanTargets
 import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.target.proto.NativeTargetDescriptor
 import dev.karmakrafts.kcml.util.kcmlNativeTarget
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.boolean
-import kotlinx.serialization.json.int
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.decodeFromString
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
@@ -34,7 +30,8 @@ import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.BinaryFormat
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import java.util.*
+import kotlin.io.path.Path
+import kotlin.io.path.readText
 
 internal class NativeTargetConfiguration(
     val target: KonanTarget, val architecture: NativeArchitectureConfiguration, val explicitTarget: Boolean
@@ -44,12 +41,6 @@ internal class NativeTargetConfiguration(
             CompilerConfigurationKey.create("kcmlResolvedNativeTarget")
         private val architectureKey: CompilerConfigurationKey<NativeArchitectureConfiguration> =
             CompilerConfigurationKey.create("kcmlResolvedNativeArchitecture")
-        private val suffixes: List<String> =
-            listOf("exeSuffix", "dynamicPrefix", "dynamicSuffix", "staticPrefix", "staticSuffix")
-
-        private fun JsonObject.string(key: String): String = requireNotNull(get(key)) {
-            "Missing Native target property '$key'"
-        }.jsonPrimitive.content
 
         fun architecture(configuration: CompilerConfiguration): NativeArchitectureConfiguration? =
             configuration[architectureKey]
@@ -58,19 +49,13 @@ internal class NativeTargetConfiguration(
             var nativeConfig = configuration[key]
             if (nativeConfig != null) return nativeConfig
 
-            val encoded = configuration.kcmlNativeTarget ?: return null
-            val payload = if (encoded.trimStart().startsWith('{')) encoded
-            else Base64.getUrlDecoder().decode(encoded).toString(Charsets.UTF_8)
-            val json = Json.parseToJsonElement(payload).jsonObject
-            val name = json.string("name").also { require(it.isNotBlank()) { "Native target name must not be blank" } }
+            val descriptorPath = configuration.kcmlNativeTarget ?: return null
+            val payload = Path(descriptorPath).readText(Charsets.UTF_8)
+            val descriptor = NativeTargetDescriptor.json.decodeFromString<NativeTargetDescriptor>(payload)
+            val name = descriptor.name.also { require(it.isNotBlank()) { "Native target name must not be blank" } }
             // Set up target family
-            val familyJson = json.getValue("family").jsonObject
-            val familyName = familyJson.string("name").also { require(it.isNotBlank()) }
-            val [exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix] = suffixes.map {
-                familyJson.string(
-                    it
-                )
-            }
+            val (familyName, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix) = descriptor.family
+            require(familyName.isNotBlank())
             val family = synchronized(Family::class.java) {
                 Family.entries.firstOrNull { it.name == familyName }?.also {
                     require(
@@ -81,9 +66,8 @@ internal class NativeTargetConfiguration(
                 )
             }
             // Set up target architecture
-            val architectureJson = json.getValue("architecture").jsonObject
-            val architectureName = architectureJson.string("name").also { require(it.isNotBlank()) }
-            val bitness = architectureJson.getValue("bitness").jsonPrimitive.int.also {
+            val architectureName = descriptor.architecture.name.also { require(it.isNotBlank()) }
+            val bitness = descriptor.architecture.bitness.also {
                 require(it > 0) { "Native architecture bitness must be positive" }
             }
             val architecture = synchronized(Architecture::class.java) {
@@ -96,23 +80,20 @@ internal class NativeTargetConfiguration(
                 it.family == family && it.architecture == architecture
             } ?: KonanTargets.create(name, family, architecture)
 
-            val llvm = json["llvm"]?.jsonObject.orEmpty()
+            val llvm = descriptor.llvm
             val settings = NativeArchitectureConfiguration().apply {
-                targetTriple = llvm["targetTriple"]?.jsonPrimitive?.content
-                cpu = llvm["cpu"]?.jsonPrimitive?.content
-                features = llvm["features"]?.jsonPrimitive?.content
-                dataLayout = llvm["dataLayout"]?.jsonPrimitive?.content
-                binaryFormat = llvm["binaryFormat"]?.jsonPrimitive?.content?.let(BinaryFormat::valueOf)
-                supports64BitAtomics = llvm["supports64BitAtomics"]?.jsonPrimitive?.boolean
-                supportsUnalignedAccess = llvm["supportsUnalignedAccess"]?.jsonPrimitive?.boolean
-                llvm["properties"]?.jsonObject?.forEach { (key, value) ->
-                    properties[key] = value.jsonPrimitive.content
-                }
+                targetTriple = llvm.targetTriple
+                cpu = llvm.cpu
+                features = llvm.features
+                dataLayout = llvm.dataLayout
+                binaryFormat = llvm.binaryFormat?.let(BinaryFormat::valueOf)
+                supports64BitAtomics = llvm.supports64BitAtomics
+                supportsUnalignedAccess = llvm.supportsUnalignedAccess
+                properties.putAll(llvm.properties)
                 validate()
             }
-            val explicitTarget = json["explicitTarget"]?.jsonPrimitive?.boolean ?: true
 
-            nativeConfig = NativeTargetConfiguration(target, settings, explicitTarget)
+            nativeConfig = NativeTargetConfiguration(target, settings, descriptor.explicitTarget)
             configuration.put(key, nativeConfig)
             return nativeConfig
         }

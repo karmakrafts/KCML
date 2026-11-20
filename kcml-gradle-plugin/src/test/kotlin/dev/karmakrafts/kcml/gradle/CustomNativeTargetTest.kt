@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import dev.karmakrafts.kcml.target.proto.NativeTargetDescriptor
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -72,7 +73,7 @@ class CustomNativeTargetTest {
 
     private fun uniqueName(prefix: String) = "${prefix}_${UUID.randomUUID().toString().replace("-", "")}"
 
-    private fun String.decodeNativeTarget(): String = String(Base64.getUrlDecoder().decode(this), Charsets.UTF_8)
+    private fun String.readNativeTarget(): String = Files.readString(Path.of(this))
 
     private fun parseNativePluginOption(option: String): K2NativeCompilerArguments = K2NativeCompilerArguments().apply {
         Class.forName("org.jetbrains.kotlin.cli.common.arguments.ParseCommandLineArgumentsKt").getMethod(
@@ -290,7 +291,7 @@ class CustomNativeTargetTest {
         val provider = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java).applyToCompilation(compilation)
         assertEquals(
             "{\"properties\":{}}", Json.parseToJsonElement(
-                provider.get().single { it.key == "nativeTarget" }.value.decodeNativeTarget()
+                provider.get().single { it.key == "nativeTarget" }.value.readNativeTarget()
             ).jsonObject["llvm"].toString()
         )
         (project as ProjectInternal).evaluate()
@@ -298,6 +299,9 @@ class CustomNativeTargetTest {
         val link = binary.linkTaskProvider.get()
         val cache = link.taskDependencies.getDependencies(link).filterIsInstance<KCMLPrepareNativeCacheTask>().single()
         val before = link.registeredInput("kcmlPluginOptions")
+        val nativeBefore = link.registeredInput("kcmlNativeTarget")
+        val compileTask = compilation.compileTaskProvider.get()
+        val compileBefore = compileTask.registeredInput("kcmlNativeTarget")
         val cacheBefore = cache.inputs.properties["kcmlNativeTarget${target.name}"]
         target.architecture {
             targetTriple = "riscv32-unknown-none"
@@ -312,24 +316,26 @@ class CustomNativeTargetTest {
         }
         val expected =
             """{"explicitTarget":true,"name":"options_native","family":{"name":"${family.name}","exeSuffix":".run","dynamicPrefix":"dyn","dynamicSuffix":".dyn","staticPrefix":"static","staticSuffix":".archive"},"architecture":{"name":"${architecture.name}","bitness":32},"llvm":{"targetTriple":"riscv32-unknown-none","cpu":"generic-rv32","features":"+m,+a","dataLayout":"e-p:32:32","binaryFormat":"ELF","supports64BitAtomics":false,"supportsUnalignedAccess":true,"properties":{"llvmHome":"/custom/llvm","targetSysRoot.options_native":"/custom/sysroot"}}}"""
-        val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(expected.toByteArray(Charsets.UTF_8))
         val options = provider.get()
-        assertEquals(encoded, options.single { it.key == "nativeTarget" }.value)
-        assertEquals(expected, options.single { it.key == "nativeTarget" }.value.decodeNativeTarget())
+        val descriptorPath = options.single { it.key == "nativeTarget" }.value
+        assertEquals(expected, descriptorPath.readNativeTarget())
         assertEquals(expected, target.nativeTargetJson())
         assertTrue(options.indexOfFirst { it.key == "nativeTarget" } < options.indexOfFirst { it.key == "agentCommPort" })
-        val compileTask = compilation.compileTaskProvider.get()
         val compileOptions =
             compileTask.kotlinPluginData!!.get().options.arguments + compileTask.compilerPluginCommandLine
         assertEquals(
-            listOf("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=$encoded"),
+            listOf("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=$descriptorPath"),
             compileOptions.filter { it.startsWith("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=") })
         val arguments = link.kotlinPluginData!!.get().options.arguments
         assertEquals(
-            listOf("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=$encoded"),
+            listOf("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=$descriptorPath"),
             arguments.filter { it.startsWith("plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=") })
         assertEquals(expected, cache.inputs.properties["kcmlNativeTarget${target.name}"])
-        assertNotEquals(before, link.registeredInput("kcmlPluginOptions"))
+        assertEquals(before, link.registeredInput("kcmlPluginOptions"))
+        assertEquals(expected, link.registeredInput("kcmlNativeTarget"))
+        assertEquals(expected, compileTask.registeredInput("kcmlNativeTarget"))
+        assertNotEquals(nativeBefore, link.registeredInput("kcmlNativeTarget"))
+        assertNotEquals(compileBefore, compileTask.registeredInput("kcmlNativeTarget"))
         assertNotEquals(cacheBefore, cache.inputs.properties["kcmlNativeTarget${target.name}"])
         assertFalse(other.nativeTargetJson()!!.contains("llvmHome"))
         target.architecture {
@@ -344,13 +350,44 @@ class CustomNativeTargetTest {
         }
         assertEquals(
             "{\"properties\":{}}", Json.parseToJsonElement(
-                provider.get().single { it.key == "nativeTarget" }.value.decodeNativeTarget()
+                provider.get().single { it.key == "nativeTarget" }.value.readNativeTarget()
             ).jsonObject["llvm"].toString()
         )
     }
 
     @Test
-    fun `encoded Native metadata survives command line parsing without splitting JSON`() =
+    fun `Native descriptor files are generated on demand in the configured build directory`() = withProject { project, kotlin ->
+        project.layout.buildDirectory.set(project.layout.projectDirectory.dir("custom build 工具"))
+        val target = kotlin.linuxX64()
+        val other = kotlin.linuxX64("other")
+        target.architecture { cpu = "first" }
+        other.architecture { cpu = "other" }
+        val bootstrap = project.plugins.getPlugin(KCMLBootstrapGradlePlugin::class.java)
+        val provider = bootstrap.applyToCompilation(target.compilations.getByName("main"))
+        assertFalse(project.layout.buildDirectory.get().asFile.exists())
+        val path = Path.of(provider.get().single { it.key == "nativeTarget" }.value)
+        assertTrue(path.isAbsolute)
+        assertTrue(path.startsWith(project.layout.buildDirectory.get().asFile.toPath()))
+        val option = "plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget=$path"
+        assertEquals(listOf(option), parseNativePluginOption(option).pluginOptions.toList())
+        assertEquals(target.nativeTargetJson(), Files.readString(path))
+        val modified = Files.getLastModifiedTime(path)
+        assertEquals(path.toString(), provider.get().single { it.key == "nativeTarget" }.value)
+        assertEquals(modified, Files.getLastModifiedTime(path))
+        target.architecture { cpu = "updated" }
+        assertEquals(path.toString(), provider.get().single { it.key == "nativeTarget" }.value)
+        assertEquals(target.nativeTargetJson(), Files.readString(path))
+        val otherPath = Path.of(bootstrap.applyToCompilation(other.compilations.getByName("main"))
+            .get().single { it.key == "nativeTarget" }.value)
+        assertNotEquals(path, otherPath)
+        assertEquals(other.nativeTargetJson(), Files.readString(otherPath))
+        Files.delete(path)
+        assertEquals(path.toString(), provider.get().single { it.key == "nativeTarget" }.value)
+        assertEquals(target.nativeTargetJson(), Files.readString(path))
+    }
+
+    @Test
+    fun `Native descriptor paths survive command line parsing without splitting JSON`() =
         withProject { project, kotlin ->
             val target = kotlin.linuxX64()
             target.architecture {
@@ -359,6 +396,13 @@ class CustomNativeTargetTest {
                 properties["custom"] = "quoted \"value\"\nsecond line"
             }
             val json = target.nativeTargetJson()!!
+            val descriptor = NativeTargetDescriptor.json.decodeFromString(NativeTargetDescriptor.serializer(), json)
+            assertFalse(descriptor.explicitTarget)
+            assertEquals(target.konanTarget.name, descriptor.name)
+            assertEquals("+m,+a", descriptor.llvm.features)
+            assertEquals("/custom/工具/llvm,bin:+/=", descriptor.llvm.properties["llvmHome"])
+            assertEquals("quoted \"value\"\nsecond line", descriptor.llvm.properties["custom"])
+            assertEquals(json, NativeTargetDescriptor.json.encodeToString(NativeTargetDescriptor.serializer(), descriptor))
             val prefix = "plugin:${BuildInfo.PLUGIN_ID}.bootstrap:nativeTarget="
             val raw = parseNativePluginOption("$prefix$json")
             assertNotEquals(listOf("$prefix$json"), raw.pluginOptions.toList())
@@ -367,12 +411,10 @@ class CustomNativeTargetTest {
                 .applyToCompilation(target.compilations.getByName("main"))
                 .get()
                 .single { it.key == "nativeTarget" }
-            val encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(json.toByteArray(Charsets.UTF_8))
-            assertEquals(encoded, option.value)
-            assertTrue(option.value.matches(Regex("[A-Za-z0-9_-]+")))
+            assertTrue(Files.isRegularFile(Path.of(option.value)))
             val parsed = parseNativePluginOption("$prefix${option.value}")
-            assertEquals(listOf("$prefix$encoded"), parsed.pluginOptions.toList())
-            assertEquals(json, parsed.pluginOptions.single().removePrefix(prefix).decodeNativeTarget())
+            assertEquals(listOf("$prefix${option.value}"), parsed.pluginOptions.toList())
+            assertEquals(json, parsed.pluginOptions.single().removePrefix(prefix).readNativeTarget())
             assertEquals(json, target.nativeTargetJson())
         }
 
@@ -385,10 +427,12 @@ class CustomNativeTargetTest {
             listOf(regular, legacy).forEach { target ->
                 val provider = bootstrap.applyToCompilation(target.compilations.getByName("main"))
                 assertTrue(provider.get().none { it.key == "nativeTarget" })
+                assertFalse(project.layout.buildDirectory.dir("kcml_native_targets").get().asFile
+                    .resolve("${target.name}.json").exists())
                 target.architecture { cpu = "late-cpu" }
                 assertEquals(
                     target.konanTarget.name, Json.parseToJsonElement(
-                        provider.get().single { it.key == "nativeTarget" }.value.decodeNativeTarget()
+                        provider.get().single { it.key == "nativeTarget" }.value.readNativeTarget()
                     ).jsonObject["name"]?.jsonPrimitive?.content
                 )
             }

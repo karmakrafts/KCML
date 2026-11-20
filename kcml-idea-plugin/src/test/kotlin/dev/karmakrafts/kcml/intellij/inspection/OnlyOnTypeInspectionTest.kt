@@ -66,7 +66,7 @@ class OnlyOnTypeInspectionTest : InspectionFixtureTestCase(OnlyOnTypeInspection(
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(alias)!!
-            document.text = "package sample\ntypealias Alias = () -> Unit"
+            document.setText("package sample\ntypealias Alias = () -> Unit")
             documents.commitDocument(document)
         }
         assertEquals(0, problems())

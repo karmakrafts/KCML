@@ -225,7 +225,8 @@ class EarlyBootstrapTest {
                     classpath,
                     EarlyBootstrapProcess::class.java.name,
                     server.localPort.toString(),
-                    plugin.toString()
+                    plugin.toString(),
+                    directory.toString()
                 ).redirectErrorStream(true).redirectOutput(log.toFile()).start()
                 try {
                     assertTrue(
@@ -253,6 +254,7 @@ object EarlyBootstrapProcess {
     private const val NATIVE_ARCHITECTURE = "KCML_BOOTSTRAP_ARCH64"
     private const val TARGET_TRIPLE = "x86_64-unknown-linux-gnu"
     private const val DATA_LAYOUT = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+    private lateinit var descriptorDirectory: Path
 
     private fun nativeTargetMetadata(bitness: Int = 64, dynamicSuffix: String = ".so", cpu: String = "x86-64"): String = """
         {
@@ -275,7 +277,9 @@ object EarlyBootstrapProcess {
             }
         }
     """.trimIndent().let {
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(it.toByteArray(Charsets.UTF_8))
+        val path = Files.createTempFile(descriptorDirectory, "native target ü-", ".json")
+        Files.writeString(path, it, Charsets.UTF_8)
+        path.toString()
     }
 
     private fun assertNativeMetadata(target: CompileTarget) {
@@ -308,6 +312,7 @@ object EarlyBootstrapProcess {
 
     @JvmStatic
     fun main(arguments: Array<String>) {
+        descriptorDirectory = Path.of(arguments[2])
         val processors = ServiceLoader.load(CommandLineProcessor::class.java).toList()
         assertTrue(processors.indexOfFirst { it.pluginId == "kcml.bootstrap" } < processors.indexOfFirst { it.pluginId == "kcml" })
         var host: KonanTarget? = null

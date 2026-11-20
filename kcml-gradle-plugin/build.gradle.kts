@@ -58,6 +58,7 @@ configureDokka {
 subprojects {
     group = rootProject.group
     version = rootProject.version
+    layout.buildDirectory = rootProject.layout.buildDirectory.dir("shared/$name")
 }
 
 val shade = configurations.create("shade") {
@@ -85,6 +86,7 @@ dependencies {
     implementation(libs.kotlinx.serialization.core)
     implementation(libs.kotlinx.serialization.json)
     shade(projects.kcmlAgentProtocol)
+    shade(projects.kcmlTargetProtocol)
     shade(projects.kcmlGradleApi)
     shade(projects.kcmlHacks)
     shade(libs.ow2.asm.core)
@@ -103,6 +105,9 @@ kotlin {
 }
 
 tasks {
+    check {
+        dependsOn(subprojects.map { "${it.path}:check" })
+    }
     test {
         useJUnitPlatform()
     }
@@ -185,7 +190,7 @@ publishing {
                         val name = it.name()
                         name == "artifactId" || (name is groovy.namespace.QName && name.localPart == "artifactId")
                     }?.text()
-                    artifactId in setOf("kcml-agent-protocol", "kcml-gradle-api", "kcml-hacks", "asm")
+                    artifactId in setOf("kcml-agent-protocol", "kcml-target-protocol", "kcml-gradle-api", "kcml-hacks", "asm")
                 }?.forEach { dependenciesNode.remove(it) }
             }
         }

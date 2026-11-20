@@ -30,12 +30,18 @@ plugins {
     alias(libs.plugins.shadow) apply false
     alias(libs.plugins.intelliJPlatform) apply false
     alias(libs.plugins.karmaConventions)
+    base
     signing
     `maven-publish`
 }
 
 group = "dev.karmakrafts.kcml"
 version = GitLabCI.getDefaultVersion(libs.versions.kcml)
+
+tasks.named("check") {
+    dependsOn(subprojects.map { "${it.path}:check" })
+    dependsOn(gradle.includedBuild("kcml-gradle-plugin").task(":check"))
+}
 
 subprojects {
     apply {

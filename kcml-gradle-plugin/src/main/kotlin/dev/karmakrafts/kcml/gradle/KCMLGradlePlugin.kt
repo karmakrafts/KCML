@@ -42,7 +42,6 @@ import org.jetbrains.kotlin.gradle.tasks.CompilerPluginOptions
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompilerPluginData
 import org.jetbrains.kotlin.gradle.tasks.KotlinNativeLink
-import java.util.*
 import javax.inject.Inject
 import kotlin.io.path.absolutePathString
 
@@ -177,6 +176,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                 )
                             }
                             task.inputs.property("kcmlBootstrapOptions", bootstrap.map { it.arguments })
+                            task.inputs.property("kcmlNativeTarget", project.provider {
+                                target.nativeTargetJson().orEmpty()
+                            })
                         }
                     }
                     target.binaries.forEach { binary ->
@@ -227,6 +229,9 @@ internal open class KCMLGradlePlugin @Inject constructor(
                             }
                             task.dependsOn(prepareCache)
                             task.inputs.property("kcmlPluginOptions", options.map { it.arguments })
+                            task.inputs.property("kcmlNativeTarget", project.provider {
+                                target.nativeTargetJson().orEmpty()
+                            })
                             task.inputs.files(plugins, runtime)
                                 .withPropertyName("kcmlPluginClasspath")
                                 .withNormalizer(ClasspathNormalizer::class.java)
@@ -362,7 +367,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
         val project = kotlinCompilation.target.project
         val extension = project.extensions.findByType(KCMLExtension::class.java)!!
         return providerFactory.provider {
-            val nativeTarget = (kotlinCompilation.target as? KotlinNativeTarget)?.nativeTargetJson()
+            val nativeTarget = (kotlinCompilation.target as? KotlinNativeTarget)?.nativeTargetFile()
             val konanTarget = getKonanTarget(kotlinCompilation)
             val pluginClasspaths = getPluginClasspaths(project).joinToString(";") {
                 it.file.toPath().absolutePathString()
@@ -388,7 +393,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                 if (nativeTarget != null) add(
                     SubpluginOption(
                         OPT_NATIVE_TARGET,
-                        Base64.getUrlEncoder().withoutPadding().encodeToString(nativeTarget.toByteArray(Charsets.UTF_8))
+                        nativeTarget.absolutePath
                     )
                 )
                 add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))

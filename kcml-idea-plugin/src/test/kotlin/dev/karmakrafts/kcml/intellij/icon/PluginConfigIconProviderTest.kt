@@ -115,7 +115,7 @@ class PluginConfigIconProviderTest : AnnotationFixtureTestCase() {
         fun edit(declaration: String, matches: Boolean, matchesOther: Boolean) {
             val before = refreshes
             WriteCommandAction.runWriteCommandAction(project) {
-                document.text = "import dev.karmakrafts.kcml.api.plugin.Plugin\n$declaration"
+                document.setText("import dev.karmakrafts.kcml.api.plugin.Plugin\n$declaration")
                 PsiDocumentManager.getInstance(project).commitDocument(document)
             }
             PlatformTestUtil.waitWithEventsDispatching("Metadata icon presentation refresh", { refreshes > before }, 5)

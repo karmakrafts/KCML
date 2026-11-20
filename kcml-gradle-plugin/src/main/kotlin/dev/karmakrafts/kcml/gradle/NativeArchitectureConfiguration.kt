@@ -18,12 +18,15 @@ package dev.karmakrafts.kcml.gradle
 
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.EnumExtender
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
+import dev.karmakrafts.kcml.target.proto.NativeArchitectureDescriptor
+import dev.karmakrafts.kcml.target.proto.NativeFamilyDescriptor
+import dev.karmakrafts.kcml.target.proto.NativeLlvmDescriptor
+import dev.karmakrafts.kcml.target.proto.NativeTargetDescriptor
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.BinaryFormat
 import org.jetbrains.kotlin.konan.target.Family
+import java.io.File
 
 /**
  * Optional LLVM settings. Unspecified fields retain the compiler plugin's defaults.
@@ -117,42 +120,43 @@ internal class NativeTargetConfiguration {
     val llvm: NativeArchitectureConfiguration = NativeArchitectureConfiguration()
 }
 
+internal fun KotlinNativeTarget.nativeTargetFile(): File? = synchronized(this) {
+    val json = nativeTargetJson() ?: return@synchronized null
+    val file = project.layout.buildDirectory.file("kcml_native_targets/$name.json").get().asFile
+    if (!file.isFile || file.readText() != json) {
+        file.parentFile.mkdirs()
+        file.writeText(json)
+    }
+    file
+}
+
 @Suppress("DEPRECATION")
 internal fun KotlinNativeTarget.nativeTargetJson(): String? {
     val configuration = project.extensions.getByType(KCMLExtension::class.java).nativeTargets[this] ?: return null
     if (!configuration.explicit && !configuration.configured) return null
     val target = konanTarget
-    return buildJsonObject {
-        put("explicitTarget", configuration.explicit)
-        put("name", target.name)
-        put("family", buildJsonObject {
-            put("name", target.family.name)
-            put("exeSuffix", target.family.exeSuffix)
-            put("dynamicPrefix", target.family.dynamicPrefix)
-            put("dynamicSuffix", target.family.dynamicSuffix)
-            put("staticPrefix", target.family.staticPrefix)
-            put("staticSuffix", target.family.staticSuffix)
-        })
-        put("architecture", buildJsonObject {
-            put("name", target.architecture.name)
-            put("bitness", target.architecture.bitness)
-        })
-        put("llvm", buildJsonObject {
-            configuration.llvm.apply {
-                targetTriple?.let { put("targetTriple", it) }
-                cpu?.let { put("cpu", it) }
-                features?.let { put("features", it) }
-                dataLayout?.let { put("dataLayout", it) }
-                binaryFormat?.let { put("binaryFormat", it.name) }
-                supports64BitAtomics?.let { put("supports64BitAtomics", it) }
-                supportsUnalignedAccess?.let { put("supportsUnalignedAccess", it) }
-                put("properties", buildJsonObject {
-                    properties.forEach { (key, value) ->
-                        require(key.isNotBlank()) { "Native property keys must not be blank" }
-                        put(key, value)
-                    }
-                })
-            }
-        })
-    }.toString()
+    val descriptor = NativeTargetDescriptor(
+        explicitTarget = configuration.explicit,
+        name = target.name,
+        family = target.family.let {
+            NativeFamilyDescriptor(
+                it.name, it.exeSuffix, it.dynamicPrefix, it.dynamicSuffix, it.staticPrefix, it.staticSuffix
+            )
+        },
+        architecture = NativeArchitectureDescriptor(target.architecture.name, target.architecture.bitness),
+        llvm = configuration.llvm.let {
+            require(it.properties.keys.all(String::isNotBlank)) { "Native property keys must not be blank" }
+            NativeLlvmDescriptor(
+                targetTriple = it.targetTriple,
+                cpu = it.cpu,
+                features = it.features,
+                dataLayout = it.dataLayout,
+                binaryFormat = it.binaryFormat?.name,
+                supports64BitAtomics = it.supports64BitAtomics,
+                supportsUnalignedAccess = it.supportsUnalignedAccess,
+                properties = it.properties.toMap()
+            )
+        }
+    )
+    return NativeTargetDescriptor.json.encodeToString(NativeTargetDescriptor.serializer(), descriptor)
 }

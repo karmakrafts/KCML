@@ -60,6 +60,7 @@ dependencies {
     compileOnly(libs.kotlin.reflect)
     shadeImplementation(libs.kotlinx.serialization.core)
     shadeImplementation(libs.kotlinx.serialization.json)
+    shadeImplementation(projects.kcmlTargetProtocol)
     shadeImplementation(libs.kotlinGraphs)
 
     testImplementation(libs.kotlin.test)

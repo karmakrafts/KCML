@@ -85,7 +85,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(metadata)!!
-            document.text = """{"id":"updated"}"""
+            document.setText("""{"id":"updated"}""")
             documents.commitDocument(document)
         }
         waitForIds(setOf("updated")) { PluginIds.fromMetadata(myFixture.file) }
@@ -100,7 +100,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(source)!!
-            document.text = source.text.replace("\"example\"", "\"updated\"")
+            document.setText(source.text.replace("\"example\"", "\"updated\""))
             documents.commitDocument(document)
         }
         waitForIds(setOf("updated")) { PluginIds.fromAnnotations(myFixture.file) }

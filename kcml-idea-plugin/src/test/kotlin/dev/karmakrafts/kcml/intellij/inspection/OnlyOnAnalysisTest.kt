@@ -57,7 +57,7 @@ class OnlyOnAnalysisTest : LightJavaCodeInsightFixtureTestCase() {
         WriteCommandAction.runWriteCommandAction(project) {
             val documents = PsiDocumentManager.getInstance(project)
             val document = documents.getDocument(dependency)!!
-            document.text = "class UpdatedDependency"
+            document.setText("class UpdatedDependency")
             documents.commitDocument(document)
         }
         assertNull(lookup())
