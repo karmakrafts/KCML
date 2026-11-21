@@ -19,8 +19,11 @@ package dev.karmakrafts.kcml.intellij.completion
 import com.intellij.codeInsight.CodeInsightSettings
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
+import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.extensions.PluginId
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 import com.intellij.testFramework.PlatformTestUtil
@@ -28,6 +31,8 @@ import com.intellij.testFramework.PsiTestUtil
 import com.intellij.util.ThreeState
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import org.jetbrains.jps.model.java.JavaResourceRootType
+import java.io.File
+import java.nio.file.Path
 
 class PluginIdCompletionTest : AnnotationFixtureTestCase() {
     private var autoCompleteSmart = false
@@ -58,6 +63,23 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         addMetadata("different-filename", "example")
         configureAnnotation("@Plugin(\"ex<caret>\") class Example")
         assertEquals(setOf("example"), variants())
+    }
+
+    fun testSandboxJsonSchemaResourceIsAccessible() {
+        // Swift's schema provider is macOS-only, but its sandbox resource must be accessible on every host.
+        val plugin = PluginManagerCore.getPlugin(PluginId.getId("com.jetbrains.kmm"))!!
+        val jar = plugin.pluginPath.resolve("lib/modules/intellij.swift.core.jar")
+        assertTrue(
+            "Installed plugin roots must be permitted independently of individual classpath entries",
+            System.getProperty("vfs.additional-allowed-roots").split(File.pathSeparator).any {
+                plugin.pluginPath.toAbsolutePath().normalize().startsWith(Path.of(it).toAbsolutePath().normalize())
+            }
+        )
+        val schema = VirtualFileManager.getInstance().findFileByUrl(
+            "jar://${jar.toString().replace('\\', '/')}!/schemas/swift-format.schema.json"
+        )
+        assertNotNull("JSON schema providers must be able to read installed sandbox resources", schema)
+        assertTrue(schema!!.contentsToByteArray().isNotEmpty())
     }
 
     fun testMetadataLookupOnEdtIsDeferredAndCached() {

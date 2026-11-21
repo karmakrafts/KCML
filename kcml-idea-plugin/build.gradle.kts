@@ -16,6 +16,7 @@
 
 import dev.karmakrafts.conventions.configureJava
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
@@ -62,9 +63,10 @@ tasks {
         classpath = classpath.filter {
             it.name != "kotlinc.kotlin-compiler-cli.jar" || !it.path.contains("/kmm-plugin/")
         }
-        // IDE extensions also resolve runtime artifacts outside the fixture's module libraries.
+        // IDE extensions resolve resources from installed sandbox copies as well as classpath artifacts.
         systemProperty("vfs.additional-allowed-roots", classpath.files
             .map { if (it.isFile) it.parentFile else it }
+            .plus(named<PrepareSandboxTask>("prepareTestSandbox").get().sandboxPluginsDirectory.get().asFile)
             .distinct()
             .joinToString(File.pathSeparator) { it.canonicalPath })
     }
