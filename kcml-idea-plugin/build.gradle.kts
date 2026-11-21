@@ -62,6 +62,11 @@ tasks {
         classpath = classpath.filter {
             it.name != "kotlinc.kotlin-compiler-cli.jar" || !it.path.contains("/kmm-plugin/")
         }
+        // IDE extensions also resolve runtime artifacts outside the fixture's module libraries.
+        systemProperty("vfs.additional-allowed-roots", classpath.files
+            .map { if (it.isFile) it.parentFile else it }
+            .distinct()
+            .joinToString(File.pathSeparator) { it.canonicalPath })
     }
 
     runIde {

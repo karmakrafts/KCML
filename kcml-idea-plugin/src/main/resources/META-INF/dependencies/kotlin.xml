@@ -68,7 +68,7 @@
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.InjectLineMarkerProvider"/>
 
         <!-- Completion contributors -->
-        <completion.contributor language="kotlin" order="first"
+        <completion.contributor language="kotlin" order="first, before KotlinCompletionContributor"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.CompileTargetCompletionContributor"/>
         <completion.contributor language="kotlin" order="first"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.IndirectMixinCompletionContributor"/>

@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.intellij.icon
 
+import com.intellij.codeInsight.completion.CompletionContributor
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.codeInsight.lookup.LookupElementPresentation
@@ -31,8 +32,10 @@ import com.intellij.ui.IconManager
 import com.intellij.ui.LayeredIcon
 import com.intellij.ui.icons.CompositeIcon
 import com.intellij.ui.icons.CoreIconManager
+import dev.karmakrafts.kcml.intellij.completion.CompileTargetCompletionContributor
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
 import org.jetbrains.kotlin.asJava.toLightClass
+import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.psi.KtClassOrObject
 import org.jetbrains.kotlin.psi.KtFile
 import javax.swing.Icon
@@ -178,6 +181,18 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
         assertTrue("File icon: $fileIcon", containsTarget(fileIcon))
     }
 
+    fun testIconContributorRunsBeforeKotlinCompletion() {
+        val contributors = CompletionContributor.forLanguage(KotlinLanguage.INSTANCE)
+        val iconContributor = contributors.indexOfFirst { it is CompileTargetCompletionContributor }
+        val kotlinContributor = contributors.indexOfFirst { it.javaClass.simpleName == "KotlinFirCompletionContributor" }
+        assertTrue("Compile target completion contributor must be registered", iconContributor >= 0)
+        assertTrue("Kotlin completion contributor must be registered", kotlinContributor >= 0)
+        assertTrue(
+            "Icon contributor must intercept Kotlin completion results: ${contributors.map { it.javaClass.name }}",
+            iconContributor < kotlinContributor
+        )
+    }
+
     fun testKotlinCompletionUsesTargetIcons() {
         myFixture.configureByText(
             "Completion.kt", """
@@ -282,7 +297,7 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     private fun assertKotlinTargetIcon(icon: Icon?) {
-        assertTrue(icon is LayeredIcon)
+        assertTrue("Expected layered Kotlin target icon, got ${icon?.javaClass?.name}: $icon", icon is LayeredIcon)
         val layered = icon as LayeredIcon
         assertSame(Icons.target, layered.getIcon(0))
         assertEquals(16, layered.iconWidth)
