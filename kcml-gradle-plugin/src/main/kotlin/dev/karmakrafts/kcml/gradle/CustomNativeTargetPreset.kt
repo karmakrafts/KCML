@@ -18,16 +18,16 @@
 
 package dev.karmakrafts.kcml.gradle
 
+import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
+import dev.karmakrafts.kcml.hacks.SyntheticDelegateClass
 import org.jetbrains.kotlin.gradle.dsl.KotlinMultiplatformExtension
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTargetPreset
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
-import org.objectweb.asm.Type
 import java.lang.reflect.Constructor
+import kotlin.jvm.internal.DefaultConstructorMarker
 
 internal fun KotlinMultiplatformExtension.createCustomNativeTarget(
     name: String, konanTarget: KonanTarget
@@ -41,58 +41,20 @@ internal fun KotlinMultiplatformExtension.createCustomNativeTarget(
     }
 }
 
-private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.classLoader) {
-    @Suppress("UNCHECKED_CAST")
-    val constructor: Constructor<KonanTarget> by lazy {
-        val targetName = TypeNames.konanTarget.internalName
-        val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
-        writer.visit(
-            Opcodes.V1_8,
-            Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL,
-            TypeNames.customKonanTarget.internalName,
-            null,
-            targetName,
-            null
-        )
-        writer.visitMethod(
-            Opcodes.ACC_PUBLIC,
-            "<init>",
-            Type.getMethodDescriptor(Type.VOID_TYPE, TypeNames.string, TypeNames.family, TypeNames.architecture),
-            null,
-            null
-        ).apply {
-            visitCode()
-            visitVarInsn(Opcodes.ALOAD, 0)
-            visitVarInsn(Opcodes.ALOAD, 1)
-            visitVarInsn(Opcodes.ALOAD, 2)
-            visitVarInsn(Opcodes.ALOAD, 3)
-            visitInsn(Opcodes.ACONST_NULL)
-            visitMethodInsn(
-                Opcodes.INVOKESPECIAL, targetName, "<init>", Type.getMethodDescriptor(
-                    Type.VOID_TYPE,
-                    TypeNames.string,
-                    TypeNames.family,
-                    TypeNames.architecture,
-                    TypeNames.defaultConstructorMarker
-                ), false
-            )
-            visitInsn(Opcodes.RETURN)
-            visitMaxs(0, 0)
-            visitEnd()
-        }
-        writer.visitEnd()
-        val bytes = writer.toByteArray()
-        requireNotNull(
-            defineClass(TypeNames.customKonanTarget.className, bytes, 0, bytes.size).getConstructor(
-                String::class.java, Family::class.java, Architecture::class.java
-            ) as Constructor<KonanTarget>
-        ) {
-            "Could not reflect constructor of custom KonanTarget for KCML"
-        }
+@OptIn(DiscouragedKcmlApi::class)
+private object CustomKonanTargetFactory {
+    val constructor: Constructor<out KonanTarget> by lazy {
+        SyntheticDelegateClass(
+            "dev.karmakrafts.kcml.gradle.internal.CustomKonanTarget",
+            KonanTarget::class.java.getDeclaredConstructor(
+                String::class.java, Family::class.java, Architecture::class.java, DefaultConstructorMarker::class.java
+            ),
+            trailingNullParameters = 1
+        ).constructor
     }
 }
 
 internal fun customKonanTarget(name: String, family: Family, architecture: Architecture): KonanTarget {
     require(name.isNotBlank()) { "Konan target name must not be blank" }
-    return CustomKonanTargetFactory.constructor.newInstance(name, family, architecture) as KonanTarget
+    return CustomKonanTargetFactory.constructor.newInstance(name, family, architecture)
 }

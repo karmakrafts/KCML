@@ -46,6 +46,7 @@ kotlin {
 }
 
 dependencies {
+    api(libs.ow2.asm.core)
     testImplementation(libs.kotlin.test)
 }
 

@@ -30,6 +30,8 @@ class CompilerRuntimePackagingTest {
                     val classes = generateSequence(loader::getNextEntry).map { it.name }.toSet()
                     for (name in listOf(
                         "dev/karmakrafts/kcml/hacks/EnumExtender.class",
+                        "dev/karmakrafts/kcml/hacks/SyntheticClass.class",
+                        "dev/karmakrafts/kcml/hacks/SyntheticDelegateClass.class",
                         "dev/karmakrafts/kcml/hacks/UnsafeUtils.class",
                         "dev/karmakrafts/kcml/target/KonanTargets.class"
                     )) assertTrue(name in classes, "Missing compiler runtime dependency $name")

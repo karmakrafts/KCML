@@ -89,7 +89,6 @@ dependencies {
     shade(projects.kcmlTargetProtocol)
     shade(projects.kcmlGradleApi)
     shade(projects.kcmlHacks)
-    shade(libs.ow2.asm.core)
 
     testImplementation(libs.kotlin.gradle.plugin)
     testImplementation(libs.kotlin.test)

@@ -18,54 +18,31 @@ package dev.karmakrafts.kcml.target
 
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.EnumExtender
+import dev.karmakrafts.kcml.hacks.SyntheticDelegateClass
 import org.jetbrains.kotlin.konan.target.Architecture
 import org.jetbrains.kotlin.konan.target.Family
 import org.jetbrains.kotlin.konan.target.KonanTarget
-import org.objectweb.asm.ClassWriter
-import org.objectweb.asm.Opcodes
 import java.lang.reflect.Constructor
+import kotlin.jvm.internal.DefaultConstructorMarker
 
-private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.classLoader) {
+@PublishedApi
+@OptIn(DiscouragedKcmlApi::class)
+internal object CustomKonanTargetFactory {
     val constructor: Constructor<out KonanTarget> by lazy {
-        val className = "dev/karmakrafts/kcml/target/internal/CustomKonanTarget"
-        val targetName = "org/jetbrains/kotlin/konan/target/KonanTarget"
-        val arguments =
-            "Ljava/lang/String;Lorg/jetbrains/kotlin/konan/target/Family;" + "Lorg/jetbrains/kotlin/konan/target/Architecture;"
-        val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
-        writer.visit(Opcodes.V1_8, Opcodes.ACC_PUBLIC or Opcodes.ACC_FINAL, className, null, targetName, null)
-        writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "($arguments)V", null, null).apply {
-            visitCode()
-            visitVarInsn(Opcodes.ALOAD, 0)
-            visitVarInsn(Opcodes.ALOAD, 1)
-            visitVarInsn(Opcodes.ALOAD, 2)
-            visitVarInsn(Opcodes.ALOAD, 3)
-            visitInsn(Opcodes.ACONST_NULL)
-            visitMethodInsn(
-                Opcodes.INVOKESPECIAL,
-                targetName,
-                "<init>",
-                "(${arguments}Lkotlin/jvm/internal/DefaultConstructorMarker;)V",
-                false
-            )
-            visitInsn(Opcodes.RETURN)
-            visitMaxs(0, 0)
-            visitEnd()
-        }
-        writer.visitEnd()
-        val bytes = writer.toByteArray()
-        defineClass(className.replace('/', '.'), bytes, 0, bytes.size).asSubclass(KonanTarget::class.java)
-            .getConstructor(String::class.java, Family::class.java, Architecture::class.java)
+        SyntheticDelegateClass(
+            "dev.karmakrafts.kcml.target.internal.CustomKonanTarget",
+            KonanTarget::class.java.getDeclaredConstructor(
+                String::class.java, Family::class.java, Architecture::class.java, DefaultConstructorMarker::class.java
+            ),
+            trailingNullParameters = 1
+        ).constructor
     }
 }
 
 /** Utilities for defining custom Kotlin/Native families, architectures, and targets. */
 @OptIn(DiscouragedKcmlApi::class)
 @Suppress("NOTHING_TO_INLINE")
-public object KonanTargets {
-    @PublishedApi
-    internal val constructor: Constructor<out KonanTarget>
-        get() = CustomKonanTargetFactory.constructor
-
+object KonanTargets {
     /**
      * Defines and registers a new Kotlin/Native [Family] enum value.
      *
@@ -78,7 +55,7 @@ public object KonanTargets {
      * @return the newly registered family value.
      * @throws IllegalArgumentException if [name] is empty or already used by a family value.
      */
-    public inline fun createFamily(
+    inline fun createFamily(
         name: String,
         exeSuffix: String,
         dynamicPrefix: String,
@@ -95,7 +72,7 @@ public object KonanTargets {
      * @return the newly registered architecture value.
      * @throws IllegalArgumentException if [name] is empty or already used by an architecture value.
      */
-    public inline fun createArchitecture(
+    inline fun createArchitecture(
         name: String, bitness: Int
     ): Architecture = EnumExtender.define(name, bitness)
 
@@ -108,7 +85,7 @@ public object KonanTargets {
      * @param architecture architecture for the target.
      * @return the constructed target.
      */
-    public inline fun create(
+    inline fun create(
         name: String, family: Family, architecture: Architecture
-    ): KonanTarget = constructor.newInstance(name, family, architecture)
+    ): KonanTarget = CustomKonanTargetFactory.constructor.newInstance(name, family, architecture)
 }
