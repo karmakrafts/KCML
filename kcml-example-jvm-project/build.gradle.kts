@@ -15,58 +15,43 @@
  */
 
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
-import dev.karmakrafts.kcml.gradle.customJsTarget
 import dev.karmakrafts.kcml.gradle.customJvmTarget
-import dev.karmakrafts.kcml.gradle.customNativeTarget
-import dev.karmakrafts.kcml.gradle.customWasmTarget
 
 plugins {
-    alias(libs.plugins.kotlin.multiplatform)
+    alias(libs.plugins.kotlin.jvm)
     id("dev.karmakrafts.kcml.kcml-gradle-plugin")
 }
 
 kcml {
     agentLogging = true
+    agentPortRangeStart = 12000
+    agentPortRangeEnd = 12999
+    compileTargetAliases.put("jvm", "exampleJvm")
 }
 
 kotlin {
     defaultCompilerOptions()
 
     customJvmTarget("exampleJvm")
-    customJsTarget("exampleJs") { browser(); nodejs() }
-    customWasmTarget("exampleWasm") { browser(); nodejs() }
-    customNativeTarget("exampleNative")
 
-    applyDefaultHierarchyTemplate()
     sourceSets {
-        commonTest {
+        named("exampleJvmMain") { kotlin.srcDir("src/main/kotlin") }
+        named("exampleJvmTest") {
+            kotlin.srcDir("src/test/kotlin")
             dependencies {
-                implementation(libs.kotlin.test)
+                implementation(kotlin("test-junit", libs.versions.kotlin.get()))
             }
         }
-        listOf("Main", "Test").forEach { compilation ->
-            named("exampleJs$compilation") { kotlin.srcDir("src/js$compilation/kotlin") }
-            named("exampleWasm$compilation") { kotlin.srcDir("src/wasmJs$compilation/kotlin") }
-        }
-        named("exampleJvmTest") { kotlin.srcDir("src/jvmTest/kotlin") }
-        named("exampleWasmTest") { kotlin.srcDir("src/wasmTest/kotlin") }
     }
 }
 
 dependencies {
     kcml(projects.kcmlExamplePlugin)
+    testImplementation(libs.kotlin.test)
 }
 
 configurations.configureEach {
     resolutionStrategy.dependencySubstitution {
         substitute(module("${rootProject.group}:kcml-compiler-plugin")).using(project(":kcml-compiler-plugin"))
-    }
-}
-
-val pluginJarTask = project(":kcml-example-plugin").tasks.named<Jar>("jar")
-
-tasks {
-    named("prepareKotlinIdeaImport") {
-        dependsOn(pluginJarTask)
     }
 }

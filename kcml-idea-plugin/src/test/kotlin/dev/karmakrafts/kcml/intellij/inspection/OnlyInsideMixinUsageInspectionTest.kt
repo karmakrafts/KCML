@@ -207,7 +207,7 @@ class OnlyInsideMixinUsageInspectionTest : InspectionFixtureTestCase(OnlyInsideM
             @DirectMixin("Target") class NotAMixin {
                 val value = dev.karmakrafts.kcml.api.mixin.<warning descr="API marked @OnlyInsideMixin must only be used in mixin classes">ConstantTable.getInt("value")</warning>
             }
-            fun unresolved() = <error descr="[UNRESOLVED_REFERENCE] Unresolved reference 'MissingTable'.">MissingTable</error>.getInt("value")
+            fun unresolved() = <error descr="[UNRESOLVED_REFERENCE]">MissingTable</error>.getInt("value")
         """.trimIndent()
     )
 

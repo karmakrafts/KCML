@@ -21,6 +21,7 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.model.ObjectFactory
 import org.gradle.api.provider.MapProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 import org.jetbrains.kotlin.gradle.plugin.mpp.KotlinNativeTarget
 import java.util.*
 import javax.inject.Inject
@@ -86,10 +87,7 @@ abstract class KCMLExtension @Inject internal constructor( // @formatter:off
     val agentDumpPath: DirectoryProperty =
         objects.directoryProperty().convention(project.layout.buildDirectory.dir("kcml_agent"))
 
-    internal val agentPort: Int by lazy {
-        val portRangeStart = agentPortRangeStart.get()
-        val portRangeEnd = agentPortRangeEnd.get()
-        AgentCommServer.findAvailablePort(portRangeStart, portRangeEnd)
-            ?: error("Could not find available port for KCML agent comm server")
-    }
+    internal val agentPort: Provider<Int>
+        get() = project.gradle.sharedServices.registrations.getByName("${KCMLBuildService.NAME}${project.path}")
+            .service.map { (it as KCMLBuildService).agentCommServer.port }
 }

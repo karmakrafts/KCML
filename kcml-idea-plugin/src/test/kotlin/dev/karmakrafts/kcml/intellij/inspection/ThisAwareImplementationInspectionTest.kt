@@ -99,7 +99,7 @@ class ThisAwareImplementationInspectionTest : InspectionFixtureTestCase(MixinThi
             @IndirectMixin("Target") class Indirect : dev.karmakrafts.kcml.api.mixin.<warning descr="ThisAware implementations must be mixin classes">ThisAware<Any></warning>
             interface ThisAware<T>
             class Ordinary : ThisAware<Any>
-            class Unresolved : <error descr="[UNRESOLVED_REFERENCE] Unresolved reference 'MissingType'.">MissingType</error>
+            class Unresolved : <error descr="[UNRESOLVED_REFERENCE]">MissingType</error>
         """.trimIndent()
     )
 

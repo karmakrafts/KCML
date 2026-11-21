@@ -29,6 +29,7 @@ import java.io.ByteArrayOutputStream
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.InetAddress
+import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.CountDownLatch
@@ -38,6 +39,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 
 @OptIn(ExperimentalSerializationApi::class)
@@ -125,6 +128,40 @@ class AgentCommServerTest {
             assertEquals(
                 expectedMessages.map(A2SLog::message).sorted(), receivedMessages.map(A2SLog::message).sorted()
             )
+        }
+    }
+
+    @Test
+    fun `range allocation skips occupied ports and retains the bound socket`() {
+        ServerSocket(0, 100, InetAddress.getLoopbackAddress()).use { occupied ->
+            AgentCommServer(occupied.localPort, 65536).use { first ->
+                AgentCommServer(occupied.localPort, 65536).use { second ->
+                    assertTrue(first.port in occupied.localPort until 65536)
+                    assertTrue(second.port in occupied.localPort until 65536)
+                    assertNotEquals(occupied.localPort, first.port)
+                    assertNotEquals(occupied.localPort, second.port)
+                    assertNotEquals(first.port, second.port)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `exhausted range fails clearly and can be reused after close`() {
+        val port = ServerSocket(0, 100, InetAddress.getLoopbackAddress()).use { occupied ->
+            val port = occupied.localPort
+            val failure = assertFailsWith<IllegalStateException> { AgentCommServer(port, port + 1).close() }
+            assertTrue(failure.message.orEmpty().contains("[$port, ${port + 1})"))
+            port
+        }
+        AgentCommServer(port, port + 1).use { assertEquals(port, it.port) }
+        AgentCommServer(port, port + 1).use { assertEquals(port, it.port) }
+    }
+
+    @Test
+    fun `rejects invalid agent port ranges`() {
+        listOf(0 to 10, -1 to 10, 10 to 10, 11 to 10, 65535 to 65537).forEach { (start, end) ->
+            assertFailsWith<IllegalArgumentException> { AgentCommServer(start, end).close() }
         }
     }
 

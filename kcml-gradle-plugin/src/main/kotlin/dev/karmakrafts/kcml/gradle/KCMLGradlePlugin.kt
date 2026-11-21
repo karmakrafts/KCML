@@ -62,6 +62,21 @@ internal open class KCMLGradlePlugin @Inject constructor(
         private const val OPT_NATIVE_TARGET: String = "nativeTarget"
     }
 
+    // Unlike kotlin.lazy, this keeps the service provider unevaluated when the configuration cache is stored.
+    private class AgentPortValue(private val port: Provider<Int>) : Lazy<String> {
+        override val value: String
+            get() = port.get().toString()
+
+        override fun isInitialized(): Boolean = false
+    }
+
+    private fun CompilerPluginOptions.inputArguments(): List<String> = CompilerPluginOptions().also { filtered ->
+        allOptions().forEach { (pluginId, options) ->
+            options.filterNot { pluginId == "${BuildInfo.PLUGIN_ID}.bootstrap" && it.key == OPT_AGENT_COMM_PORT }
+                .forEach { filtered.addPluginArgument(pluginId, it) }
+        }
+    }.arguments
+
     override fun apply(target: Project) {
         val logger = target.logger
         logger.info("KCML ${BuildInfo.version}")
@@ -82,9 +97,8 @@ internal open class KCMLGradlePlugin @Inject constructor(
         val buildService = target.gradle.sharedServices.registerIfAbsent(
             "${KCMLBuildService.NAME}${target.path}", KCMLBuildService::class.java
         ) { service ->
-            val port = extension.agentPort
-            logger.info("Using port $port for KCML agent comm server")
-            service.parameters.agentCommPort.value(port)
+            service.parameters.agentPortRangeStart.set(extension.agentPortRangeStart)
+            service.parameters.agentPortRangeEnd.set(extension.agentPortRangeEnd)
             service.parameters.loaderFile.set(prepareRuntime.flatMap { it.outputDirectory.file("kcml-loader.jar") })
             service.parameters.bridgeFile.set(prepareRuntime.flatMap { it.outputDirectory.file("kcml-mixin-bridge.jar") })
             service.parameters.pluginPaths.set(pluginConfiguration.elements.map { files -> files.map { it.asFile.absolutePath } })
@@ -175,7 +189,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                     )
                                 )
                             }
-                            task.inputs.property("kcmlBootstrapOptions", bootstrap.map { it.arguments })
+                            task.inputs.property("kcmlBootstrapOptions", bootstrap.map { it.inputArguments() })
                             task.inputs.property("kcmlNativeTarget", project.provider {
                                 target.nativeTargetJson().orEmpty()
                             })
@@ -228,7 +242,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                                 )
                             }
                             task.dependsOn(prepareCache)
-                            task.inputs.property("kcmlPluginOptions", options.map { it.arguments })
+                            task.inputs.property("kcmlPluginOptions", options.map { it.inputArguments() })
                             task.inputs.property("kcmlNativeTarget", project.provider {
                                 target.nativeTargetJson().orEmpty()
                             })
@@ -396,7 +410,7 @@ internal open class KCMLGradlePlugin @Inject constructor(
                         nativeTarget.absolutePath
                     )
                 )
-                add(SubpluginOption(OPT_AGENT_COMM_PORT, extension.agentPort.toString()))
+                add(SubpluginOption(OPT_AGENT_COMM_PORT, AgentPortValue(extension.agentPort)))
             }
         }
     }

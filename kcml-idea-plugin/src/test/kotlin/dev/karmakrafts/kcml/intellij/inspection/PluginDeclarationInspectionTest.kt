@@ -124,8 +124,8 @@ class PluginDeclarationInspectionTest : InspectionFixtureTestCase(PluginDeclarat
 
     fun testUnresolvedTypesAreIgnored() = check(
         """
-            @<error descr="[UNRESOLVED_REFERENCE] Unresolved reference 'missing'.">missing</error>.Plugin("example") class Example
-            class Other : <error descr="[UNRESOLVED_REFERENCE] Unresolved reference 'MissingInterface'.">MissingInterface</error>
+            @<error descr="[UNRESOLVED_REFERENCE]">missing</error>.Plugin("example") class Example
+            class Other : <error descr="[UNRESOLVED_REFERENCE]">MissingInterface</error>
         """.trimIndent()
     )
 

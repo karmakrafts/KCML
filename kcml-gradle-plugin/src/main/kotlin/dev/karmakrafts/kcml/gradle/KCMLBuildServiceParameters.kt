@@ -22,7 +22,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.services.BuildServiceParameters
 
 internal interface KCMLBuildServiceParameters : BuildServiceParameters {
-    val agentCommPort: Property<Int>
+    val agentPortRangeStart: Property<Int>
+    val agentPortRangeEnd: Property<Int>
     val loaderFile: RegularFileProperty
     val bridgeFile: RegularFileProperty
     val pluginPaths: ListProperty<String>

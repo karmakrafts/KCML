@@ -27,7 +27,9 @@ internal abstract class KCMLBuildService : BuildService<KCMLBuildServiceParamete
     }
 
     private val logger: Logger = Logging.getLogger(this::class.java)
-    val agentCommServer: AgentCommServer = AgentCommServer(parameters.agentCommPort.get()) { request ->
+    val agentCommServer: AgentCommServer = AgentCommServer(
+        parameters.agentPortRangeStart.get(), parameters.agentPortRangeEnd.get()
+    ) { request ->
         S2AHandshake(
             signature = request.signature,
             loaderPath = parameters.loaderFile.get().asFile.absolutePath,
@@ -40,6 +42,7 @@ internal abstract class KCMLBuildService : BuildService<KCMLBuildServiceParamete
 
     init {
         logger.info("Starting KCML build service..")
+        logger.info("Using port ${agentCommServer.port} for KCML agent comm server")
     }
 
     override fun close() {

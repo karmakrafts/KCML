@@ -34,40 +34,37 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.random.Random
-import kotlin.time.Clock
 
-internal class AgentCommServer(
-    port: Int, private val handshakeProvider: ((A2SHandshake) -> S2AHandshake)? = null
+internal class AgentCommServer private constructor(
+    private val socket: ServerSocket, private val handshakeProvider: ((A2SHandshake) -> S2AHandshake)?
 ) : AutoCloseable {
     companion object {
         private const val SHUTDOWN_TIMEOUT_MILLIS: Long = 1_000
 
-        fun isPortInUse(port: Int): Boolean = try {
-            ServerSocket(port).close()
-            false
-        } catch (_: BindException) {
-            true
-        } catch (_: Throwable) {
-            false
-        }
-
-        fun findAvailablePort( // @formatter:off
-            rangeStart: Int,
-            rangeEnd: Int,
-            maxAttempts: Int = 100
-        ): Int? { // @formatter:on
-            val random = Random(Clock.System.now().epochSeconds)
-            var port = random.nextInt(rangeStart, rangeEnd)
-            var attempts = 1
-            while (isPortInUse(port) && attempts++ < maxAttempts) {
-                port = random.nextInt(rangeStart, rangeEnd)
+        private fun bindSocket(rangeStart: Int, rangeEnd: Int): ServerSocket {
+            require(rangeStart in 1..65535 && rangeEnd in (rangeStart + 1)..65536) {
+                "Invalid KCML agent port range [$rangeStart, $rangeEnd)"
             }
-            return when {
-                isPortInUse(port) -> null
-                else -> port
+            val size = rangeEnd - rangeStart
+            val offset = Random.nextInt(size)
+            var failure: BindException? = null
+            repeat(size) { index ->
+                val port = rangeStart + (offset + index) % size
+                try {
+                    return ServerSocket(port, 100, InetAddress.getLoopbackAddress())
+                } catch (exception: BindException) {
+                    failure = exception
+                }
             }
+            throw IllegalStateException("Could not bind KCML agent comm server in port range [$rangeStart, $rangeEnd)", failure)
         }
     }
+
+    constructor(port: Int, handshakeProvider: ((A2SHandshake) -> S2AHandshake)? = null) :
+        this(ServerSocket(port, 100, InetAddress.getLoopbackAddress()), handshakeProvider)
+
+    constructor(rangeStart: Int, rangeEnd: Int, handshakeProvider: ((A2SHandshake) -> S2AHandshake)? = null) :
+        this(bindSocket(rangeStart, rangeEnd), handshakeProvider)
 
     private val logger: Logger = Logging.getLogger(AgentCommServer::class.java)
 
@@ -119,7 +116,6 @@ internal class AgentCommServer(
     }
 
     private val isRunning: AtomicBoolean = AtomicBoolean(true)
-    private val socket: ServerSocket = ServerSocket(port, 100, InetAddress.getLoopbackAddress())
     private val connections: ConcurrentLinkedQueue<Connection> = ConcurrentLinkedQueue()
     private val handlers: ConcurrentHashMap<String, AgentPacketHandler<*>> = ConcurrentHashMap()
 
