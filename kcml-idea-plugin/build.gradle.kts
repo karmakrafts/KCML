@@ -15,6 +15,7 @@
  */
 
 import dev.karmakrafts.conventions.configureJava
+import org.gradle.internal.os.OperatingSystem
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 
@@ -25,6 +26,23 @@ plugins {
 }
 
 configureJava(rootProject.libs.versions.java)
+
+val hostPlatform = run {
+    val hostOs = OperatingSystem.current()
+    val os = when {
+        hostOs.isLinux -> "linux"
+        hostOs.isMacOsX -> "mac"
+        hostOs.isWindows -> "windows"
+        else -> error("Unsupported plugin host OS: $hostOs")
+    }
+    val hostArch = providers.systemProperty("os.arch").get()
+    val arch = when (hostArch.lowercase()) {
+        "amd64", "x86_64" -> "x86_64"
+        "aarch64", "arm64" -> "arm64"
+        else -> error("Unsupported plugin host architecture: $hostArch")
+    }
+    "$os-$arch"
+}
 
 repositories {
     mavenCentral()
@@ -47,12 +65,12 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.modules.json")
         bundledPlugin("org.jetbrains.kotlin")
-        plugin("org.jetbrains.android", libs.versions.intelliJAndroid.get())
+        plugin("org.jetbrains.android", "${libs.versions.intelliJAndroid.get()}-$hostPlatform")
         plugin("com.android.tools.design", libs.versions.intelliJAndroidDesignTools.get())
         plugin("org.jetbrains.kotlin-toolchain", libs.versions.intelliJKotlinToolchain.get())
         plugin("com.jetbrains.kmm", libs.versions.intelliJKotlinMultiplatform.get())
         plugin("androidx.compose.plugins.idea", libs.versions.intelliJJetpackCompose.get())
-        plugin("com.intellij.nativeDebug", libs.versions.intelliJNativeDebugging.get())
+        plugin("com.intellij.nativeDebug", "${libs.versions.intelliJNativeDebugging.get()}-$hostPlatform")
         testFramework(TestFrameworkType.Platform)
         testFramework(TestFrameworkType.Plugin.Java)
     }

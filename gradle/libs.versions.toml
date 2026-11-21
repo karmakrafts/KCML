@@ -4,13 +4,13 @@ java = "21"
 
 kotlinBootstrap = "2.4.21" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
 kotlin = "2.5.0-RC" # https://github.com/JetBrains/kotlin/releases
-androidGradle = "9.5.1" # https://developer.android.com/reference/tools/gradle-api
+androidGradle = "9.5.2" # https://developer.android.com/reference/tools/gradle-api
 
 kcml = "1.6.0"
-iridium = "1.15.0.111-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
+iridium = "1.15.0.112-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.13.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.3.0" # https://github.com/Kotlin/dokka/releases"
-karmaConventions = "1.23.0.321-SNAPSHOT" # https://github.com/karmakrafts/karma-conventions/tags
+karmaConventions = "1.23.0.322-SNAPSHOT" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
 semver = "3.1.0" # https://github.com/z4kn4fein/kotlin-semver/releases
 ow2asm = "9.11.1" # https://gitlab.ow2.org/asm/asm/-/tags
@@ -19,13 +19,13 @@ kotlinGraphs = "0.6.1" # https://github.com/alexandrepiveteau/kotlin-graphs/rele
 annotations = "26.1.0" # https://github.com/JetBrains/java-annotations/releases
 
 intelliJPlatform = "2.20.1" # https://github.com/JetBrains/intellij-platform-gradle-plugin/releases
-intelliJVersion = "2026.2.5"
-intelliJKotlinToolchain = "262.11879.139" # https://plugins.jetbrains.com/plugin/31850-kotlin-toolchain/versions
-intelliJKotlinMultiplatform = "262.12573.28-IJ" # https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform/versions
-intelliJAndroid = "262.12573.28" # https://plugins.jetbrains.com/plugin/22989-android/versions
-intelliJAndroidDesignTools = "262.10968.63" # https://plugins.jetbrains.com/plugin/22990-android-design-tools/versions
-intelliJJetpackCompose = "262.10968.63" # https://plugins.jetbrains.com/plugin/18409-jetpack-compose/versions
-intelliJNativeDebugging = "262.11879.100" # https://plugins.jetbrains.com/plugin/12775-native-debugging-support/versions
+intelliJVersion = "2026.3"
+intelliJKotlinToolchain = "263.7307.231" # https://plugins.jetbrains.com/plugin/31850-kotlin-toolchain/versions
+intelliJKotlinMultiplatform = "263.7307.200-IJ" # https://plugins.jetbrains.com/plugin/14936-kotlin-multiplatform/versions
+intelliJAndroid = "263.7307.200" # https://plugins.jetbrains.com/plugin/22989-android/versions
+intelliJAndroidDesignTools = "263.7307.112" # https://plugins.jetbrains.com/plugin/22990-android-design-tools/versions
+intelliJJetpackCompose = "263.7307.112" # https://plugins.jetbrains.com/plugin/18409-jetpack-compose/versions
+intelliJNativeDebugging = "263.7307.200" # https://plugins.jetbrains.com/plugin/12775-native-debugging-support/versions
 
 [libraries]
 
