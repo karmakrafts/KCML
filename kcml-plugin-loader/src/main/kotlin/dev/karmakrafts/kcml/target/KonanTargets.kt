@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.target
+package dev.karmakrafts.kcml.target
 
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.EnumExtender
@@ -27,7 +27,7 @@ import java.lang.reflect.Constructor
 
 private object CustomKonanTargetFactory : ClassLoader(KonanTarget::class.java.classLoader) {
     val constructor: Constructor<out KonanTarget> by lazy {
-        val className = "dev/karmakrafts/kcml/api/target/internal/CustomKonanTarget"
+        val className = "dev/karmakrafts/kcml/target/internal/CustomKonanTarget"
         val targetName = "org/jetbrains/kotlin/konan/target/KonanTarget"
         val arguments =
             "Ljava/lang/String;Lorg/jetbrains/kotlin/konan/target/Family;" + "Lorg/jetbrains/kotlin/konan/target/Architecture;"

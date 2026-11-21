@@ -16,12 +16,12 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
-import dev.karmakrafts.kcml.api.util.ReflectionUtils
+import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
+import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
@@ -105,7 +105,7 @@ object WASMHooks {
             })
     }
 
-    @OptIn(DelicateKcmlApi::class)
+    @OptIn(DiscouragedKcmlApi::class)
     @JvmStatic
     fun onGenerateDeclaration(element: IrElement, generator: IrFileToWasmIrGenerator): Boolean {
         if (!hasCodeGenerationExtensions()) return false

@@ -32,7 +32,6 @@ public interface NativeCompileTarget : CompileTarget {
 
     /**
      * Konan platform target selected for native code generation.
-     * When implementing a custom compile target, use [KonanTargets.create] to create a fitting custom target.
      */
     @OnlyOn(NativeCompileTarget::class)
     public val konanTarget: KonanTarget

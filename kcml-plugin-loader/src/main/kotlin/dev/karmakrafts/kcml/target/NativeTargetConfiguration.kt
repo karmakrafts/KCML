@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.target
 
-import dev.karmakrafts.kcml.api.target.KonanTargets
 import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.target.proto.NativeTargetDescriptor

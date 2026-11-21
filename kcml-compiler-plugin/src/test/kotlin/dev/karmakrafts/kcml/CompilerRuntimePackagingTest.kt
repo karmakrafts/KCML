@@ -31,7 +31,7 @@ class CompilerRuntimePackagingTest {
                     for (name in listOf(
                         "dev/karmakrafts/kcml/hacks/EnumExtender.class",
                         "dev/karmakrafts/kcml/hacks/UnsafeUtils.class",
-                        "dev/karmakrafts/kcml/api/target/KonanTargets.class"
+                        "dev/karmakrafts/kcml/target/KonanTargets.class"
                     )) assertTrue(name in classes, "Missing compiler runtime dependency $name")
                     assertTrue(classes.any { it.endsWith("/org/objectweb/asm/ClassWriter.class") })
                 }

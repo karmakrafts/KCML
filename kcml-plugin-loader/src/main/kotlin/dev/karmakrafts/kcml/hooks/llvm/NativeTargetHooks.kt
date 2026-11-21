@@ -16,10 +16,10 @@
 
 package dev.karmakrafts.kcml.hooks.llvm
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
-import dev.karmakrafts.kcml.api.util.ReflectionUtils
+import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
+import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import dev.karmakrafts.kcml.target.CustomNativeConfigurables
@@ -101,7 +101,7 @@ object NativeTargetHooks {
             ?: false.takeIf { target.architecture !in builtinArchitectures }
     }
 
-    @OptIn(DelicateKcmlApi::class, ExperimentalForeignApi::class)
+    @OptIn(DiscouragedKcmlApi::class, ExperimentalForeignApi::class)
     @JvmStatic
     fun onRuntimeModule(runtime: Any) {
         val settings = PluginLoaderImpl.nativeArchitectureOrNull ?: return

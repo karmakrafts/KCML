@@ -17,8 +17,6 @@
 package dev.karmakrafts.kcml.util
 
 import com.sun.tools.attach.VirtualMachine
-import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
-import dev.karmakrafts.kcml.hacks.UnsafeUtils
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.div
@@ -31,24 +29,9 @@ class AgentInjector( // @formatter:off
     private val agentPath: Path = directory / "agent-${FileChecksum.forResource(agentJar.path)}.jar"
     private val lockPath: Path = directory / "agent.lock"
 
-    @OptIn(DiscouragedKcmlApi::class)
-    @Suppress("DEPRECATION")
-    private fun tryOverwriteAttachPermissions() {
-        try {
-            val unsafe = UnsafeUtils.unsafe
-            val hotspotVirtualMachine = Class.forName("sun.tools.attach.HotSpotVirtualMachine")
-            val allowAttachSelfField = hotspotVirtualMachine.getDeclaredField("ALLOW_ATTACH_SELF")
-            val allowAttachSelfBase = unsafe.staticFieldBase(allowAttachSelfField)
-            val allowAttachSelfOffset = unsafe.staticFieldOffset(allowAttachSelfField)
-            unsafe.putBooleanVolatile(allowAttachSelfBase, allowAttachSelfOffset, true)
-        } catch (_: ClassNotFoundException) {
-            // Skip overwriting access flag if class is not found (J9/Graal)
-        }
-    }
-
     private fun tryAttachSelf(): Result<VirtualMachine> = runCatching {
         System.setProperty("jdk.attach.allowAttachSelf", "true")
-        tryOverwriteAttachPermissions()
+        AgentAttachPermissions.allowAttachSelf()
         val pid = ProcessHandle.current().pid().toString()
         val virtualMachines = VirtualMachine.list()
         val descriptor = virtualMachines.first { pid in it.id() || pid in it.displayName() }

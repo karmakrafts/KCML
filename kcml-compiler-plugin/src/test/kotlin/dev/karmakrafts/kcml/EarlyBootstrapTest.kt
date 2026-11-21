@@ -37,9 +37,9 @@ import dev.karmakrafts.kcml.api.target.CompileTargetFactory
 import dev.karmakrafts.kcml.api.target.CompileTargetRegistry
 import dev.karmakrafts.kcml.api.target.CompileTargetType
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
-import dev.karmakrafts.kcml.api.target.KonanTargets
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.target.KonanTargets
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.cli.common.ExitCode

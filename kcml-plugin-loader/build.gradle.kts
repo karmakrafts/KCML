@@ -54,7 +54,7 @@ dependencies {
     compileOnly(projects.kcmlMixinBridge)
 
     shadeApi(projects.kcmlPluginApi)
-    shadeApi(projects.kcmlHacks)
+    shadeImplementation(projects.kcmlHacks)
     shadeApi(libs.semver)
     shadeApi(libs.ow2.asm.core)
     compileOnly(libs.kotlin.reflect)

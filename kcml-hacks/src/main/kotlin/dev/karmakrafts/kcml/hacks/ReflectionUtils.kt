@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.util
+package dev.karmakrafts.kcml.hacks
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import java.lang.reflect.Constructor
 import java.lang.reflect.Member
 import java.lang.reflect.Modifier
@@ -28,6 +27,7 @@ import java.util.Locale.getDefault
  * This checks only the member's modifier flags and does not guarantee that the member is accessible through
  * reflection; access can also be restricted by its declaring type or JVM module boundaries.
  */
+@DiscouragedKcmlApi
 public inline val Member.isPubliclyAccessible: Boolean
     get() = modifiers and Modifier.PUBLIC == Modifier.PUBLIC
 
@@ -39,7 +39,7 @@ public inline val Member.isPubliclyAccessible: Boolean
  * accessible only for the duration of an operation, when the JVM permits it; a public modifier alone does not
  * guarantee reflective access.
  */
-@DelicateKcmlApi
+@DiscouragedKcmlApi
 public object ReflectionUtils {
     @PublishedApi
     @Suppress("UNCHECKED_CAST")

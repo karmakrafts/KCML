@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.util
+package dev.karmakrafts.kcml.hacks
 
-import dev.karmakrafts.kcml.api.DelicateKcmlApi
 import java.lang.reflect.InvocationTargetException
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
-@OptIn(DelicateKcmlApi::class)
+@OptIn(DiscouragedKcmlApi::class)
 class ReflectionUtilsTest {
     open class FieldFixture {
         @JvmField

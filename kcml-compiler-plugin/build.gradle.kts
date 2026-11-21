@@ -50,7 +50,6 @@ dependencies {
     compileOnly(libs.kotlin.compiler.embeddable)
     compileOnly(libs.kotlin.native.compiler.embeddable)
     compileOnly(projects.kcmlPluginLoader) // Injected into compiler CP at runtime and by injection
-    compileOnly(projects.kcmlHacks)
     compileOnly(libs.autoService.annotations)
     compileOnly(libs.kotlin.reflect)
     kapt(libs.autoService.processor)
