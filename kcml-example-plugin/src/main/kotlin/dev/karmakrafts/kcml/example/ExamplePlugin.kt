@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.example
 
+import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
@@ -53,9 +54,11 @@ class ExamplePlugin : CompilerPlugin {
         }
     }
 
+    @OptIn(ExperimentalKcmlApi::class)
     override fun init(context: InitializationContext) {
         context.logger.info("Loading example plugin!")
         context.extensionRegistry.apply {
+            register(ExampleSyntaxExtension())
             register(ExampleFirExtension())
             register(ExampleIrExtension())
             register(ExampleIrIntrinsicsExtension())

@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.example
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.FirExtension
-import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import org.jetbrains.kotlin.fir.extensions.MemberGenerationContext
 import org.jetbrains.kotlin.fir.symbols.impl.FirNamedFunctionSymbol
 import org.jetbrains.kotlin.name.CallableId
@@ -27,7 +27,7 @@ import org.jetbrains.kotlin.name.CallableId
 @ExtensionId("fir_example")
 internal class ExampleFirExtension : AbstractExtension(), FirExtension {
     override fun generateFunctions( // @formatter:off
-        frontend: Frontend,
+        frontend: FirFrontend,
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirNamedFunctionSymbol> { // @formatter:on
@@ -35,7 +35,7 @@ internal class ExampleFirExtension : AbstractExtension(), FirExtension {
         return emptyList()
     }
 
-    override fun getTopLevelCallableIds(frontend: Frontend): Set<CallableId> {
+    override fun getTopLevelCallableIds(frontend: FirFrontend): Set<CallableId> {
         frontend.logger.info("Requesting generated top level callable IDs for FIR")
         return setOf(ExampleNames.exampleFunction)
     }
