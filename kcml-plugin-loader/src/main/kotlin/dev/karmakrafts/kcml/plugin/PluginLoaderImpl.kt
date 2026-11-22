@@ -34,6 +34,7 @@ import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
+import dev.karmakrafts.kcml.extension.SyntaxExtensionAdapter
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
@@ -140,6 +141,26 @@ object PluginLoaderImpl : PluginLoader {
     internal val extensionDispatcher: ExtensionDispatcher
         get() = checkNotNull(dispatcher) { "KCML plugins have not been loaded" }
 
+    internal val syntaxAdapterOrNull: SyntaxExtensionAdapter?
+        get() = dispatcher?.syntaxAdapter
+
+    private val preparingSyntax: ThreadLocal<Boolean> = ThreadLocal.withInitial { false }
+
+    internal fun prepareSyntaxParsing(config: CompilerConfiguration): Boolean {
+        if (preparingSyntax.get()) return false
+        if (arePluginsLoaded) return syntaxAdapterOrNull != null
+        if (!compilationState.get().arePluginsPreInitialized) return false
+        preparingSyntax.set(true)
+        try {
+            setupLogging(config)
+            loadAllPlugins(config)
+            return syntaxAdapterOrNull != null
+        }
+        finally {
+            preparingSyntax.remove()
+        }
+    }
+
     private val ipms: ConcurrentHashMap<String, IPMImpl>
         get() = compilationState.get().ipms
 
@@ -236,10 +257,13 @@ object PluginLoaderImpl : PluginLoader {
         logger = loggerFactory("KCML")
     }
 
-    private fun loadCandidates(urls: List<URL>): List<CompilerPlugin> {
+    private fun loadCandidates(
+        urls: List<URL>,
+        classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
+    ): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = this::class.java.classLoader
-        val classLoader = URLClassLoader(urls.toTypedArray(), parentClassLoader)
+        val classLoader = classLoaderFactory(urls.toTypedArray(), parentClassLoader)
         pluginClassLoader = classLoader
         return PluginClassScanner.scan(urls).mapNotNull { className ->
             try {
@@ -421,7 +445,7 @@ object PluginLoaderImpl : PluginLoader {
         processIpms()
         logger.info("Initialized ${plugins.size} plugins")
         extensionRegistries.values.forEach(DefaultExtensionRegistry::freeze)
-        dispatcher = ExtensionDispatcher(this, extensionRegistries)
+        dispatcher = ExtensionDispatcher(this, extensionRegistries, config, loggerFactory)
         arePluginsLoaded = true
     }
 
@@ -434,6 +458,38 @@ object PluginLoaderImpl : PluginLoader {
         }?.value ?: fallbackTarget ?: return config
         // Incremental JS/Wasm link contexts omit bootstrap settings and may be read-only.
         return config.copy().apply { kcmlCompileTarget = target }
+    }
+
+    internal fun <T> withState(state: CompilationState, action: CompilationState.() -> T): T {
+        val previous = compilationState.get()
+        compilationState.set(state)
+        return try {
+            action(state)
+        }
+        finally {
+            compilationState.set(previous)
+        }
+    }
+
+    @JvmOverloads
+    fun loadForIde(
+        config: CompilerConfiguration,
+        pluginPaths: List<URL>,
+        options: List<String> = emptyList(),
+        classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
+    ): IdeSyntaxSession {
+        val state = CompilationState()
+        try {
+            withState(state) {
+                setupLogging(config)
+                loadAllPlugins(config, options) { loadCandidates(pluginPaths, classLoaderFactory) }
+            }
+        }
+        catch (error: Throwable) {
+            state.pluginClassLoader?.close()
+            throw error
+        }
+        return IdeSyntaxSession(state)
     }
 
     // Invoked standalone for things like linking tasks

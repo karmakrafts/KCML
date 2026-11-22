@@ -16,16 +16,20 @@
 
 package dev.karmakrafts.kcml.extension
 
+import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
+import dev.karmakrafts.kcml.api.extension.SyntaxExtension
 import dev.karmakrafts.kcml.api.extension.js.LateJsExtension
 import dev.karmakrafts.kcml.api.extension.jvm.LateJvmExtension
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
 import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.frontend.SyntaxFrontendImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -34,10 +38,13 @@ import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.extensions.FirDeclarationGenerationExtension
 import org.jetbrains.kotlin.fir.extensions.FirExtensionRegistrar
 
-@OptIn(ExperimentalCompilerApi::class)
-internal class ExtensionDispatcher( // @formatter:off
+@InternalKcmlApi
+@OptIn(ExperimentalCompilerApi::class, ExperimentalKcmlApi::class)
+class ExtensionDispatcher( // @formatter:off
     private val loader: PluginLoader,
-    private val registries: Map<String, ExtensionRegistry>
+    private val registries: Map<String, ExtensionRegistry>,
+    private val config: CompilerConfiguration,
+    private val loggerFactory: LoggerFactory
 ) { // @formatter:on
     private val extensions: List<Pair<String, Extension>> = registries.flatMap { [pluginId, registry] ->
         registry.allSorted().map { extension -> pluginId to extension }
@@ -53,6 +60,16 @@ internal class ExtensionDispatcher( // @formatter:off
     val lateWasmExtensions: List<Pair<String, LateWasmExtension>> by gather()
     val lateJvmExtensions: List<Pair<String, LateJvmExtension>> by gather()
     val lateJsExtensions: List<Pair<String, LateJsExtension>> by gather()
+
+    val syntaxAdapter: SyntaxExtensionAdapter? by lazy {
+        val syntaxExtensions = loader.allPluginsSorted().flatMap { pluginId ->
+            registries[pluginId]?.allSorted().orEmpty().filterIsInstance<SyntaxExtension>().map { pluginId to it }
+        }
+        if (syntaxExtensions.isEmpty()) null
+        else SyntaxExtensionAdapter(syntaxExtensions) { pluginId ->
+            SyntaxFrontendImpl(pluginId, config, loggerFactory, loader)
+        }
+    }
 
     /**
      * Registers all adapters required to wire through existing compiler extension APIs

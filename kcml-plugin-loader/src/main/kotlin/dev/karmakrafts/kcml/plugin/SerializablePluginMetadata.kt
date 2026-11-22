@@ -16,13 +16,15 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import io.github.z4kn4fein.semver.Version
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+@InternalKcmlApi
 @Serializable
-internal data class SerializablePluginMetadata(
+data class SerializablePluginMetadata(
     override val id: String,
     override val name: String? = null,
     override val version: Version? = null,

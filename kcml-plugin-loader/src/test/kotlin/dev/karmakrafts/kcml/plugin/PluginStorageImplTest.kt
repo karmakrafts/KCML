@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginStorage.Key
 import dev.karmakrafts.kcml.api.plugin.delegateFor
 import kotlin.test.Test
@@ -25,6 +26,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
+@OptIn(InternalKcmlApi::class)
 class PluginStorageImplTest {
     @Test
     fun `storage exposes its owner plugin id`() {

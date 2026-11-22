@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.target
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.target.CommonCompileTarget
 import dev.karmakrafts.kcml.api.target.CompileTarget
 import dev.karmakrafts.kcml.api.target.CompileTargetFactory
@@ -31,7 +32,8 @@ import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.KonanTarget
 import java.util.concurrent.ConcurrentHashMap
 
-internal class CompileTargetRegistryImpl : CompileTargetRegistry {
+@InternalKcmlApi
+class CompileTargetRegistryImpl : CompileTargetRegistry {
     override val factories: ConcurrentHashMap<CompileTargetType, CompileTargetFactory> = ConcurrentHashMap()
 
     init {

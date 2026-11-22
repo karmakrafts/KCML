@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
@@ -28,6 +29,7 @@ import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.CompilerConfiguration.Internals
 import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import java.nio.file.Files
@@ -52,7 +54,7 @@ class LifecycleTestPlugin : CompilerPlugin {
 @ExtensionId("lifecycle_test_extension")
 private class LifecycleTestExtension : AbstractExtension(), LateNativeExtension
 
-@OptIn(KCMLHookApi::class, CompilerConfiguration.Internals::class)
+@OptIn(KCMLHookApi::class, Internals::class, InternalKcmlApi::class)
 class PluginLoaderLifecycleTest {
     private fun jvmCompilerConfiguration(): CompilerConfiguration =
         CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }

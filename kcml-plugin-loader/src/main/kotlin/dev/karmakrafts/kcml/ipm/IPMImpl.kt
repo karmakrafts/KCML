@@ -25,8 +25,9 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedDeque
 
+@InternalKcmlApi
 @OptIn(InternalKcmlApi::class)
-internal class IPMImpl( // @formatter:off
+class IPMImpl( // @formatter:off
     private val pluginId: String,
     private val loader: PluginLoader
 ) : IPM { // @formatter:on

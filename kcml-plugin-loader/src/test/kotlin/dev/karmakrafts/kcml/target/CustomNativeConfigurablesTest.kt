@@ -33,9 +33,7 @@ class CustomNativeConfigurablesTest {
             setProperty("libffiDir.${HostManager.host.name}", "/tools/libffi")
         }
         val settings = CustomNativeConfigurables(
-            KonanTarget.LINUX_X64,
-            properties,
-            Path.of("build").toAbsolutePath().toString()
+            KonanTarget.LINUX_X64, properties, Path.of("build").toAbsolutePath().toString()
         ) { _, _, _ -> }
         assertEquals("/tools/llvm", settings.absoluteTargetToolchain)
         assertEquals("", settings.absoluteTargetSysRoot)
@@ -51,9 +49,7 @@ class CustomNativeConfigurablesTest {
             setProperty("targetSysRoot.linux_x64", "/sdk")
         }
         val settings = CustomNativeConfigurables(
-            KonanTarget.LINUX_X64,
-            properties,
-            Path.of("build").toAbsolutePath().toString()
+            KonanTarget.LINUX_X64, properties, Path.of("build").toAbsolutePath().toString()
         ) { _, _, _ -> }
         assertEquals("/tools/custom", settings.absoluteTargetToolchain)
         assertEquals("/sdk", settings.absoluteTargetSysRoot)

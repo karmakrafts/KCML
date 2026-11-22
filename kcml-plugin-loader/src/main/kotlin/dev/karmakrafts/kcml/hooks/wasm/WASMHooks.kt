@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.wasm
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
@@ -40,6 +41,7 @@ import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.io.path.Path
 
+@OptIn(InternalKcmlApi::class)
 @Suppress("UNUSED")
 @KCMLHookApi
 object WASMHooks {

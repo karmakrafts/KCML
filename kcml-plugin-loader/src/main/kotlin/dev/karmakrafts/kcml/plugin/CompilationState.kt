@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.target.CompileTarget
@@ -30,8 +31,9 @@ import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import java.net.URLClassLoader
 import java.util.concurrent.ConcurrentHashMap
 
+@InternalKcmlApi
 @OptIn(ExperimentalCompilerApi::class)
-internal class CompilationState {
+class CompilationState {
     val owner: Thread = Thread.currentThread()
     lateinit var loggerFactory: MessageCollectorLoggerFactory
     val plugins: HashMap<String, CompilerPlugin> = HashMap()

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import dev.karmakrafts.conventions.configureJava
 import dev.karmakrafts.conventions.kotlin.defaultCompilerOptions
 
@@ -57,6 +58,7 @@ dependencies {
     shadeImplementation(projects.kcmlHacks)
     shadeApi(libs.semver)
     shadeApi(libs.ow2.asm.core)
+    shadeApi(libs.ow2.asm.commons)
     compileOnly(libs.kotlin.reflect)
     shadeImplementation(libs.kotlinx.serialization.core)
     shadeImplementation(libs.kotlinx.serialization.json)
@@ -87,4 +89,18 @@ tasks {
         relocate("kotlinx.serialization", "$relocationPrefix.kotlinx.serialization")
         relocate("org.objectweb.asm", "$relocationPrefix.org.objectweb.asm")
     }
+}
+
+val ideaJar by tasks.registering(ShadowJar::class) {
+    dependsOn(tasks.shadowJar)
+    archiveClassifier = "idea"
+    configurations = emptySet()
+    from(tasks.shadowJar.map { shadow -> zipTree(shadow.archiveFile) })
+    relocate("org.jetbrains.kotlin.com.intellij", "com.intellij")
+}
+
+configurations.create("ideaRuntimeElements") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+    outgoing.artifact(ideaJar)
 }

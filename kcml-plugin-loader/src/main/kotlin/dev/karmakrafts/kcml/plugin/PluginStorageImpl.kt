@@ -16,11 +16,13 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PluginStorage.Key
 import java.util.concurrent.ConcurrentHashMap
 
-internal data class PluginStorageImpl( // @formatter:off
+@InternalKcmlApi
+data class PluginStorageImpl( // @formatter:off
     override val ownerPluginId: String,
     val values: ConcurrentHashMap<Key<*>, Any> = ConcurrentHashMap()
 ) : PluginStorage { // @formatter:on

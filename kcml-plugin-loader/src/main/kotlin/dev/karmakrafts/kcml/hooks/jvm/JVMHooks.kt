@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.hooks.jvm
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.jvm.JvmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.backend.jvm.JvmCodeGeneratorImpl
@@ -31,6 +32,7 @@ import org.jetbrains.kotlin.ir.IrElement
 import java.util.*
 import kotlin.io.path.Path
 
+@OptIn(InternalKcmlApi::class)
 @Suppress("UNUSED")
 @KCMLHookApi
 object JVMHooks {

@@ -23,7 +23,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 
-internal class FrontendImpl( // @formatter:off
+internal class FirFrontendImpl( // @formatter:off
     override val pluginId: String,
     override val session: FirSession,
     override val config: CompilerConfiguration,

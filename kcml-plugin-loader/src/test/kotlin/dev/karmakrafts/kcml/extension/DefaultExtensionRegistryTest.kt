@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.extension
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionDependsOn
@@ -27,6 +28,7 @@ import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
+@OptIn(InternalKcmlApi::class)
 class DefaultExtensionRegistryTest {
     @ExtensionId("foundation")
     private class FoundationExtension : AbstractExtension()

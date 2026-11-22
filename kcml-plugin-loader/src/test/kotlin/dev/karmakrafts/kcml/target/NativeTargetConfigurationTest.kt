@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.target
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.api.target.nativeArchitecture
 import dev.karmakrafts.kcml.hooks.CommonHooks
@@ -27,6 +28,7 @@ import kotlinx.serialization.SerializationException
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.CompilerConfiguration.Internals
 import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.Family
@@ -43,7 +45,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
-@OptIn(CompilerConfiguration.Internals::class, KCMLHookApi::class)
+@OptIn(Internals::class, KCMLHookApi::class, InternalKcmlApi::class)
 class NativeTargetConfigurationTest {
     private val descriptorFiles = mutableListOf<Path>()
 
@@ -98,8 +100,10 @@ class NativeTargetConfigurationTest {
 
     @Test
     fun `Native descriptors ignore unknown fields at every level`() {
-        val payload = descriptor("""{"cpu":"haswell","futureLlvm":{"value":true}}""")
-            .replace("\"name\":\"linux_x64\"", "\"name\":\"linux_x64\",\"futureTarget\":[1,2]")
+        val payload = descriptor("""{"cpu":"haswell","futureLlvm":{"value":true}}""").replace(
+                "\"name\":\"linux_x64\"",
+                "\"name\":\"linux_x64\",\"futureTarget\":[1,2]"
+            )
             .replace("\"name\":\"LINUX\"", "\"name\":\"LINUX\",\"futureFamily\":true")
             .replace("\"name\":\"X64\"", "\"name\":\"X64\",\"futureArchitecture\":null")
         val config = CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(payload) }
@@ -150,7 +154,9 @@ class NativeTargetConfigurationTest {
         val customDescriptor = descriptor().replace("\"name\":\"LINUX\"", "\"name\":\"$familyName\"")
         for (payload in listOf(descriptor(), customDescriptor)) {
             fun decode(value: String = payload): NativeTargetConfiguration = checkNotNull(
-                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(value) })
+                NativeTargetConfiguration.get(CompilerConfiguration().apply {
+                    kcmlNativeTarget = descriptorFile(value)
+                })
             )
 
             val first = decode()
@@ -194,9 +200,11 @@ class NativeTargetConfigurationTest {
             override val konanTarget = KonanTarget.LINUX_ARM64
         }
         val config = CompilerConfiguration().apply {
-            kcmlNativeTarget = descriptorFile(descriptor("""{"cpu":"generic"}""").replace(
-                "\"name\":\"linux_x64\"", "\"explicitTarget\":false,\"name\":\"linux_x64\""
-            ))
+            kcmlNativeTarget = descriptorFile(
+                descriptor("""{"cpu":"generic"}""").replace(
+                    "\"name\":\"linux_x64\"", "\"explicitTarget\":false,\"name\":\"linux_x64\""
+                )
+            )
         }
         val configured = NativeTargetConfiguration.configure(pluginTarget, config)
         assertSame(KonanTarget.LINUX_ARM64, configured.konanTarget)
@@ -244,7 +252,9 @@ class NativeTargetConfigurationTest {
             descriptor("""{"properties":{" ":"value"}}""")
         )) {
             assertFailsWith<IllegalArgumentException>(payload) {
-                NativeTargetConfiguration.get(CompilerConfiguration().apply { kcmlNativeTarget = descriptorFile(payload) })
+                NativeTargetConfiguration.get(CompilerConfiguration().apply {
+                    kcmlNativeTarget = descriptorFile(payload)
+                })
             }
         }
     }

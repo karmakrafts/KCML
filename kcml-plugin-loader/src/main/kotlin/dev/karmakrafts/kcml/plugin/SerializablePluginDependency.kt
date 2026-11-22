@@ -16,13 +16,15 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.plugin.PluginDependency
 import dev.karmakrafts.kcml.api.util.Order
 import io.github.z4kn4fein.semver.constraints.Constraint
 import kotlinx.serialization.Serializable
 
+@InternalKcmlApi
 @Serializable
-internal data class SerializablePluginDependency( // @formatter:off
+data class SerializablePluginDependency( // @formatter:off
     override val id: String,
     override val required: Boolean,
     override val order: Order,

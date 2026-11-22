@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.extension
 
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.log.Logger
@@ -26,7 +27,8 @@ import io.github.alexandrepiveteau.graphs.Vertex
 import io.github.alexandrepiveteau.graphs.algorithms.topologicalSort
 import io.github.alexandrepiveteau.graphs.builder.buildDirectedGraph
 
-internal class DefaultExtensionRegistry( // @formatter:off
+@InternalKcmlApi
+class DefaultExtensionRegistry( // @formatter:off
     private val loader: PluginLoader,
     override val pluginId: String,
     private val logger: Logger

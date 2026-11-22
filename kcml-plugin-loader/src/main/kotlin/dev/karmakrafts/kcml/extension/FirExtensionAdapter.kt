@@ -17,9 +17,10 @@
 package dev.karmakrafts.kcml.extension
 
 import dev.karmakrafts.kcml.api.extension.FirExtension
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
-import dev.karmakrafts.kcml.frontend.FrontendImpl
+import dev.karmakrafts.kcml.frontend.FirFrontendImpl
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.extensions.ExperimentalTopLevelDeclarationsGenerationApi
@@ -47,9 +48,9 @@ internal class FirExtensionAdapter( // @formatter:off
         loader.logger.info("Initializing FIR extension adapter")
     }
 
-    private fun createFrontend(pluginId: String, session: FirSession): FrontendImpl {
+    private fun createFrontend(pluginId: String, session: FirSession): FirFrontend {
         val logger = loggerFactory.getForPlugin(pluginId)
-        return FrontendImpl( // @formatter:off
+        return FirFrontendImpl( // @formatter:off
             pluginId = pluginId,
             session = session,
             config = config,

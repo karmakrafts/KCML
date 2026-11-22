@@ -1,0 +1,48 @@
+/*
+ * Copyright 2026 Karma Krafts
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package dev.karmakrafts.kcml.mixin
+
+import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
+import dev.karmakrafts.kcml.api.mixin.IndirectMixin
+import dev.karmakrafts.kcml.api.mixin.Inject
+import dev.karmakrafts.kcml.api.mixin.ReturnContext
+import dev.karmakrafts.kcml.api.mixin.ThisAware
+import dev.karmakrafts.kcml.api.mixin.returnFromTarget
+import dev.karmakrafts.kcml.hooks.KCMLHookApi
+import dev.karmakrafts.kcml.hooks.SyntaxHooks
+
+@OptIn(ExperimentalKcmlApi::class, KCMLHookApi::class)
+@IndirectMixin("org.jetbrains.kotlin.parsing.KotlinParsing")
+internal class SyntaxParsingMixin : ThisAware<Any> {
+    @Inject("parseTopLevelDeclaration", "()V", order = Inject.Order.BEFORE)
+    fun parseTopLevelDeclaration(context: ReturnContext<Unit>) {
+        if (SyntaxHooks.parse(getThis(), GrammarRule.TOP_LEVEL_DECLARATION)) context.returnFromTarget()
+    }
+
+    @Inject("parseMemberDeclaration", "()V", order = Inject.Order.BEFORE)
+    fun parseMemberDeclaration(context: ReturnContext<Unit>) {
+        if (SyntaxHooks.parse(getThis(), GrammarRule.MEMBER_DECLARATION)) context.returnFromTarget()
+    }
+
+    @Inject(
+        "parseTypeRef", "(Lorg/jetbrains/kotlin/com/intellij/psi/tree/TokenSet;ZZ)V", order = Inject.Order.BEFORE
+    )
+    fun parseTypeRef(context: ReturnContext<Unit>) {
+        if (SyntaxHooks.parse(getThis(), GrammarRule.TYPE)) context.returnFromTarget()
+    }
+}

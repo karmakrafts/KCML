@@ -245,8 +245,7 @@ class CustomNativeLinkerTest {
         val linker = CustomNativeLinker(configurables(tempFiles))
         val libraries = listOf("one.a", "two.lib", "three.dll.a", "FOUR.LIB", "one.a")
         assertEquals(
-            libraries,
-            linker.filterStaticLibraries(libraries + listOf("object.o", "libshared.so", "dynamic.dll"))
+            libraries, linker.filterStaticLibraries(libraries + listOf("object.o", "libshared.so", "dynamic.dll"))
         )
         assertEquals(libraries, linker.linkStaticLibraries(libraries))
     }
