@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.frontend
 
-import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -30,4 +30,4 @@ internal class FrontendImpl( // @formatter:off
     override val loggerFactory: LoggerFactory,
     override val logger: Logger,
     override val loader: PluginLoader
-) : Frontend // @formatter:on
+) : FirFrontend // @formatter:on

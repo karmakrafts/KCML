@@ -25,46 +25,31 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
-import org.jetbrains.kotlin.cli.common.messages.MessageCollector
-import org.jetbrains.kotlin.config.CompilerConfiguration
-import org.jetbrains.kotlin.config.MessageCollectorAccess
-import org.jetbrains.kotlin.config.messageCollector
-import org.jetbrains.kotlin.fir.FirSession
 
 /**
- * Provides the compiler services available while KCML integrates with Kotlin's FIR frontend.
+ * Provides the shared plugin services available to KCML frontend extensions.
  *
- * FIR extensions receive this context to inspect the session and report diagnostics while the
- * compiler resolves and generates frontend declarations.
+ * [FirFrontend] provides an active FIR session, while [SyntaxFrontend] supports syntax extensions
+ * before FIR and can also be supplied by an IDE adapter.
  */
-public interface Frontend {
+public sealed interface Frontend {
     /** ID of the plugin to which this frontend context belongs. */
     public val pluginId: String
-
-    /** FIR session for the current compilation, including symbol providers and type services. */
-    public val session: FirSession
-
-    /** Compiler configuration for the active Kotlin compilation. */
-    public val config: CompilerConfiguration
 
     /**
      * Creates named KCML loggers that report through the current compiler's diagnostic collector.
      */
     public val loggerFactory: LoggerFactory
 
-    /** Logger for the KCML component dispatching this frontend extension. */
+    /** Default logger for this frontend's owning plugin. */
     public val logger: Logger
+        get() = loggerFactory.getForPlugin(pluginId)
 
     /**
      * Provides the plugins and extension registries discovered for this compiler invocation.
-     * Registries have already been populated before FIR extensions are dispatched.
+     * Registries have already been populated before frontend extensions are dispatched.
      */
     public val loader: PluginLoader
-
-    /** Collects compiler diagnostics emitted by KCML extensions. */
-    @OptIn(MessageCollectorAccess::class)
-    public val messageCollector: MessageCollector
-        get() = config.messageCollector
 }
 
 /** Storage for [Frontend.pluginId], scoped to the current compiler invocation. */
