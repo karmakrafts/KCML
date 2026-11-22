@@ -23,7 +23,7 @@ import dev.karmakrafts.kcml.api.backend.IrBackend
 import dev.karmakrafts.kcml.api.extension.ExtensionDependency
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
-import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.target.JsCompileTarget
 import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
@@ -52,7 +52,7 @@ class CompilerPipelineBuilderExtensionsTest {
         val marker = CompilerConfigurationKey.create<String>("kcml-iridium test marker")
         for (target in CompilerTarget.entries) {
             lateinit var config: CompilerConfiguration
-            val frontends = ArrayList<Frontend>()
+            val frontends = ArrayList<FirFrontend>()
             val backends = ArrayList<IrBackend>()
             val modules = ArrayList<IrModuleFragment>()
             runCompilerTest {
@@ -62,7 +62,7 @@ class CompilerPipelineBuilderExtensionsTest {
                         override val id: String = "fir"
                         override val dependencies: List<ExtensionDependency> = emptyList()
 
-                        override fun getTopLevelClassIds(frontend: Frontend): Set<ClassId> {
+                        override fun getTopLevelClassIds(frontend: FirFrontend): Set<ClassId> {
                             frontends += frontend
                             return emptySet()
                         }
@@ -144,7 +144,7 @@ class CompilerPipelineBuilderExtensionsTest {
 
     @Test
     fun `Multiple FIR extensions are registered for the same session`() = runCompilerTest {
-        val calls = ArrayList<Pair<String, Frontend>>()
+        val calls = ArrayList<Pair<String, FirFrontend>>()
         pipeline {
             defaultPipelineSpec()
             for (name in listOf("first", "second")) {
@@ -152,7 +152,7 @@ class CompilerPipelineBuilderExtensionsTest {
                     override val id: String = name
                     override val dependencies: List<ExtensionDependency> = emptyList()
 
-                    override fun hasPackage(frontend: Frontend, packageFqName: FqName): Boolean {
+                    override fun hasPackage(frontend: FirFrontend, packageFqName: FqName): Boolean {
                         calls += name to frontend
                         return false
                     }

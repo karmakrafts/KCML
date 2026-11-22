@@ -16,7 +16,7 @@
 
 package dev.karmakrafts.kcml.iridium
 
-import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
@@ -34,7 +34,7 @@ import org.jetbrains.kotlin.fir.FirSession
 public class TestFrontend( // @formatter:off
     override val session: FirSession,
     override val config: CompilerConfiguration
-) : Frontend { // @formatter:on
+) : FirFrontend { // @formatter:on
     /** Fixed plugin ID used by the Iridium test integration. */
     override val pluginId: String = "iridium"
 

@@ -121,7 +121,7 @@ internal class MixinClassTransformer( // @formatter:off
             if (wasChanged) { // If class changed, rewrite it
                 // Backend targets can be used without CLICompiler.exec, e.g. by Gradle's Kotlin DSL compiler.
                 if (loader != null) compilerClassLoaderInjector?.accept(loader)
-                val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES)
+                val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES, loader, classNode)
                 classNode.accept(writer)
                 val newClassfileBuffer = writer.toByteArray()
                 if (dumpPath != null) try { // Dump class if enabled from Gradle plugin

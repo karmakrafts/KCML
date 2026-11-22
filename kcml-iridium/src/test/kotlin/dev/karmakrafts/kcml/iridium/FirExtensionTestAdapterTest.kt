@@ -20,7 +20,7 @@ import dev.karmakrafts.iridium.pipeline.defaultPipelineSpec
 import dev.karmakrafts.iridium.runCompilerTest
 import dev.karmakrafts.kcml.api.extension.ExtensionDependency
 import dev.karmakrafts.kcml.api.extension.FirExtension
-import dev.karmakrafts.kcml.api.frontend.Frontend
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.declarations.FirConstructor
 import org.jetbrains.kotlin.fir.declarations.FirNamedFunction
@@ -110,7 +110,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateConstructors(
-                frontend: Frontend, context: MemberGenerationContext
+                frontend: FirFrontend, context: MemberGenerationContext
             ): List<FirConstructorSymbol> {
                 calls += listOf(frontend, context)
                 return result
@@ -132,7 +132,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateFunctions(
-                frontend: Frontend, callableId: CallableId, context: MemberGenerationContext?
+                frontend: FirFrontend, callableId: CallableId, context: MemberGenerationContext?
             ): List<FirNamedFunctionSymbol> {
                 calls += listOf(frontend, callableId, context)
                 return result
@@ -155,7 +155,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateProperties(
-                frontend: Frontend, callableId: CallableId, context: MemberGenerationContext?
+                frontend: FirFrontend, callableId: CallableId, context: MemberGenerationContext?
             ): List<FirPropertySymbol> {
                 calls += listOf(frontend, callableId, context)
                 return result
@@ -179,7 +179,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateNestedClassLikeDeclaration(
-                frontend: Frontend, owner: FirClassSymbol<*>, name: Name, context: NestedClassGenerationContext
+                frontend: FirFrontend, owner: FirClassSymbol<*>, name: Name, context: NestedClassGenerationContext
             ): FirClassLikeSymbol<*>? {
                 calls += listOf(frontend, owner, name, context)
                 return result
@@ -202,7 +202,7 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun generateTopLevelClassLikeDeclaration(
-                frontend: Frontend, classId: ClassId
+                frontend: FirFrontend, classId: ClassId
             ): FirClassLikeSymbol<*>? {
                 calls += listOf(frontend, classId)
                 return result
@@ -227,14 +227,14 @@ class FirExtensionTestAdapterTest {
             override val dependencies: List<ExtensionDependency> = emptyList()
 
             override fun getCallableNamesForClass(
-                frontend: Frontend, classSymbol: FirClassSymbol<*>, context: MemberGenerationContext
+                frontend: FirFrontend, classSymbol: FirClassSymbol<*>, context: MemberGenerationContext
             ): Set<Name> {
                 callableCalls += listOf(frontend, classSymbol, context)
                 return callableNames
             }
 
             override fun getNestedClassifiersNames(
-                frontend: Frontend, classSymbol: FirClassSymbol<*>, context: NestedClassGenerationContext
+                frontend: FirFrontend, classSymbol: FirClassSymbol<*>, context: NestedClassGenerationContext
             ): Set<Name> {
                 classifierCalls += listOf(frontend, classSymbol, context)
                 return classifierNames
@@ -257,12 +257,12 @@ class FirExtensionTestAdapterTest {
             override val id: String = "test"
             override val dependencies: List<ExtensionDependency> = emptyList()
 
-            override fun getTopLevelCallableIds(frontend: Frontend): Set<CallableId> {
+            override fun getTopLevelCallableIds(frontend: FirFrontend): Set<CallableId> {
                 callableCalls += listOf(frontend)
                 return callableIds
             }
 
-            override fun getTopLevelClassIds(frontend: Frontend): Set<ClassId> {
+            override fun getTopLevelClassIds(frontend: FirFrontend): Set<ClassId> {
                 classCalls += listOf(frontend)
                 return classIds
             }
@@ -282,7 +282,7 @@ class FirExtensionTestAdapterTest {
             override val id: String = "test"
             override val dependencies: List<ExtensionDependency> = emptyList()
 
-            override fun hasPackage(frontend: Frontend, packageFqName: FqName): Boolean {
+            override fun hasPackage(frontend: FirFrontend, packageFqName: FqName): Boolean {
                 calls += listOf(frontend, packageFqName)
                 return packageFqName == packageName
             }
