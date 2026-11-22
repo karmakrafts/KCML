@@ -44,6 +44,11 @@ val hostPlatform = run {
     "$os-$arch"
 }
 
+val syntaxTestPlugins = configurations.create("syntaxTestPlugins") {
+    isCanBeConsumed = false
+    isTransitive = false
+}
+
 repositories {
     mavenCentral()
     mavenLocal()
@@ -54,11 +59,9 @@ repositories {
 }
 
 dependencies {
+    implementation(project(path = ":kcml-plugin-loader", configuration = "ideaRuntimeElements"))
     testImplementation(libs.kotlin.test)
-    testImplementation(projects.kcmlPluginApi) {
-        // Fixtures only need the annotations; compiler and serialization dependencies conflict with the IDE.
-        isTransitive = false
-    }
+    syntaxTestPlugins(projects.kcmlExamplePlugin)
 
     intellijPlatform {
         intellijIdea(libs.versions.intelliJVersion)
@@ -78,6 +81,9 @@ dependencies {
 
 tasks {
     test {
+        dependsOn(syntaxTestPlugins)
+        inputs.files(syntaxTestPlugins).withPropertyName("syntaxTestPlugins").withNormalizer(ClasspathNormalizer::class)
+        systemProperty("kcml.test.examplePlugin", syntaxTestPlugins.singleFile.absolutePath)
         classpath = classpath.filter {
             it.name != "kotlinc.kotlin-compiler-cli.jar" || !it.path.contains("/kmm-plugin/")
         }

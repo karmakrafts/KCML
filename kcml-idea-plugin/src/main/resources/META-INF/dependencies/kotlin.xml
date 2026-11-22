@@ -16,6 +16,11 @@
 
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
+        <annotator language="kotlin" implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxAnnotator"
+                   order="first"/>
+        <highlightInfoFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter"/>
+        <highlightErrorFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxErrorFilter"/>
+
         <!-- Icon providers -->
         <fileIconProvider implementation="dev.karmakrafts.kcml.intellij.icon.PluginConfigIconProvider"/>
         <iconProvider implementation="dev.karmakrafts.kcml.intellij.icon.CompileTargetIconProvider" order="first"/>

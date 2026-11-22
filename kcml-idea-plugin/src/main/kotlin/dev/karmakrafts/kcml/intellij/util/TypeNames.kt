@@ -28,4 +28,14 @@ internal object TypeNames {
 
     const val COMPILE_TARGET: String = "dev.karmakrafts.kcml.api.target.CompileTarget"
     const val ONLY_ON: String = "dev.karmakrafts.kcml.api.target.OnlyOn"
+
+    const val KOTLIN_PACKAGE: String = "org.jetbrains.kotlin."
+    const val INTELLIJ_PACKAGE: String = "com.intellij."
+    const val EMBEDDED_INTELLIJ_PACKAGE: String = "org.jetbrains.kotlin.com.intellij."
+    const val KOTLIN_PARSING_PACKAGE: String = "org.jetbrains.kotlin.parsing."
+    const val KOTLIN_PARSER: String = "org.jetbrains.kotlin.parsing.KotlinParser"
+    const val KOTLIN_PARSING: String = "org.jetbrains.kotlin.parsing.KotlinParsing"
+    const val KOTLIN_EXPRESSION_PARSING: String = "org.jetbrains.kotlin.parsing.KotlinExpressionParsing"
+    const val SYNTAX_HOOKS: String = "dev.karmakrafts.kcml.hooks.SyntaxHooks"
+    const val SYNTAX_GRAMMAR_RULE: String = $$"dev.karmakrafts.kcml.api.extension.SyntaxExtension$GrammarRule"
 }
