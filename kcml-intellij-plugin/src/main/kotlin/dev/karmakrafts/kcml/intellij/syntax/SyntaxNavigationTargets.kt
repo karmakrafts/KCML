@@ -33,8 +33,8 @@ internal class SyntaxNavigationTargets(
     private val source: SmartPsiElementPointer<KtFile?> = SmartPointerManager.createPointer(source)
 
     override fun KaSession.getNavigationTargets(element: KtElement): Collection<PsiElement> {
-        val file = source.getElement() ?: return mutableListOf()
+        val file = source.getElement() ?: return emptyList()
         val target = file.findElementAt(offsets.toSource(element.textRange).startOffset)
-        return if (target == null) mutableListOf() else listOf(target)
+        return if (target == null) emptyList() else listOf(target)
     }
 }
