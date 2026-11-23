@@ -27,6 +27,7 @@ internal class KcmlRootNode(project: Project, settings: ViewSettings) : ProjectV
     project, "KCML", settings
 ) {
     private val categories: List<AbstractTreeNode<*>> = listOf( // @formatter:off
+        KcmlConfiguredPluginsNode(project, settings),
         KcmlPluginsNode(project, settings),
         KcmlSyntaxExtensionsNode(project, settings)
     ) // @formatter:on

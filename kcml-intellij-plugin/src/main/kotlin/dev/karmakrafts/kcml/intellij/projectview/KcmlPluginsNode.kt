@@ -29,9 +29,7 @@ import com.intellij.openapi.vfs.VirtualFile
 import dev.karmakrafts.kcml.intellij.syntax.SyntaxConfiguration
 
 internal class KcmlPluginsNode(project: Project, settings: ViewSettings) : ProjectViewNode<String>(
-    project,
-    "Project classpaths",
-    settings
+    project, "Project classpaths", settings
 ) {
     override fun contains(file: VirtualFile): Boolean = false
 

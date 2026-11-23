@@ -27,9 +27,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 internal class KcmlPluginPathNode(project: Project, path: Path, settings: ViewSettings) : ProjectViewNode<Path>(
-    project,
-    path,
-    settings
+    project, path, settings
 ) {
     override fun contains(file: VirtualFile): Boolean = file.path == value.toString()
 

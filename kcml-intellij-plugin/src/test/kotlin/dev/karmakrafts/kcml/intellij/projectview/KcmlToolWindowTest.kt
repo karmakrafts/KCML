@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.intellij.projectview
 
 import com.intellij.facet.FacetManager
 import com.intellij.ide.projectView.TreeStructureProvider
+import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.runWriteAction
@@ -34,6 +35,7 @@ import com.intellij.ui.tree.AsyncTreeModel
 import com.intellij.ui.tree.StructureTreeModel
 import com.intellij.ui.treeStructure.Tree
 import com.intellij.util.ui.tree.TreeUtil
+import dev.karmakrafts.kcml.intellij.icon.Icons
 import dev.karmakrafts.kcml.intellij.syntax.SyntaxExtensionService
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
@@ -85,7 +87,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         val root = structure.rootElement
         val categories = structure.getChildElements(root).map { it as AbstractTreeNode<*> }
         categories.forEach { it.update() }
-        assertEquals(listOf("Project classpaths", "Syntax extensions"), categories.map { it.presentation.presentableText })
+        assertEquals(listOf("Plugins", "Project classpaths", "Syntax extensions"), categories.map { it.presentation.presentableText })
         categories.forEach {
             assertEmpty(structure.getChildElements(it))
             assertSame(root, structure.getParentElement(it))
@@ -310,6 +312,92 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             classes.toFile().deleteRecursively()
         }
     }
+
+    fun testPluginsCategoryShowsEmbeddedMetadataWithoutLoadingSyntaxRuntime() {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin")).toAbsolutePath().normalize()
+        configure(listOf(exampleJar, exampleJar), "exampleJvm")
+        val structure = KcmlPluginTreeStructure(project)
+        val categories = structure.getChildElements(structure.rootElement)
+        val category = categories.first() as KcmlConfiguredPluginsNode
+        val moduleNode = structure.getChildElements(category).single() as KcmlConfiguredPluginModuleNode
+        moduleNode.update()
+        assertEquals(module.name, moduleNode.presentation.presentableText)
+        val plugin = structure.getChildElements(moduleNode).single() as KcmlPluginNode
+        plugin.update()
+        assertEquals("Example Plugin", plugin.presentation.presentableText)
+        assertEquals("1.0.0", plugin.presentation.locationString)
+        assertNotNull(plugin.presentation.getIcon(false))
+        assertNotSame(Icons.kcml, plugin.presentation.getIcon(false))
+        assertSame(moduleNode, structure.getParentElement(plugin))
+        assertEmpty(project.service<SyntaxExtensionService>().loadedExtensions())
+    }
+
+    fun testPluginMetadataFallbacksUseIdUnavailableVersionAndColoredKcmlIcon() {
+        val directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "kcml-metadata-fallback-")
+        try {
+            Files.createDirectories(directory.resolve("META-INF"))
+            Files.writeString(directory.resolve("META-INF/minimal.json"), """{"id":"minimal"}""")
+            configure(listOf(directory), "common")
+            val category = KcmlConfiguredPluginsNode(project, ViewSettings.DEFAULT)
+            val plugin = category.children.single().children.single() as KcmlPluginNode
+            plugin.update()
+            assertEquals("minimal", plugin.presentation.presentableText)
+            assertEquals("<not available>", plugin.presentation.locationString)
+            assertSame(Icons.kcml, plugin.presentation.getIcon(false))
+        }
+        finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    fun testPluginsCategoryRefreshesAfterMetadataCreationUpdateAndRemoval() {
+        val directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "kcml-metadata-refresh-")
+        val toolWindow = ToolWindowManager.getInstance(project).registerToolWindow(
+            RegisterToolWindowTask.notClosable("KCML metadata test", ToolWindowAnchor.BOTTOM)
+        )
+        try {
+            configure(listOf(directory), "common")
+            val virtualDirectory = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)!!
+            KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
+            val tree = (toolWindow.contentManager.contents.single().component as JScrollPane).viewport.view as Tree
+            fun pluginNode(): KcmlPluginNode? {
+                val category = categoryNode<KcmlConfiguredPluginsNode>(tree) ?: return null
+                if (tree.model.getChildCount(category) != 1) return null
+                val module = tree.model.getChild(category, 0)
+                if (tree.model.getChildCount(module) != 1) return null
+                return TreeUtil.getUserObject(tree.model.getChild(module, 0)) as? KcmlPluginNode
+            }
+            PlatformTestUtil.waitWithEventsDispatching("Empty plugins category", {
+                categoryNode<KcmlConfiguredPluginsNode>(tree)?.let { tree.model.getChildCount(it) == 0 } == true
+            }, 5)
+            val metadata = runWriteAction {
+                virtualDirectory.createChildDirectory(this, "META-INF").createChildData(this, "dynamic.json").apply {
+                    setBinaryContent("""{"id":"dynamic"}""".toByteArray())
+                }
+            }
+            PlatformTestUtil.waitWithEventsDispatching("Created plugin metadata", {
+                pluginNode()?.presentation?.presentableText == "dynamic"
+            }, 5)
+            assertEquals("<not available>", pluginNode()?.presentation?.locationString)
+            runWriteAction {
+                metadata.setBinaryContent("""{"id":"dynamic","name":"Updated Plugin","version":"2.0.0"}""".toByteArray())
+            }
+            PlatformTestUtil.waitWithEventsDispatching("Updated plugin metadata", {
+                pluginNode()?.presentation?.let {
+                    it.presentableText == "Updated Plugin" && it.locationString == "2.0.0"
+                } == true
+            }, 5)
+            runWriteAction { metadata.delete(this) }
+            PlatformTestUtil.waitWithEventsDispatching("Removed plugin metadata", {
+                categoryNode<KcmlConfiguredPluginsNode>(tree)?.let { tree.model.getChildCount(it) == 0 } == true
+            }, 5)
+        }
+        finally {
+            toolWindow.remove()
+            directory.toFile().deleteRecursively()
+        }
+    }
+
 
     private inline fun <reified T> categoryNode(tree: Tree): Any? {
         val root = tree.model.root ?: return null

@@ -21,6 +21,7 @@ import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.intelliJPlatform)
     signing
 }
@@ -59,6 +60,7 @@ repositories {
 
 dependencies {
     implementation(project(path = ":kcml-plugin-loader", configuration = "ideaRuntimeElements"))
+    implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.kotlin.test)
     syntaxTestPlugins(projects.kcmlExamplePlugin)
 
