@@ -18,7 +18,7 @@ package dev.karmakrafts.kcml.intellij.syntax
 
 import com.intellij.openapi.util.TextRange
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
 import java.util.*
 
 @OptIn(ExperimentalKcmlApi::class)

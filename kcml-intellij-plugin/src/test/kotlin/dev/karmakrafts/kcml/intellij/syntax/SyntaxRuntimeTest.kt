@@ -19,6 +19,8 @@ package dev.karmakrafts.kcml.intellij.syntax
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
 import com.intellij.codeInsight.daemon.impl.HighlightInfoFilter
 import com.intellij.codeInsight.daemon.impl.HighlightInfoType
+import com.intellij.codeInsight.completion.CompletionType
+import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.facet.FacetManager
@@ -40,6 +42,8 @@ import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.TextRange
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
+import com.intellij.profile.ProfileChangeAdapter
+import com.intellij.profile.codeInspection.InspectionProjectProfileManager
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.tree.IElementType
 import com.intellij.psi.util.PsiTreeUtil
@@ -50,7 +54,15 @@ import com.intellij.util.ui.UIUtil
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
+import dev.karmakrafts.kcml.api.extension.syntax.Completion
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Inspection
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionMode
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionSeverity
+import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
@@ -124,9 +136,9 @@ class SyntaxFixtureExtension : AbstractExtension(), SyntaxExtension {
         }
     }
 
-    override fun parse(context: SyntaxExtension.ParsingContext, frontend: SyntaxFrontend): Boolean {
+    override fun parse(context: ParsingContext, frontend: SyntaxFrontend): Boolean {
         val builder = context.builder
-        if (context.rule != SyntaxExtension.GrammarRule.EXPRESSION) return false
+        if (context.rule != GrammarRule.EXPRESSION) return false
         if (builder.tokenText == "magic") {
             val marker = builder.mark()
             builder.advanceLexer()
@@ -151,13 +163,45 @@ class SyntaxFixtureExtension : AbstractExtension(), SyntaxExtension {
         }
         check(PsiTreeUtil.collectElementsOfType(file, PsiErrorElement::class.java).isEmpty()) { file.node.toString() }
         val text = file.text.replace("fn ", "fun ").replace("magic", "42").replace("unwrap ", "")
+            .replace("inspectMe", "val first = 1;\nval second = 2;\n")
         return KtPsiFactory(file.project).createFile(file.name, text)
     }
 
-    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> =
+    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> =
         PsiTreeUtil.collectElementsOfType(file, KtProperty::class.java).filter { it.name == "themed" }.map {
-            SyntaxExtension.Highlighting(it.nameIdentifier!!.textRange, "DEFAULT_KEYWORD")
+            Highlighting(it.nameIdentifier!!.textRange, "DEFAULT_KEYWORD")
         }
+
+    override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
+        check(offset in 0..file.textLength)
+        if (file.text.startsWith("// suppressCompletion")) return emptyList()
+        if (!file.text.startsWith("// customCompletion")) return null
+        return listOf(
+            Completion("customOne", "magic", typeText = if (smart) "smart" else "basic", element = file),
+            Completion("customTwo", "42")
+        )
+    }
+
+    override fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
+        if (file.text.startsWith("// suppressAllInspections")) return listOf(
+            InspectionRule(file, InspectionMode.SUPPRESS)
+        )
+        val mode = when {
+            file.text.startsWith("// forwardInspections") -> InspectionMode.DESUGARED
+            file.text.startsWith("// suppressTokenInspections") -> InspectionMode.SUPPRESS
+            else -> return emptyList()
+        }
+        return Regex("\\binspectMe\\b").findAll(file.text).map {
+            InspectionRule(file, mode, TextRange(it.range.first, it.range.last + 1))
+        }.toList()
+    }
+
+    override fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> {
+        if (!file.text.startsWith("// suppressAllInspections custom")) return emptyList()
+        return PsiTreeUtil.collectElementsOfType(file, KtProperty::class.java).map {
+            Inspection(it.nameIdentifier!!, "Custom syntax inspection", InspectionSeverity.WEAK_WARNING)
+        }
+    }
 }
 
 class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
@@ -223,6 +267,146 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         checkExamplePlugin("jvm")
     }
 
+    @OptIn(ExperimentalKcmlApi::class)
+    fun testExamplePluginLowersSyntaxInsideLambdas() {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin"))
+        val configuration = configuration().copy(paths = listOf(exampleJar), options = emptyList())
+        val text = """
+            class LambdaTest {
+                fn test() {
+                    val action = { magic }
+                    consume { value ->
+                        fn nested() = magic
+                        consume { nested() + value + magic }
+                    }
+                }
+            }
+        """.trimIndent()
+        val source = myFixture.configureByText("LambdaTest.kt", text) as KtFile
+        SyntaxRuntime(
+            configuration.compilerConfiguration(), listOf(exampleJar.toUri().toURL()), emptyList()
+        ).use { runtime ->
+            val expected = text.replace("fn ", "fun ").replace("magic", "42")
+            assertEquals(expected, runtime.lower(source).text)
+            val result = runtime.analyzeIfOpen(source)!!
+            assertEquals(expected, result.lowered.text)
+            assertEquals(5, result.highlighting.size)
+            assertTrue(PsiTreeUtil.collectElementsOfType(result.lowered, PsiErrorElement::class.java).isEmpty())
+            assertEquals(text, source.text)
+        }
+    }
+
+    fun testCustomCompletionOverridesKotlinAndInsertsCustomSyntax() {
+        loadRuntime(configuration(), project.service())
+        for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
+            myFixture.configureByText("Custom.kt", "// customCompletion\nfun customKotlin() = 1\nfun usage() = cus<caret>")
+            val variants = myFixture.complete(type).orEmpty()
+            assertSameElements(variants.map { it.lookupString }, "customOne", "customTwo")
+            assertSame(myFixture.file, variants.single { it.lookupString == "customOne" }.psiElement!!.containingFile.originalFile)
+            myFixture.lookup.currentItem = variants.single { it.lookupString == "customOne" }
+            myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
+            myFixture.checkResult("// customCompletion\nfun customKotlin() = 1\nfun usage() = magic<caret>")
+        }
+    }
+
+    fun testEmptyCustomCompletionSuppressesKotlinInUnchangedSource() {
+        loadRuntime(configuration(), project.service())
+        for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
+            myFixture.configureByText("Custom.kt", "// suppressCompletion\nfun customOne() = 1\nfun usage() = cus<caret>")
+            assertEmpty(myFixture.complete(type).orEmpty().toList())
+            myFixture.checkResult("// suppressCompletion\nfun customOne() = 1\nfun usage() = cus<caret>")
+        }
+    }
+
+    fun testAllLoweredSubnodeInspectionsAreShownOnOneSourceToken() {
+        enableSemicolonInspection()
+        loadRuntime(configuration(), project.service())
+        myFixture.configureByText("Inspections.kt", "// forwardInspections\nfun usage() { inspectMe }")
+        val source = myFixture.file as KtFile
+        val tokenStart = source.text.indexOf("inspectMe")
+        val expected = TextRange(tokenStart, tokenStart + "inspectMe".length)
+        val analysis = syntaxAnalysis(source)
+        assertSize(2, analysis.inspections)
+        assertEquals(listOf(expected, expected), analysis.inspections.map { it.range })
+        val warnings = myFixture.doHighlighting().filter {
+            it.problemGroup === SyntaxProblemGroup && it.description?.contains("semicolon", true) == true
+        }
+        assertFalse(warnings.toString(), warnings.isEmpty())
+        assertTrue(warnings.toString(), warnings.all { it.startOffset == expected.startOffset && it.endOffset == expected.endOffset })
+    }
+
+    fun testInspectionRuleSuppressesLoweredSubnodesButNotOtherFindings() {
+        enableSemicolonInspection()
+        loadRuntime(configuration(), project.service())
+        myFixture.configureByText("Inspections.kt", "// suppressTokenInspections\nfun usage() { inspectMe }\nval unrelated = 3;")
+        val source = myFixture.file as KtFile
+        val analysis = syntaxAnalysis(source)
+        assertSize(1, analysis.inspections)
+        assertEquals(source.text.lastIndexOf(';'), analysis.inspections.single().range.startOffset)
+        val warnings = myFixture.doHighlighting().filter { it.description?.contains("semicolon", true) == true }
+        assertSize(1, warnings)
+        assertEquals(source.text.lastIndexOf(';'), warnings.single().startOffset)
+    }
+
+    fun testInspectionRuleSuppressesNormalInspectionsWithoutDesugaring() {
+        enableSemicolonInspection()
+        loadRuntime(configuration(), project.service())
+        myFixture.configureByText("Inspections.kt", "// suppressAllInspections\nval value = 1;")
+        assertEmpty(syntaxAnalysis(myFixture.file as KtFile).inspections)
+        assertEmpty(myFixture.doHighlighting().filter { it.description?.contains("semicolon", true) == true })
+    }
+
+    fun testCustomInspectionsAreInvokedByIdeAndSurviveNormalInspectionSuppression() {
+        enableSemicolonInspection()
+        loadRuntime(configuration(), project.service())
+        myFixture.configureByText("Inspections.kt", "// suppressAllInspections custom\nval value = magic;")
+        val highlights = myFixture.doHighlighting()
+        val custom = highlights.single { it.description == "Custom syntax inspection" }
+        assertEquals(HighlightSeverity.WEAK_WARNING, custom.severity)
+        assertEquals("value", myFixture.file.text.substring(custom.startOffset, custom.endOffset))
+        assertSame(SyntaxProblemGroup, custom.problemGroup)
+        assertEmpty(highlights.filter { it.description?.contains("semicolon", true) == true })
+    }
+
+    fun testInspectionProfileChangesInvalidateDesugaredFindings() {
+        enableSemicolonInspection()
+        val service = project.service<SyntaxExtensionService>()
+        loadRuntime(configuration(), service)
+        myFixture.configureByText("Inspections.kt", "// forwardInspections\nfun usage() { inspectMe }")
+        val source = myFixture.file as KtFile
+        val before = syntaxAnalysis(source)
+        assertSize(2, before.inspections)
+        val runtime = service.runtime(module)
+        val profile = InspectionProjectProfileManager.getInstance(project).currentProfile
+        profile.getTools("RedundantSemicolon", project).apply {
+            isEnabled = false
+            defaultState.isEnabled = false
+        }
+        project.messageBus.syncPublisher(ProfileChangeAdapter.TOPIC).profileChanged(profile)
+        val after = syntaxAnalysis(source)
+        assertTrue(after.generation > before.generation)
+        assertEmpty(after.inspections)
+        assertSame("Profile changes must not reload the syntax runtime", runtime, service.runtime(module))
+    }
+
+    private fun enableSemicolonInspection() {
+        val inspection = Class.forName(
+            "org.jetbrains.kotlin.idea.codeInsight.inspections.RedundantSemicolonInspection", true,
+            KotlinLanguage.INSTANCE.javaClass.classLoader
+        ).getDeclaredConstructor().newInstance() as LocalInspectionTool
+        myFixture.enableInspections(inspection)
+    }
+
+    private fun syntaxAnalysis(file: KtFile): SyntaxAnalysis.Result = AppExecutorUtil.getAppExecutorService().submit<SyntaxAnalysis.Result> {
+        var result: SyntaxAnalysis.Result? = null
+        ProgressManager.getInstance().executeProcessUnderProgress({
+            result = runReadActionBlocking { SyntaxAnalysis.result(file)!! }
+        }, EmptyProgressIndicator())
+        result!!
+    }.get(30, TimeUnit.SECONDS)
+
+    // The editor's rendered color is only observable through IterationState; no public API merges markup layers.
+    @Suppress("JetBrainsInternalApiUsage")
     fun testExampleKeywordUsesEditorKeywordColor() {
         val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin"))
         assertTrue("Missing example plugin JAR: $exampleJar", Files.isRegularFile(exampleJar))
@@ -265,7 +449,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
                 text.indexOf("fn answer") to "KOTLIN_KEYWORD", text.indexOf("fn local") to "KOTLIN_KEYWORD",
                 text.indexOf("magic", text.indexOf("fn local")) to "KOTLIN_NUMBER", text.indexOf("magic +") to "KOTLIN_NUMBER"
             ).map { (start, key) ->
-                SyntaxExtension.Highlighting(TextRange(start, start + if (key == "KOTLIN_KEYWORD") 2 else 5), key)
+                Highlighting(TextRange(start, start + if (key == "KOTLIN_KEYWORD") 2 else 5), key)
             }
             assertEquals(expected.sortedBy { it.range.startOffset }, result.highlighting.sortedBy { it.range.startOffset })
             assertEquals(
@@ -419,10 +603,12 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
                 assertEquals(listOf("ide_fixture:syntax"), service.loadedExtensions().single().extensionIds)
                 val canceled = AppExecutorUtil.getAppExecutorService().submit<KtFile?> {
                     val indicator = EmptyProgressIndicator()
-                    ProgressManager.getInstance().runProcess<KtFile?>({
+                    var lowered: KtFile? = null
+                    ProgressManager.getInstance().executeProcessUnderProgress({
                         indicator.cancel()
-                        runtime.lowerIfOpen(source)
+                        lowered = runtime.lowerIfOpen(source)
                     }, indicator)
+                    lowered
                 }
                 val failure = assertFailsWith<ExecutionException> { canceled.get(5, TimeUnit.SECONDS) }
                 assertTrue("Canceled analysis must not wait for a busy runtime", failure.cause is ProcessCanceledException)
@@ -687,6 +873,8 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         assertTrue(SyntaxHighlightInfoFilter().accept(error, file))
     }
 
+    // Origin flags are the only way to tell host semantic highlighting from the KCML override.
+    @Suppress("JetBrainsInternalApiUsage")
     fun testHighlightingOverridesOnlyDeclaredRangesAndKeepsOtherSemanticColors() {
         val manager = FacetManager.getInstance(module)
         val kotlinFacet = manager.createFacet(KotlinFacetType.INSTANCE, "Kotlin", null)

@@ -27,7 +27,9 @@ import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionSeverity
 import org.jetbrains.kotlin.analysis.api.components.KaDiagnosticCheckerFilter
 import org.jetbrains.kotlin.analysis.api.components.collectDiagnostics
 import org.jetbrains.kotlin.analysis.api.diagnostics.KaSeverity
@@ -46,7 +48,11 @@ internal object SyntaxAnalysis {
         val stamp: Long,
         val generation: Long,
         val diagnostics: List<Diagnostic>,
-        val highlighting: List<Highlighting>
+        val highlighting: List<Highlighting>,
+        val inspections: List<SyntaxInspections.Problem>,
+        val inspectionToolIds: Set<String>,
+        val inspectionRules: List<InspectionRule>,
+        val desugared: Boolean
     ) // @formatter:on
 
     private val key: Key<Result> = Key.create("kcml.syntax.diagnostics")
@@ -57,7 +63,9 @@ internal object SyntaxAnalysis {
         if (file.project.isDisposed) return null
         val stamp = PsiModificationTracker.getInstance(file.project).modificationCount
         val generation = file.project.service<SyntaxExtensionService>().modificationCount
-        return cached.takeIf { it.stamp == stamp && it.generation == generation }
+        return cached.takeIf { (val stamp1 = stamp, val generation1 = generation) ->
+            stamp1 == stamp && generation1 == generation
+        }
     }
 
     fun result(file: KtFile): Result? {
@@ -81,13 +89,32 @@ internal object SyntaxAnalysis {
         analyzing.set(true)
         try {
             val generation = service.modificationCount
-            (val lowered, val highlighting) = runtime.analyzeIfOpen(file) ?: return null
+            (val lowered, val highlighting, val inspectionRules, val inspections) = runtime.analyzeIfOpen(file)
+                ?: return null
+            SyntaxAnalysisContext.attach(lowered, file)
             // Analyze desugared Kotlin, but report ranges in the original document.
             val offsets = SyntaxOffsetMap(file.text, lowered.text)
             val diagnostics = collectSyntaxDiagnostics(lowered, offsets) + collectSemanticDiagnostics(lowered, offsets)
+            val desugared = file.text != lowered.text
+            (val problems, val toolIds) = if (desugared || inspectionRules.isNotEmpty()) {
+                SyntaxInspections.collect(file, lowered, offsets, inspectionRules)
+            }
+            else SyntaxInspections.Result(emptyList(), emptySet())
             // Never replace diagnostics with results from a session invalidated during analysis.
             if (generation != service.modificationCount) return null
-            val result = Result(stamp, generation, diagnostics, highlighting)
+            val result = Result(
+                stamp, generation, diagnostics, highlighting, problems.filter { problem ->
+                desugared || inspectionRules.any { it.range.intersects(problem.range) }
+            } + inspections.map {
+                val severity = when (it.severity) {
+                    InspectionSeverity.ERROR -> HighlightSeverity.ERROR
+                    InspectionSeverity.WARNING -> HighlightSeverity.WARNING
+                    InspectionSeverity.WEAK_WARNING -> HighlightSeverity.WEAK_WARNING
+                    InspectionSeverity.INFORMATION -> HighlightSeverity.INFORMATION
+                }
+                SyntaxInspections.Problem(severity, it.message, it.range)
+            }, toolIds, inspectionRules, desugared
+            )
             file.putUserData(key, result)
             return result
         }

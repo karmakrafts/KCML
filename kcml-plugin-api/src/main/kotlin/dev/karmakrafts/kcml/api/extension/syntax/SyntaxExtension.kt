@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.extension
+package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
-import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
-import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.psi.KtFile
 
 /**
@@ -28,7 +27,7 @@ import org.jetbrains.kotlin.psi.KtFile
  *
  * The contract uses lexing and PSI parsing rather than a FIR session so compiler and IDE adapters
  * can share syntax rules. It covers tokenization, parsing, IDE highlighting of original syntax,
- * and lowering to ordinary Kotlin PSI.
+ * optional IDE completion, custom inspections and inspection rules, and lowering to ordinary Kotlin PSI.
  * The compiler loader installs a PSI adapter when syntax extensions are present; an IDE needs its
  * own adapter.
  * Callbacks receive a [SyntaxFrontend] pre-FIR context with compiler configuration and diagnostics,
@@ -95,18 +94,85 @@ public interface SyntaxExtension : Extension {
     public fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> = emptyList()
 
     /**
-     * An editor coloring override in original source coordinates.
+     * Optionally overrides editor completion for this extension's original, non-desugared syntax.
      *
-     * @param range nonempty range within the source file; IDE hosts ignore out-of-bounds ranges.
-     * @param textAttributesKey external name of an IDE color-scheme key, such as `KOTLIN_KEYWORD`,
-     * `KOTLIN_NUMBER` or `DEFAULT_KEYWORD`. Custom keys must be registered by an IDE integration.
+     * [file] has been parsed with all active syntax extensions, but has not been [lower]ed. [offset]
+     * is an absolute UTF-16 offset in that original source text, not in the lowered Kotlin. The file must
+     * not be modified.
+     *
+     * IDE hosts automatically invoke this callback when editor completion is requested; compiler
+     * hosts do not invoke it. Later extensions are consulted first, and the first non-null result
+     * replaces normal Kotlin completion. Return `null` to decline and let the next extension handle
+     * the request, or use normal Kotlin completion on desugared source if all extensions decline.
+     * An empty list claims the request and suppresses completion entirely.
+     *
+     * For example, return `listOf(Completion("magic", "magic", typeText = "Int"))` to offer a custom
+     * candidate that inserts `magic` and displays `Int` as its type, or use [Completion.forElement]
+     * to infer a candidate's name from PSI. Any [Completion.element] must belong to [file]'s original
+     * parsed source; synthetic candidates may omit it.
+     *
+     * @param file parsed source PSI, before any lowering callbacks run.
+     * @param offset completion position in the original source text, in UTF-16 code units.
+     * @param smart whether the host requested smart rather than basic completion.
+     * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
+     * @return replacement completion candidates, or `null` to retain the host's fallback.
      */
-    public data class Highlighting(public val range: TextRange, public val textAttributesKey: String) {
-        init {
-            require(!range.isEmpty) { "Highlighting range must not be empty" }
-            require(textAttributesKey.isNotBlank()) { "Text attributes key must not be blank" }
-        }
-    }
+    public fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? = null
+
+    /**
+     * Supplies custom editor inspection findings for this extension's original syntax.
+     *
+     * [file] has been parsed with all active syntax extensions, but has not been [lower]ed. Findings
+     * anchor PSI elements belonging to that original parsed source, optionally restricted by
+     * [Inspection.rangeInElement]. Their absolute UTF-16 [Inspection.range] is captured at construction,
+     * before lowering can change PSI or offsets. The file must not be modified by this callback.
+     *
+     * IDE hosts automatically invoke this callback during editor analysis; compiler hosts do not
+     * invoke it. Every extension's findings are aggregated in registration order, preserving each
+     * extension's result order and all duplicates. [inspectionRules] affect only normal Kotlin
+     * inspections and never suppress these custom findings. Return an empty list for no findings.
+     *
+     * For example, return `listOf(Inspection(node.nameIdentifier!!, "Prefer foo", InspectionSeverity.WARNING))`
+     * to show a custom warning on a declaration's name in the original source.
+     *
+     * @param file parsed source PSI, before any lowering callbacks run.
+     * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
+     * @return custom inspection findings in original source coordinates.
+     */
+    public fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> = emptyList()
+
+    /**
+     * Supplies editor inspection rules for this extension's original, non-desugared syntax.
+     *
+     * [file] has been parsed with all active syntax extensions, but has not been [lower]ed. Rules
+     * anchor PSI elements belonging to that original parsed source, optionally restricted by
+     * [InspectionRule.rangeInElement]. Their absolute UTF-16 [InspectionRule.range] is captured at
+     * construction, before lowering can change PSI or offsets. The file must not be modified by this callback.
+     *
+     * Only IDE hosts invoke this callback. [InspectionMode.DESUGARED] forwards all mapped diagnostics
+     * from lowered subnodes to the whole [InspectionRule.range], allowing many reports on one source
+     * node, and suppresses raw Kotlin inspection reports overlapping that source span.
+     * [InspectionMode.SUPPRESS] suppresses both raw and lowered normal inspection reports overlapping
+     * the range. Neither mode suppresses diagnostics outside its source span or custom findings
+     * returned by [inspect].
+     *
+     * Later extensions take precedence for overlapping ranges. Within one extension, the first
+     * overlapping rule wins; IDE hosts select the first overlapping rule from the adapter's list,
+     * collected in reverse extension order while retaining each extension's rule order. Return an
+     * empty list to retain normal desugared inspection forwarding when lowering actually changes
+     * the file, or ordinary Kotlin inspections when it does not.
+     *
+     * For example, return `listOf(InspectionRule(node))` to attach every inspection from the
+     * lowered form of `node` to that single source node, or
+     * `listOf(InspectionRule(node, InspectionMode.SUPPRESS))` to omit its normal inspections.
+     * Compiler diagnostics and unrelated inspection providers are unaffected. Hosts forward local
+     * Kotlin inspection findings, but not quick fixes that would edit only temporary lowered PSI.
+     *
+     * @param file parsed source PSI, before any lowering callbacks run.
+     * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
+     * @return source ranges and their inspection handling modes.
+     */
+    public fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> = emptyList()
 
     /**
      * Lowers modified or extended syntax to PSI understood by Kotlin's frontend.
@@ -124,60 +190,4 @@ public interface SyntaxExtension : Extension {
      * @return the file to pass to the next lowering callback and eventually frontend analysis.
      */
     public fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile = file
-
-    /** Host services available while parsing a single syntax construct. */
-    public interface ParsingContext {
-        /** Token stream and tree builder positioned at the start of the candidate construct. */
-        public val builder: PsiBuilder
-
-        /** Grammar rule for which the host is requesting a construct. */
-        public val rule: GrammarRule
-
-        /**
-         * Parses an ordinary Kotlin construct at the builder's current token.
-         *
-         * Bypasses syntax extensions for this entry call to avoid recursively claiming the same
-         * construct. Nested grammar rules may dispatch extensions again. A `false` result must
-         * leave the builder unchanged; a `true` result must consume tokens and balance its markers.
-         *
-         * @param rule grammar rule to invoke, defaulting to this context's [ParsingContext.rule].
-         * @return whether the Kotlin parser consumed a construct, including error recovery.
-         * @throws IllegalArgumentException if the host adapter does not support [rule].
-         */
-        public fun parseKotlin(rule: GrammarRule = this.rule): Boolean
-    }
-
-    /**
-     * Open identifier for a grammar entry point at which syntax can be replaced or extended.
-     *
-     * The well-known Kotlin rules are conveniences, not an exhaustive set. Host adapters may support
-     * additional identifiers; constructing a rule does not require every host to support it.
-     *
-     * @param id nonblank, namespaced identifier shared by extensions and their host adapter.
-     */
-    public data class GrammarRule(public val id: String) {
-        init {
-            require(id.isNotBlank()) { "Grammar rule ID must not be blank" }
-        }
-
-        public companion object {
-            /** A declaration in a file, after its package and import directives. */
-            public val TOP_LEVEL_DECLARATION: GrammarRule = GrammarRule("kotlin.top_level_declaration")
-
-            /** A declaration in a class or object body. */
-            public val MEMBER_DECLARATION: GrammarRule = GrammarRule("kotlin.member_declaration")
-
-            /** A declaration in a local scope. */
-            public val LOCAL_DECLARATION: GrammarRule = GrammarRule("kotlin.local_declaration")
-
-            /** A statement in a block, including statements that are not expressions. */
-            public val STATEMENT: GrammarRule = GrammarRule("kotlin.statement")
-
-            /** An expression, including a replacement for an existing Kotlin expression form. */
-            public val EXPRESSION: GrammarRule = GrammarRule("kotlin.expression")
-
-            /** A type reference. */
-            public val TYPE: GrammarRule = GrammarRule("kotlin.type")
-        }
-    }
 }

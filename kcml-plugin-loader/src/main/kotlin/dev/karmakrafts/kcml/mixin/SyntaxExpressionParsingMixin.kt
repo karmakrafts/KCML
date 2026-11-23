@@ -17,7 +17,7 @@
 package dev.karmakrafts.kcml.mixin
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
 import dev.karmakrafts.kcml.api.mixin.Capture
 import dev.karmakrafts.kcml.api.mixin.IndirectMixin
 import dev.karmakrafts.kcml.api.mixin.Inject

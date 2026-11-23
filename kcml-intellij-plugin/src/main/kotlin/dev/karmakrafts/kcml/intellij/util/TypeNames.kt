@@ -37,5 +37,5 @@ internal object TypeNames {
     const val KOTLIN_PARSING: String = "org.jetbrains.kotlin.parsing.KotlinParsing"
     const val KOTLIN_EXPRESSION_PARSING: String = "org.jetbrains.kotlin.parsing.KotlinExpressionParsing"
     const val SYNTAX_HOOKS: String = "dev.karmakrafts.kcml.hooks.SyntaxHooks"
-    const val SYNTAX_GRAMMAR_RULE: String = $$"dev.karmakrafts.kcml.api.extension.SyntaxExtension$GrammarRule"
+    const val SYNTAX_GRAMMAR_RULE: String = "dev.karmakrafts.kcml.api.extension.syntax.GrammarRule"
 }

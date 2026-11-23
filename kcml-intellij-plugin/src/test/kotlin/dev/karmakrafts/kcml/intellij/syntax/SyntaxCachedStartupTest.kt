@@ -40,6 +40,8 @@ class SyntaxCachedStartupTest : HeavyPlatformTestCase() {
         VfsRootAccess.allowRootAccess(testRootDisposable, exampleJar.parent.toString())
         val projectDir = createTempDirectory().toPath().resolve("cached")
         val manager = ProjectManagerEx.getInstanceEx()
+        // The replacement DSL is inline JVM 25 bytecode; this project targets JVM 21.
+        @Suppress("DEPRECATION")
         val created = manager.newProject(
             projectDir, OpenProjectTask.build().copy(
                 isNewProject = true, runConfigurators = false, useDefaultProjectAsTemplate = false
@@ -74,7 +76,7 @@ class SyntaxCachedStartupTest : HeavyPlatformTestCase() {
             PlatformTestUtil.saveProject(created, true)
         }
         finally {
-            manager.forceCloseProject(created)
+            assertTrue("Created project must close", manager.closeAndDispose(created))
         }
 
         val reopened = PlatformTestUtil.loadAndOpenProject(projectDir, testRootDisposable)
@@ -95,7 +97,7 @@ class SyntaxCachedStartupTest : HeavyPlatformTestCase() {
             }, 30)
         }
         finally {
-            manager.forceCloseProject(reopened)
+            assertTrue("Reopened project must close", manager.closeAndDispose(reopened))
         }
     }
 }

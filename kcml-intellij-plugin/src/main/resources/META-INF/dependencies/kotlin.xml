@@ -23,6 +23,8 @@
                    order="first"/>
         <daemon.highlightInfoFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter"/>
         <highlightErrorFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxErrorFilter"/>
+        <lang.inspectionSuppressor language="kotlin"
+                                  implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxInspectionSuppressor"/>
 
         <!-- Icon providers -->
         <fileIconProvider implementation="dev.karmakrafts.kcml.intellij.icon.PluginConfigIconProvider"/>
@@ -76,6 +78,8 @@
                                         implementationClass="dev.karmakrafts.kcml.intellij.gutter.InjectLineMarkerProvider"/>
 
         <!-- Completion contributors -->
+        <completion.contributor language="kotlin" order="first"
+                                implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxCompletionContributor"/>
         <completion.contributor language="kotlin" order="first, before KotlinCompletionContributor"
                                 implementationClass="dev.karmakrafts.kcml.intellij.completion.CompileTargetCompletionContributor"/>
         <completion.contributor language="kotlin" order="first"
@@ -100,5 +104,10 @@
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
         <completion.confidence language="JSON" order="first"
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
+    </extensions>
+
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <kaResolveExtensionProvider implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxResolveExtensionProvider"/>
+        <k2KaModuleFactory implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxModuleFactory"/>
     </extensions>
 </idea-plugin>

@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import dev.karmakrafts.kcml.util.kcmlModuleName
 import dev.karmakrafts.kcml.util.kcmlNativeTarget
 import dev.karmakrafts.kcml.util.kcmlPluginClasspaths
+import org.jetbrains.kotlin.cli.create
 import org.jetbrains.kotlin.config.CommonConfigurationKeys
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
@@ -37,8 +38,7 @@ internal data class SyntaxConfiguration( // @formatter:off
 ) { // @formatter:on
     val watchedPaths: List<Path> get() = paths + listOfNotNull(nativeTarget)
 
-    @OptIn(CompilerConfiguration.Internals::class)
-    fun compilerConfiguration(): CompilerConfiguration = CompilerConfiguration().apply {
+    fun compilerConfiguration(): CompilerConfiguration = CompilerConfiguration.create().apply {
         kcmlPluginClasspaths = paths
         kcmlCompileTarget = target
         kcmlModuleName = moduleName

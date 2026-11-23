@@ -37,6 +37,22 @@ internal class SyntaxOffsetMap(source: String, lowered: String) {
         return TextRange(start, end)
     }
 
+    fun toLowered(offset: Int): Int {
+        val sourceOffset = offset.coerceIn(0, sourceLength)
+        var delta = 0
+        var change = changes
+        while (change != null) {
+            if (sourceOffset < change.line0) break
+            if (change.deleted > 0) {
+                if (sourceOffset == change.line0) return change.line1
+                if (sourceOffset < change.line0 + change.deleted) return change.line1
+            }
+            delta = change.line1 + change.inserted - change.line0 - change.deleted
+            change = change.link
+        }
+        return (sourceOffset + delta).coerceIn(0, loweredLength)
+    }
+
     private fun toSourceOffset(offset: Int, end: Boolean): Int {
         var delta = 0
         var change = changes

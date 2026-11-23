@@ -34,9 +34,16 @@ internal class SyntaxHighlightInfoFilter : HighlightInfoFilter {
     // The daemon exposes producer identity only through internal APIs; keep unrelated inspections intact.
     @Suppress("JetBrainsInternalApiUsage")
     override fun accept(info: HighlightInfo, file: PsiFile?): Boolean {
-        if (file !is KtFile || info.problemGroup === SyntaxProblemGroup || info.isFromInspection) return true
-        val result = SyntaxAnalysis.result(file) ?: return true
-        if (info.severity < HighlightSeverity.WARNING && result.highlighting.none {
+        if (file !is KtFile || info.problemGroup === SyntaxProblemGroup) return true
+        (val highlighting, val inspectionToolIds, val inspectionRules, val desugared) = SyntaxAnalysis.result(file)
+            ?: return true
+        if (info.isFromInspection) {
+            if (info.inspectionToolId !in inspectionToolIds) return true
+            return !desugared && inspectionRules.none {
+                it.range.startOffset < info.endOffset && info.startOffset < it.range.endOffset
+            }
+        }
+        if (info.severity < HighlightSeverity.WARNING && highlighting.none {
                 it.range.startOffset < info.endOffset && info.startOffset < it.range.endOffset
             }) return true
         val producer = info.toolId

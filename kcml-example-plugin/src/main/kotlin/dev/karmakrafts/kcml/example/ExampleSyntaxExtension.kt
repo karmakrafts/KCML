@@ -19,7 +19,10 @@ package dev.karmakrafts.kcml.example
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.com.intellij.lexer.DelegateLexer
@@ -47,8 +50,8 @@ internal class ExampleSyntaxExtension : AbstractExtension(), SyntaxExtension {
             else delegate.tokenType
     }
 
-    override fun parse(context: SyntaxExtension.ParsingContext, frontend: SyntaxFrontend): Boolean {
-        if (context.rule != SyntaxExtension.GrammarRule.EXPRESSION) return false
+    override fun parse(context: ParsingContext, frontend: SyntaxFrontend): Boolean {
+        if (context.rule != GrammarRule.EXPRESSION) return false
         val builder = context.builder
         if (builder.tokenType != KtTokens.IDENTIFIER || builder.tokenText != "magic") return false
         val marker = builder.mark()
@@ -57,13 +60,13 @@ internal class ExampleSyntaxExtension : AbstractExtension(), SyntaxExtension {
         return true
     }
 
-    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> = buildList {
+    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> = buildList {
         for (function in PsiTreeUtil.collectElementsOfType(file, KtNamedFunction::class.java)) {
             val keyword = function.funKeyword ?: continue
-            if (keyword.text == "fn") add(SyntaxExtension.Highlighting(keyword.textRange, "KOTLIN_KEYWORD"))
+            if (keyword.text == "fn") add(Highlighting(keyword.textRange, "KOTLIN_KEYWORD"))
         }
         for (constant in PsiTreeUtil.collectElementsOfType(file, KtConstantExpression::class.java)) {
-            if (constant.text == "magic") add(SyntaxExtension.Highlighting(constant.textRange, "KOTLIN_NUMBER"))
+            if (constant.text == "magic") add(Highlighting(constant.textRange, "KOTLIN_NUMBER"))
         }
     }
 

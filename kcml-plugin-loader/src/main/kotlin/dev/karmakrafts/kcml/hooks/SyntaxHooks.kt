@@ -18,7 +18,7 @@ package dev.karmakrafts.kcml.hooks
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.InternalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.cli.jvm.compiler.KotlinCoreEnvironment
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder

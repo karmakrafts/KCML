@@ -28,7 +28,7 @@ import org.jetbrains.kotlin.psi.KtFile
 internal class SyntaxAnnotator : Annotator {
     override fun annotate(element: PsiElement, holder: AnnotationHolder) {
         val file = element as? KtFile ?: return
-        (val diagnostics, val highlighting) = SyntaxAnalysis.result(file) ?: return
+        (val diagnostics, val highlighting, val inspections) = SyntaxAnalysis.result(file) ?: return
         for ((range, textAttributesKey) in highlighting) {
             holder.newSilentAnnotation(HighlightSeverity.INFORMATION)
                 .range(range)
@@ -43,6 +43,9 @@ internal class SyntaxAnnotator : Annotator {
                 .problemGroup(SyntaxProblemGroup)
                 .create()
             // @formatter:on
+        }
+        for ((val severity, val message, val range) in inspections) {
+            holder.newAnnotation(severity, message).range(range).problemGroup(SyntaxProblemGroup).create()
         }
     }
 }

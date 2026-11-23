@@ -17,12 +17,14 @@
 package dev.karmakrafts.kcml.intellij.syntax
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.codeInspection.InspectionProfile
 import com.intellij.facet.Facet
 import com.intellij.facet.FacetManager
 import com.intellij.facet.FacetManagerListener
 import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.logger
@@ -32,13 +34,23 @@ import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.roots.ModuleRootEvent
 import com.intellij.openapi.roots.ModuleRootListener
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.SimpleModificationTracker
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import com.intellij.profile.ProfileChangeAdapter
+import com.intellij.psi.PsiManager
+import com.intellij.psi.PsiTreeChangeAdapter
+import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.util.concurrency.AppExecutorUtil
+import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
+import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinGlobalModuleStateModificationEvent
+import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinModificationEvent
+import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinModuleOutOfBlockModificationEvent
+import org.jetbrains.kotlin.psi.KtFile
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.FileTime
@@ -94,9 +106,15 @@ internal class SyntaxExtensionService( // @formatter:off
 
     @Volatile
     private var started: Boolean = false
+    private val invalidateResolveScheduled = AtomicBoolean()
 
     init {
         project.messageBus.connect(this).apply {
+            subscribe(ProfileChangeAdapter.TOPIC, object : ProfileChangeAdapter {
+                override fun profileChanged(profile: InspectionProfile) = invalidateAnalysis()
+                override fun profileActivated(oldProfile: InspectionProfile?, profile: InspectionProfile?) =
+                    invalidateAnalysis()
+            })
             subscribe(ModuleRootListener.TOPIC, object : ModuleRootListener {
                 override fun rootsChanged(event: ModuleRootEvent) = refresh()
             })
@@ -113,6 +131,25 @@ internal class SyntaxExtensionService( // @formatter:off
                 }
             })
         }
+        PsiManager.getInstance(project).addPsiTreeChangeListener(object : PsiTreeChangeAdapter() {
+            override fun childAdded(event: PsiTreeChangeEvent) = sourceChanged(event)
+            override fun childRemoved(event: PsiTreeChangeEvent) = sourceChanged(event)
+            override fun childReplaced(event: PsiTreeChangeEvent) = sourceChanged(event)
+            override fun childMoved(event: PsiTreeChangeEvent) = sourceChanged(event)
+            override fun childrenChanged(event: PsiTreeChangeEvent) = sourceChanged(event)
+        }, this)
+    }
+
+    @OptIn(KaPlatformInterface::class)
+    private fun sourceChanged(event: PsiTreeChangeEvent) {
+        val source = event.file as? KtFile ?: return
+        if (!source.isPhysical || !ApplicationManager.getApplication().isWriteAccessAllowed) return
+        val virtualFile = source.virtualFile ?: return
+        val module = ProjectFileIndex.getInstance(project).getModuleForFile(virtualFile) ?: return
+        if (!synchronized(this) { !disposed && sessions[module]?.runtime?.hasExtensions == true }) return
+        val context = SyntaxAnalysisContext.sourceModule(source) ?: return
+        project.messageBus.syncPublisher(KotlinModificationEvent.TOPIC)
+            .onModification(KotlinModuleOutOfBlockModificationEvent(context))
     }
 
     fun start() {
@@ -159,7 +196,10 @@ internal class SyntaxExtensionService( // @formatter:off
         // Cached module settings can arrive after the initial scan without an import notification
         ReadAction.nonBlocking<Unit> {
             loadRuntime(module, SyntaxConfiguration.fromModule(module))
-        }.expireWith(this).expireWhen { module.isDisposed }.coalesceBy(this, module)
+        }
+            .expireWith(this)
+            .expireWhen { module.isDisposed }
+            .coalesceBy(this, module)
             .submit(AppExecutorUtil.getAppExecutorService())
         return null
     }
@@ -307,13 +347,28 @@ internal class SyntaxExtensionService( // @formatter:off
         changed()
     }
 
-    private fun changed() {
+    private fun invalidateAnalysis() {
+        incModificationCount()
+        changed(false)
+    }
+
+    @OptIn(KaPlatformInterface::class)
+    private fun changed(invalidateResolve: Boolean = true) {
+        if (invalidateResolve) {
+            invalidateResolveScheduled.set(true)
+        }
         listeners.forEach { it() }
         // Coalesce background load notifications into one queued EDT analysis restart
         if (!restartScheduled.compareAndSet(false, true)) return
         ApplicationManager.getApplication().invokeLater {
             restartScheduled.set(false)
-            if (!disposed && !project.isDisposed) DaemonCodeAnalyzer.getInstance(project).restart(this)
+            if (!disposed && !project.isDisposed) {
+                if (invalidateResolveScheduled.getAndSet(false)) runWriteAction {
+                    project.messageBus.syncPublisher(KotlinModificationEvent.TOPIC)
+                        .onModification(KotlinGlobalModuleStateModificationEvent)
+                }
+                DaemonCodeAnalyzer.getInstance(project).restart(this)
+            }
         }
     }
 

@@ -19,9 +19,15 @@ package dev.karmakrafts.kcml.extension
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.Completion
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Inspection
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionMode
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionSeverity
+import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.frontend.SyntaxFrontendImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
@@ -42,8 +48,11 @@ import org.jetbrains.kotlin.com.intellij.openapi.Disposable
 import org.jetbrains.kotlin.com.intellij.openapi.application.ApplicationManager
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
+import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
+import org.jetbrains.kotlin.com.intellij.psi.PsiNamedElement
 import org.jetbrains.kotlin.com.intellij.psi.TokenType
+import org.jetbrains.kotlin.com.intellij.psi.impl.source.tree.LeafElement
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -51,13 +60,17 @@ import org.jetbrains.kotlin.config.CompilerConfiguration.Internals
 import org.jetbrains.kotlin.lexer.KotlinLexer
 import org.jetbrains.kotlin.parsing.KotlinParserDefinition
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.psi.KtNamedFunction
+import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiFactory
+import java.lang.reflect.Modifier
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 import kotlin.test.fail
@@ -308,6 +321,33 @@ class SyntaxExtensionAdapterTest {
     }
 
     @Test
+    fun `syntax API models are top-level types in the syntax package`() {
+        val types = listOf(
+            SyntaxExtension::class.java,
+            GrammarRule::class.java,
+            ParsingContext::class.java,
+            Highlighting::class.java,
+            Completion::class.java,
+            InspectionRule::class.java,
+            InspectionMode::class.java,
+            Inspection::class.java,
+            InspectionSeverity::class.java
+        )
+        for (type in types) {
+            assertEquals("dev.karmakrafts.kcml.api.extension.syntax.${type.simpleName}", type.name)
+            assertNull(type.enclosingClass)
+        }
+        assertEquals(
+            Boolean::class.javaPrimitiveType,
+            ParsingContext::class.java.getMethod("parseKotlin", GrammarRule::class.java).returnType
+        )
+        val factory = Completion::class.java.getMethod(
+            "forElement", PsiNamedElement::class.java, String::class.java, String::class.java, String::class.java
+        )
+        assertTrue(Modifier.isStatic(factory.modifiers))
+    }
+
+    @Test
     fun `callbacks share one cached frontend per owning plugin ID`() {
         val created = mutableMapOf<String, SyntaxFrontend>()
         val calls = mutableListOf<SyntaxFrontend>()
@@ -327,7 +367,22 @@ class SyntaxExtensionAdapterTest {
                 return file
             }
 
-            override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> {
+            override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> {
+                calls += frontend
+                return emptyList()
+            }
+
+            override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
+                calls += frontend
+                return null
+            }
+
+            override fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
+                calls += frontend
+                return emptyList()
+            }
+
+            override fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> {
                 calls += frontend
                 return emptyList()
             }
@@ -343,19 +398,22 @@ class SyntaxExtensionAdapterTest {
         assertFalse(adapter.parse(builder("value"), GrammarRule.EXPRESSION) { fail("Unexpected fallback") })
         adapter.lower(KtPsiFactory(environment.project).createFile("val value = 0"))
         adapter.highlight(KtPsiFactory(environment.project).createFile("val value = 0"))
+        assertNull(adapter.complete(KtPsiFactory(environment.project).createFile("val value = 0"), 4, false))
+        assertTrue(adapter.inspectionRules(KtPsiFactory(environment.project).createFile("val value = 0")).isEmpty())
+        assertTrue(adapter.inspect(KtPsiFactory(environment.project).createFile("val value = 0")).isEmpty())
 
         assertEquals(setOf("first", "second"), created.keys)
-        assertEquals(List(4) { listOf("first", "second", "first") }.flatten(), calls.map { it.pluginId })
+        assertEquals(List(7) { listOf("first", "second", "first") }.flatten(), calls.map { it.pluginId })
         calls.forEach { assertSame(created.getValue(it.pluginId), it) }
     }
 
     @Test
     fun `highlighting collects original source ranges in extension order`() {
         val file = KtPsiFactory(environment.project).createFile("val value = 0")
-        val first = SyntaxExtension.Highlighting(TextRange(0, 3), "DEFAULT_KEYWORD")
-        val second = SyntaxExtension.Highlighting(TextRange(12, 13), "DEFAULT_NUMBER")
-        fun extension(expectedPlugin: String, highlighting: SyntaxExtension.Highlighting) = object : TestExtension() {
-            override fun highlight(source: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> {
+        val first = Highlighting(TextRange(0, 3), "DEFAULT_KEYWORD")
+        val second = Highlighting(TextRange(12, 13), "DEFAULT_NUMBER")
+        fun extension(expectedPlugin: String, highlighting: Highlighting) = object : TestExtension() {
+            override fun highlight(source: KtFile, frontend: SyntaxFrontend): List<Highlighting> {
                 assertSame(file, source)
                 assertEquals(expectedPlugin, frontend.pluginId)
                 return listOf(highlighting)
@@ -368,10 +426,291 @@ class SyntaxExtensionAdapterTest {
 
     @Test
     fun `highlighting rejects empty ranges and blank keys`() {
-        assertFailsWith<IllegalArgumentException> { SyntaxExtension.Highlighting(TextRange(1, 1), "DEFAULT_KEYWORD") }
+        assertFailsWith<IllegalArgumentException> { Highlighting(TextRange(1, 1), "DEFAULT_KEYWORD") }
         for (key in listOf("", " ", "\t\n")) {
-            assertFailsWith<IllegalArgumentException> { SyntaxExtension.Highlighting(TextRange(0, 1), key) }
+            assertFailsWith<IllegalArgumentException> { Highlighting(TextRange(0, 1), key) }
         }
+    }
+
+    @Test
+    fun `declined completions visit extensions in reverse order with original source arguments`() {
+        val file = KtPsiFactory(environment.project).createFile("val value = 0")
+        val offset = file.textLength
+        val calls = mutableListOf<String>()
+        fun extension(expectedPlugin: String) = object : TestExtension() {
+            override fun complete(source: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
+                assertSame(file, source)
+                assertEquals(file.textLength, offset)
+                assertTrue(smart)
+                assertEquals(expectedPlugin, frontend.pluginId)
+                calls += frontend.pluginId
+                return null
+            }
+
+            override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile =
+                fail("Completion must not lower the original source")
+        }
+
+        assertNull(adapter(extension("plugin-0"), extension("plugin-1")).complete(file, offset, true))
+        assertEquals(listOf("plugin-1", "plugin-0"), calls)
+        assertEquals("val value = 0", file.text)
+    }
+
+    @Test
+    fun `later completion overrides earlier extensions including empty results`() {
+        val file = KtPsiFactory(environment.project).createFile("val value = 0")
+        val element = file.declarations.single() as KtProperty
+        val custom = listOf(Completion("custom", "custom()", "()", "Unit", element))
+        for (result in listOf(emptyList(), custom)) {
+            val calls = mutableListOf<String>()
+            val earlier = object : TestExtension() {
+                override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion> =
+                    fail("An earlier completion override must not run")
+            }
+            val accepting = object : TestExtension() {
+                override fun complete(source: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion> {
+                    assertSame(file, source)
+                    assertEquals(4, offset)
+                    assertFalse(smart)
+                    assertEquals("plugin-1", frontend.pluginId)
+                    calls += "accept"
+                    return result
+                }
+            }
+            val declining = object : TestExtension() {
+                override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
+                    assertEquals("plugin-2", frontend.pluginId)
+                    calls += "decline"
+                    return null
+                }
+            }
+
+            assertSame(result, adapter(earlier, accepting, declining).complete(file, 4, false))
+            assertEquals(listOf("decline", "accept"), calls)
+        }
+    }
+
+    @Test
+    fun `completion defaults preserve lookup text and reject blank lookup strings`() {
+        val completion = Completion("custom")
+        assertEquals("custom", completion.lookupString)
+        assertEquals("custom", completion.insertText)
+        assertNull(completion.tailText)
+        assertNull(completion.typeText)
+        assertNull(completion.element)
+        assertEquals("", Completion("custom", "").insertText)
+        for (lookupString in listOf("", " ", "\t\n")) {
+            assertFailsWith<IllegalArgumentException> { Completion(lookupString) }
+        }
+    }
+
+    @Test
+    fun `completion infers PSI names and retains anchors with optional presentation`() {
+        val file = KtPsiFactory(environment.project).createFile("val `escaped value` = 0\nval anonymous = fun() {}")
+        val named = file.declarations[0] as KtProperty
+        val completion = Completion.forElement(named)
+        assertEquals("escaped value", completion.lookupString)
+        assertEquals("escaped value", completion.insertText)
+        assertNull(completion.tailText)
+        assertNull(completion.typeText)
+        assertSame(named, completion.element)
+
+        val custom = Completion.forElement(named, "replacement()", "()", "Int")
+        assertEquals("escaped value", custom.lookupString)
+        assertEquals("replacement()", custom.insertText)
+        assertEquals("()", custom.tailText)
+        assertEquals("Int", custom.typeText)
+        assertSame(named, custom.element)
+
+        val unnamed = (file.declarations[1] as KtProperty).initializer as KtNamedFunction
+        assertNull(unnamed.name)
+        val fallback = Completion.forElement(unnamed)
+        assertEquals(unnamed.text, fallback.lookupString)
+        assertEquals(unnamed.text, fallback.insertText)
+        assertSame(unnamed, fallback.element)
+    }
+
+    @Test
+    fun `inspection rules retain all ranges in reverse extension order and original per-extension order`() {
+        val source = "// \uD83D\uDE00\nfun example() { test }"
+        val file = KtPsiFactory(environment.project).createFile(source)
+        val start = source.indexOf("test")
+        val whole = TextRange(start, start + 4)
+        val element = file.findElementAt(start)!!
+        assertEquals(whole, element.textRange)
+        val earlier = listOf(InspectionRule(element), InspectionRule(element, InspectionMode.SUPPRESS, TextRange(0, 2)))
+        val later = listOf(InspectionRule(element, InspectionMode.SUPPRESS), InspectionRule(element))
+        val calls = mutableListOf<String>()
+        fun extension(expectedPlugin: String, rules: List<InspectionRule>) = object : TestExtension() {
+            override fun inspectionRules(original: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
+                assertSame(file, original)
+                assertEquals(source, original.text)
+                assertEquals("test", original.text.substring(whole.startOffset, whole.endOffset))
+                assertEquals(expectedPlugin, frontend.pluginId)
+                calls += frontend.pluginId
+                return rules
+            }
+
+            override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile =
+                fail("Inspection rules must not lower the original source")
+        }
+        val adapter = adapter(extension("plugin-0", earlier), TestNoopExtension(), extension("plugin-2", later))
+
+        val rules = adapter.inspectionRules(file)
+        assertEquals(later + earlier, rules)
+        (later + earlier).zip(rules).forEach { (expected, actual) -> assertSame(expected, actual) }
+        rules.forEach { assertSame(element, it.element) }
+        assertEquals(listOf(whole, whole, whole, TextRange(start, start + 2)), rules.map { it.range })
+        assertEquals(listOf("plugin-2", "plugin-0"), calls)
+        assertEquals(source, file.text)
+    }
+
+    @Test
+    fun `inspection rules default to desugared and validate PSI subranges for every mode`() {
+        val factory = KtPsiFactory(environment.project)
+        val file = factory.createFile("val value = 0")
+        val element = (file.declarations.single() as KtProperty).nameIdentifier!!
+        val empty = factory.createFile("")
+        val rule = InspectionRule(element)
+        assertSame(element, rule.element)
+        assertEquals(TextRange(4, 9), rule.range)
+        assertNull(rule.rangeInElement)
+        assertEquals(InspectionMode.DESUGARED, rule.mode)
+        for (mode in InspectionMode.entries) {
+            assertEquals(mode, InspectionRule(element, mode).mode)
+            assertEquals(rule.range, InspectionRule(element, mode, TextRange(0, element.textLength)).range)
+            val subrange = TextRange(1, 4)
+            val partial = InspectionRule(element, mode, subrange)
+            assertSame(subrange, partial.rangeInElement)
+            assertEquals(TextRange(5, 8), partial.range)
+            assertFailsWith<IllegalArgumentException> { InspectionRule(empty, mode) }
+            assertFailsWith<IllegalArgumentException> { rule.copy(element = empty, mode = mode) }
+            for (range in listOf(TextRange(0, 0), TextRange(5, 5), TextRange(0, 6), TextRange(5, 6))) {
+                assertFailsWith<IllegalArgumentException> { InspectionRule(element, mode, range) }
+                assertFailsWith<IllegalArgumentException> { rule.copy(mode = mode, rangeInElement = range) }
+            }
+        }
+    }
+
+    @Test
+    fun `custom inspections aggregate in registration order without deduplication or rule suppression`() {
+        val source = "// \uD83D\uDE00\nfun example() { test }"
+        val file = KtPsiFactory(environment.project).createFile(source)
+        val start = source.indexOf("test")
+        val range = TextRange(start, start + 4)
+        val element = file.findElementAt(start)!!
+        assertEquals(range, element.textRange)
+        val findings = InspectionSeverity.entries.map { Inspection(element, "Prefer foo", it) }
+        val earlier = listOf(findings[0], findings[1], findings[0])
+        val later = listOf(findings[2], findings[3], findings[0])
+        val calls = mutableListOf<String>()
+        fun extension(expectedPlugin: String, inspections: List<Inspection>) = object : TestExtension() {
+            override fun inspect(original: KtFile, frontend: SyntaxFrontend): List<Inspection> {
+                assertSame(file, original)
+                assertEquals(source, original.text)
+                assertEquals("test", original.text.substring(range.startOffset, range.endOffset))
+                assertEquals(expectedPlugin, frontend.pluginId)
+                calls += frontend.pluginId
+                return inspections
+            }
+
+            override fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> =
+                listOf(InspectionRule(element, InspectionMode.SUPPRESS))
+
+            override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile =
+                fail("Custom inspections must not lower the original source")
+        }
+        val adapter = adapter(extension("plugin-0", earlier), TestNoopExtension(), extension("plugin-2", later))
+
+        assertEquals(List(2) { InspectionRule(element, InspectionMode.SUPPRESS) }, adapter.inspectionRules(file))
+        val inspections = adapter.inspect(file)
+        assertEquals(earlier + later, inspections)
+        (earlier + later).zip(inspections).forEach { (expected, actual) -> assertSame(expected, actual) }
+        inspections.forEach {
+            assertSame(element, it.element)
+            assertEquals(range, it.range)
+        }
+        assertEquals(listOf("plugin-0", "plugin-2"), calls)
+        assertEquals(source, file.text)
+    }
+
+    @Test
+    fun `custom inspections default to warning and validate PSI subranges and messages for every severity`() {
+        val factory = KtPsiFactory(environment.project)
+        val file = factory.createFile("val value = 0")
+        val element = (file.declarations.single() as KtProperty).nameIdentifier!!
+        val empty = factory.createFile("")
+        val inspection = Inspection(element, "Prefer foo")
+        assertSame(element, inspection.element)
+        assertEquals(TextRange(4, 9), inspection.range)
+        assertNull(inspection.rangeInElement)
+        assertEquals("Prefer foo", inspection.message)
+        assertEquals(InspectionSeverity.WARNING, inspection.severity)
+        for (severity in InspectionSeverity.entries) {
+            assertEquals(severity, Inspection(element, "Prefer foo", severity).severity)
+            assertEquals(
+                inspection.range, Inspection(element, "Prefer foo", severity, TextRange(0, element.textLength)).range
+            )
+            val subrange = TextRange(1, 4)
+            val partial = Inspection(element, "Prefer foo", severity, subrange)
+            assertSame(subrange, partial.rangeInElement)
+            assertEquals(TextRange(5, 8), partial.range)
+            assertFailsWith<IllegalArgumentException> { Inspection(empty, "Prefer foo", severity) }
+            assertFailsWith<IllegalArgumentException> { inspection.copy(element = empty, severity = severity) }
+            for (range in listOf(TextRange(0, 0), TextRange(5, 5), TextRange(0, 6), TextRange(5, 6))) {
+                assertFailsWith<IllegalArgumentException> { Inspection(element, "Prefer foo", severity, range) }
+                assertFailsWith<IllegalArgumentException> {
+                    inspection.copy(rangeInElement = range, severity = severity)
+                }
+            }
+            for (message in listOf("", " ", "\t\n")) {
+                assertFailsWith<IllegalArgumentException> { Inspection(element, message, severity) }
+                assertFailsWith<IllegalArgumentException> { inspection.copy(message = message, severity = severity) }
+            }
+        }
+    }
+
+    @Test
+    fun `inspection ranges are captured before in-place PSI lowering changes offsets and lengths`() {
+        val file = KtPsiFactory(environment.project).createFile("val prefix = 0\nval value = 1")
+        val prefix = file.declarations[0] as KtProperty
+        val element = file.declarations[1] as KtProperty
+        val subrange = TextRange(4, 9)
+        val rule = InspectionRule(element)
+        val partialRule = InspectionRule(element, rangeInElement = subrange)
+        val inspection = Inspection(element, "Prefer foo")
+        val partialInspection = Inspection(element, "Prefer foo", rangeInElement = subrange)
+        val whole = element.textRange
+        val partial = subrange.shiftRight(whole.startOffset)
+        fun rename(name: PsiElement, text: String) {
+            val node = name.node as LeafElement
+            val parent = node.treeParent
+            node.rawReplaceWithText(text)
+            parent.subtreeChanged()
+        }
+        val extension = object : TestExtension() {
+            override fun lower(source: KtFile, frontend: SyntaxFrontend): KtFile {
+                assertSame(file, source)
+                ApplicationManager.getApplication().runWriteAction {
+                    rename(prefix.nameIdentifier!!, "longerPrefix")
+                    rename(element.nameIdentifier!!, "longerValue")
+                }
+                return source
+            }
+        }
+
+        assertSame(file, adapter(extension).lower(file))
+        assertEquals("val longerPrefix = 0\nval longerValue = 1", file.text)
+        assertTrue(element.textRange.startOffset > whole.startOffset)
+        assertTrue(element.textLength > whole.length)
+        assertEquals(whole, rule.range)
+        assertEquals(whole, inspection.range)
+        assertEquals(partial, partialRule.range)
+        assertEquals(partial, partialInspection.range)
+        assertSame(element, rule.element)
+        assertSame(element, inspection.element)
+        assertEquals(element.textRange, rule.copy().range)
+        assertEquals(element.textRange, inspection.copy().range)
     }
 
     @Test
@@ -411,6 +750,10 @@ class SyntaxExtensionAdapterTest {
             assertSame(lexer, adapter.createLexer(lexer))
             assertSame(file, adapter.lower(file))
             assertTrue(adapter.highlight(file).isEmpty())
+            assertNull(adapter.complete(file, 0, false))
+            assertNull(adapter.complete(file, file.textLength, true))
+            assertTrue(adapter.inspectionRules(file).isEmpty())
+            assertTrue(adapter.inspect(file).isEmpty())
             val builder = builder("value")
             assertFalse(adapter.parse(builder, GrammarRule.LOCAL_DECLARATION) { fail("Unexpected fallback") })
             assertEquals(0, builder.currentOffset)

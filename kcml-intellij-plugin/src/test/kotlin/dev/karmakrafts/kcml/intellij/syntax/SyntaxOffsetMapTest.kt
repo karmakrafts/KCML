@@ -22,6 +22,17 @@ import kotlin.test.assertEquals
 
 class SyntaxOffsetMapTest {
     @Test
+    fun sourceCaretsMapToLoweredTextAcrossEdits() {
+        val map = SyntaxOffsetMap("fn answer() = magic\nfun use() = ans", "fun answer() = 42\nfun use() = ans")
+        assertEquals(0, map.toLowered(0))
+        assertEquals(4, map.toLowered(3))
+        assertEquals(17, map.toLowered(19))
+        assertEquals(32, map.toLowered(34))
+        assertEquals("fun answer() = 42\nfun use() = ans".length, map.toLowered(Int.MAX_VALUE))
+        assertEquals(0, map.toLowered(-1))
+    }
+
+    @Test
     fun identicalTextPreservesRanges() {
         val map = SyntaxOffsetMap("abcdef", "abcdef")
         assertEquals(TextRange(1, 4), map.toSource(TextRange(1, 4)))

@@ -18,8 +18,13 @@ package dev.karmakrafts.kcml.extension
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.InternalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Completion
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Inspection
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
+import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
@@ -43,16 +48,33 @@ class SyntaxExtensionAdapter( // @formatter:off
         extension.createLexer(lexer, frontends.getValue(pluginId))
     }
 
-    fun highlight(file: KtFile): List<SyntaxExtension.Highlighting> = extensions.flatMap { [pluginId, extension] ->
+    fun highlight(file: KtFile): List<Highlighting> = extensions.flatMap { [pluginId, extension] ->
         extension.highlight(file, frontends.getValue(pluginId))
     }
+
+    fun complete(file: KtFile, offset: Int, smart: Boolean): List<Completion>? {
+        for ([pluginId, extension] in extensions.asReversed()) {
+            val result = extension.complete(file, offset, smart, frontends.getValue(pluginId))
+            if (result != null) return result
+        }
+        return null
+    }
+
+    fun inspect(file: KtFile): List<Inspection> = extensions.flatMap { [pluginId, extension] ->
+        extension.inspect(file, frontends.getValue(pluginId))
+    }
+
+    fun inspectionRules(file: KtFile): List<InspectionRule> =
+        extensions.asReversed().flatMap { [pluginId, extension] ->
+            extension.inspectionRules(file, frontends.getValue(pluginId))
+        }
 
     fun parse(builder: PsiBuilder, rule: GrammarRule, parseKotlin: (GrammarRule) -> Boolean): Boolean {
         if (builder.eof()) return false
         for ([pluginId, extension] in extensions) {
             val marker = builder.mark()
             val offset = builder.currentOffset
-            val context = object : SyntaxExtension.ParsingContext {
+            val context = object : ParsingContext {
                 override val builder: PsiBuilder = builder
                 override val rule: GrammarRule = rule
                 override fun parseKotlin(rule: GrammarRule): Boolean = parseKotlin(rule)

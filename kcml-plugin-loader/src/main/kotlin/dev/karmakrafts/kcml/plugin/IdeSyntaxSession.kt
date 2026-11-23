@@ -18,8 +18,11 @@ package dev.karmakrafts.kcml.plugin
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.InternalKcmlApi
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Completion
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Inspection
+import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.psi.KtFile
@@ -53,6 +56,18 @@ class IdeSyntaxSession internal constructor(private val state: CompilationState)
 
     fun highlight(file: KtFile): List<Highlighting> = invoke {
         PluginLoaderImpl.syntaxAdapterOrNull?.highlight(file).orEmpty()
+    }
+
+    fun complete(file: KtFile, offset: Int, smart: Boolean): List<Completion>? = invoke {
+        PluginLoaderImpl.syntaxAdapterOrNull?.complete(file, offset, smart)
+    }
+
+    fun inspect(file: KtFile): List<Inspection> = invoke {
+        PluginLoaderImpl.syntaxAdapterOrNull?.inspect(file).orEmpty()
+    }
+
+    fun inspectionRules(file: KtFile): List<InspectionRule> = invoke {
+        PluginLoaderImpl.syntaxAdapterOrNull?.inspectionRules(file).orEmpty()
     }
 
     @Synchronized

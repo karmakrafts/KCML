@@ -22,10 +22,10 @@ import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.extension.ExtensionRegistry
 import dev.karmakrafts.kcml.api.extension.FirExtension
 import dev.karmakrafts.kcml.api.extension.IrExtension
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
 import dev.karmakrafts.kcml.api.extension.js.LateJsExtension
 import dev.karmakrafts.kcml.api.extension.jvm.LateJvmExtension
 import dev.karmakrafts.kcml.api.extension.llvm.LateNativeExtension
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader

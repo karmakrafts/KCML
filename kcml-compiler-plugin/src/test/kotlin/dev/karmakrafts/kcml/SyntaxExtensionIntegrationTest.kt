@@ -24,9 +24,10 @@ import dev.karmakrafts.kcml.agent.proto.io.AgentPacketWriter
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
-import dev.karmakrafts.kcml.api.extension.SyntaxExtension.ParsingContext
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
+import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
+import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
@@ -81,7 +82,7 @@ class SyntaxIntegrationTestPlugin : CompilerPlugin {
 @ExtensionId("syntax_integration_test")
 private class SyntaxIntegrationTestExtension(private val plugin: SyntaxIntegrationTestPlugin) : AbstractExtension(),
     SyntaxExtension {
-    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> =
+    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> =
         error("Editor highlighting must not run during compilation")
 
     private fun assertFrontend(frontend: SyntaxFrontend) {
