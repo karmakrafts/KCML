@@ -38,6 +38,7 @@ import dev.karmakrafts.kcml.intellij.syntax.SyntaxExtensionService
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType
+import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JScrollPane
@@ -169,6 +170,16 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         finally {
             toolWindow.remove()
             directory.toFile().deleteRecursively()
+        }
+    }
+
+    fun testSyntaxPluginArtifactsAreAllowedVfsRoots() {
+        val allowedRoots = System.getProperty("vfs.additional-allowed-roots")
+            .split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it).canonicalFile.toPath() }
+        val artifacts = System.getProperty("kcml.test.examplePluginClasspath").split(';')
+        artifacts.forEach { artifact ->
+            val path = Path.of(artifact).toRealPath()
+            assertTrue("Syntax plugin artifact is outside allowed VFS roots: $path", allowedRoots.any { path.startsWith(it) })
         }
     }
 

@@ -90,9 +90,10 @@ tasks {
         classpath = classpath.filter {
             it.name != "kotlinc.kotlin-compiler-cli.jar" || !it.path.contains("/kmm-plugin/")
         }
-        // IDE extensions resolve resources from installed sandbox copies as well as classpath artifacts.
+        // IDE extensions resolve resources from sandbox copies, classpath artifacts, and external syntax plugins.
         systemProperty("vfs.additional-allowed-roots", classpath.files
             .map { if (it.isFile) it.parentFile else it }
+            .plus(syntaxTestPlugins.files.map { it.parentFile })
             .plus(named<PrepareSandboxTask>("prepareTestSandbox").get().sandboxPluginsDirectory.get().asFile)
             .distinct()
             .joinToString(File.pathSeparator) { it.canonicalPath })
