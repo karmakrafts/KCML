@@ -33,6 +33,9 @@ import org.jetbrains.kotlin.lexer.KotlinLexer
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.TimeUnit
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
@@ -73,6 +76,8 @@ class IdeSyntaxSessionTest {
                 output.closeEntry()
             }
             val originalPlugins = PluginLoaderImpl.allPlugins()
+            val originalExtensionIds = PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty()
+            val expectedExtensionIds = listOf("ide_syntax_test:syntax")
             var closed = false
             val config = CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
             val session = PluginLoaderImpl.loadForIde(config, listOf(jar.toUri().toURL())) { urls, parent ->
@@ -86,23 +91,118 @@ class IdeSyntaxSessionTest {
             session.use { session ->
                 assertEquals(originalPlugins, PluginLoaderImpl.allPlugins())
                 assertTrue(session.hasExtensions)
+                assertEquals(expectedExtensionIds, session.extensionIds)
+                assertEquals(originalExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
                 CompletableFuture.runAsync {
                     val workerPlugins = PluginLoaderImpl.allPlugins()
+                    val workerExtensionIds = PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty()
                     val lexer = KotlinLexer()
+                    assertEquals(expectedExtensionIds, session.extensionIds)
                     assertSame(lexer, session.createLexer(lexer))
                     assertEquals(workerPlugins, PluginLoaderImpl.allPlugins())
+                    assertEquals(workerExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
                 }.get(10, TimeUnit.SECONDS)
                 PluginLoaderImpl.loadForIde(config, emptyList()).use { empty ->
                     assertTrue(!empty.hasExtensions)
+                    assertEquals(emptyList(), empty.extensionIds)
+                    assertEquals(expectedExtensionIds, session.extensionIds)
                     session.createLexer(KotlinLexer())
+                    assertEquals(emptyList(), empty.extensionIds)
                 }
+                assertEquals(expectedExtensionIds, session.extensionIds)
             }
             assertTrue(closed)
             assertFailsWith<IllegalStateException> { session.createLexer(KotlinLexer()) }
+            assertFailsWith<IllegalStateException> { session.extensionIds }
             assertEquals(originalPlugins, PluginLoaderImpl.allPlugins())
+            assertEquals(originalExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
         }
         finally {
             Files.deleteIfExists(jar)
+        }
+    }
+
+    @Test
+    fun `concurrent non-empty IDE session loads are isolated`() {
+        val workerCount = 4
+        val resource = IdeSyntaxTestPlugin::class.java.name.replace('.', '/') + ".class"
+        val jars = List(workerCount) { Files.createTempFile("kcml-ide-syntax-concurrent", ".jar") }
+        val closedFlags = List(workerCount) { AtomicBoolean(false) }
+        val executor = Executors.newFixedThreadPool(workerCount)
+        val sessions = ArrayList<IdeSyntaxSession>()
+        try {
+            for (jar in jars) {
+                JarOutputStream(Files.newOutputStream(jar)).use { output ->
+                    output.putNextEntry(JarEntry(resource))
+                    IdeSyntaxTestPlugin::class.java.classLoader.getResourceAsStream(resource)!!
+                        .use { input -> input.copyTo(output) }
+                    output.closeEntry()
+                }
+            }
+            val originalPlugins = PluginLoaderImpl.allPlugins()
+            val originalExtensionIds = PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty()
+            val expectedExtensionIds = listOf("ide_syntax_test:syntax")
+            val ready = CountDownLatch(workerCount)
+            val start = CountDownLatch(1)
+            val futures = jars.mapIndexed { index, jar ->
+                executor.submit<IdeSyntaxSession> {
+                    val workerPlugins = PluginLoaderImpl.allPlugins()
+                    val workerExtensionIds = PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty()
+                    val config = CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
+                    ready.countDown()
+                    check(start.await(10, TimeUnit.SECONDS)) { "Start signal timed out" }
+                    val session = PluginLoaderImpl.loadForIde(config, listOf(jar.toUri().toURL())) { urls, parent ->
+                        object : URLClassLoader(urls, parent) {
+                            override fun close() {
+                                closedFlags[index].set(true)
+                                super.close()
+                            }
+                        }
+                    }
+                    try {
+                        check(session.hasExtensions)
+                        check(expectedExtensionIds == session.extensionIds) { "Unexpected IDs ${session.extensionIds}" }
+                        check(workerPlugins == PluginLoaderImpl.allPlugins()) { "Worker plugins changed" }
+                        check(workerExtensionIds == PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty()) {
+                            "Worker syntax adapter changed"
+                        }
+                        val lexer = KotlinLexer()
+                        check(lexer === session.createLexer(lexer))
+                        check(workerPlugins == PluginLoaderImpl.allPlugins()) { "Worker plugins changed after use" }
+                    }
+                    catch (error: Throwable) {
+                        session.close()
+                        throw error
+                    }
+                    session
+                }
+            }
+            assertTrue(ready.await(10, TimeUnit.SECONDS))
+            start.countDown()
+            futures.forEach { sessions += it.get(30, TimeUnit.SECONDS) }
+            assertEquals(workerCount, sessions.toSet().size)
+            assertEquals(originalPlugins, PluginLoaderImpl.allPlugins())
+            assertEquals(originalExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
+            for (session in sessions) {
+                assertTrue(session.hasExtensions)
+                assertEquals(expectedExtensionIds, session.extensionIds)
+                val lexer = KotlinLexer()
+                assertSame(lexer, session.createLexer(lexer))
+            }
+            assertTrue(closedFlags.none { it.get() })
+            sessions.first().close()
+            assertTrue(closedFlags.first().get())
+            for (session in sessions.drop(1)) assertEquals(expectedExtensionIds, session.extensionIds)
+            sessions.forEach(IdeSyntaxSession::close)
+            assertTrue(closedFlags.all { it.get() })
+            for (session in sessions) assertFailsWith<IllegalStateException> { session.extensionIds }
+            assertEquals(originalPlugins, PluginLoaderImpl.allPlugins())
+            assertEquals(originalExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
+        }
+        finally {
+            sessions.forEach { runCatching { it.close() } }
+            executor.shutdownNow()
+            jars.forEach(Files::deleteIfExists)
         }
     }
 }

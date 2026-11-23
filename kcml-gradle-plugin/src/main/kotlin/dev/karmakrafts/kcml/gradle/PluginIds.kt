@@ -17,5 +17,6 @@
 package dev.karmakrafts.kcml.gradle
 
 internal object PluginIds {
+    const val KOTLIN_JVM: String = "org.jetbrains.kotlin.jvm"
     const val KOTLIN_MP: String = "org.jetbrains.kotlin.multiplatform"
 }

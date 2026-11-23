@@ -37,8 +37,14 @@ class SyntaxExtensionAdapter( // @formatter:off
         .associateWith(frontendFactory)
     // @formatter:on
 
+    val extensionIds: List<String> = extensions.map { [pluginId, extension] -> "$pluginId:${extension.id}" }
+
     fun createLexer(delegate: Lexer): Lexer = extensions.fold(delegate) { lexer, [pluginId, extension] ->
         extension.createLexer(lexer, frontends.getValue(pluginId))
+    }
+
+    fun highlight(file: KtFile): List<SyntaxExtension.Highlighting> = extensions.flatMap { [pluginId, extension] ->
+        extension.highlight(file, frontends.getValue(pluginId))
     }
 
     fun parse(builder: PsiBuilder, rule: GrammarRule, parseKotlin: (GrammarRule) -> Boolean): Boolean {

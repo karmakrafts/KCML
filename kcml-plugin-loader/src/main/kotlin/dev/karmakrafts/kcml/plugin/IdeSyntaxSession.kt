@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.plugin
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.SyntaxExtension.GrammarRule
+import dev.karmakrafts.kcml.api.extension.SyntaxExtension.Highlighting
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.psi.KtFile
@@ -30,6 +31,9 @@ class IdeSyntaxSession internal constructor(private val state: CompilationState)
 
     val hasExtensions: Boolean
         get() = invoke { PluginLoaderImpl.syntaxAdapterOrNull != null }
+
+    val extensionIds: List<String>
+        get() = invoke { PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty() }
 
     @Synchronized
     fun <T> invoke(action: CompilationState.() -> T): T {
@@ -46,6 +50,10 @@ class IdeSyntaxSession internal constructor(private val state: CompilationState)
     }
 
     fun lower(file: KtFile): KtFile = invoke { PluginLoaderImpl.syntaxAdapterOrNull?.lower(file) ?: file }
+
+    fun highlight(file: KtFile): List<Highlighting> = invoke {
+        PluginLoaderImpl.syntaxAdapterOrNull?.highlight(file).orEmpty()
+    }
 
     @Synchronized
     override fun close() {

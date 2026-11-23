@@ -62,9 +62,3 @@ configurations.configureEach {
         substitute(module("${rootProject.group}:kcml-compiler-plugin")).using(project(":kcml-compiler-plugin"))
     }
 }
-
-tasks {
-    named("prepareKotlinIdeaImport") {
-        dependsOn(":kcml-example-plugin:jar")
-    }
-}

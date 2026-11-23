@@ -82,6 +82,16 @@ internal open class KCMLGradlePlugin @Inject constructor(
         logger.info("KCML ${BuildInfo.version}")
         val extension = target.extensions.create("kcml", KCMLExtension::class.java, target)
         val pluginConfiguration = target.configurations.create(CONFIGURATION_NAME)
+        target.pluginManager.withPlugin(PluginIds.KOTLIN_JVM) {
+            if ("prepareKotlinIdeaImport" !in target.tasks.names) {
+                target.tasks.register("prepareKotlinIdeaImport") { task ->
+                    task.description = "Prepares KCML plugins for Kotlin IDE import"
+                }
+            }
+        }
+        target.tasks.matching { it.name == "prepareKotlinIdeaImport" }.configureEach { task ->
+            task.dependsOn(pluginConfiguration)
+        }
         val runtimeConfiguration = target.configurations.create("kcmlRuntime") {
             it.isCanBeConsumed = false
             it.isTransitive = false

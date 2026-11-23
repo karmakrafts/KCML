@@ -20,13 +20,15 @@ import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
+import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.psi.KtFile
 
 /**
  * Modifies or extends Kotlin syntax before frontend analysis.
  *
  * The contract uses lexing and PSI parsing rather than a FIR session so compiler and IDE adapters
- * can share syntax rules. It covers tokenization, parsing, and lowering to ordinary Kotlin PSI.
+ * can share syntax rules. It covers tokenization, parsing, IDE highlighting of original syntax,
+ * and lowering to ordinary Kotlin PSI.
  * The compiler loader installs a PSI adapter when syntax extensions are present; an IDE needs its
  * own adapter.
  * Callbacks receive a [SyntaxFrontend] pre-FIR context with compiler configuration and diagnostics,
@@ -71,6 +73,40 @@ public interface SyntaxExtension : Extension {
      * @return `true` if this extension parsed the construct, including a recovered erroneous one.
      */
     public fun parse(context: ParsingContext, frontend: SyntaxFrontend): Boolean = false
+
+    /**
+     * Supplies editor highlighting overrides for this extension's original, non-desugared syntax.
+     *
+     * [file] has been parsed with all active syntax extensions, but has not been [lower]ed. Ranges
+     * are absolute offsets in that file's source text, not in the lowered Kotlin. Inspect PSI or
+     * tokens rather than matching raw text so comments, strings and escaped identifiers retain
+     * their normal highlighting. The file must not be modified.
+     *
+     * Only IDE hosts invoke this callback. Overrides use color-scheme keys rather than IDE-only
+     * editor classes, keeping extensions usable with the compiler-embeddable API. They replace
+     * host semantic coloring in their ranges, but do not suppress diagnostics or inspections.
+     * Later extensions take precedence for overlapping ranges. Return an empty list to retain
+     * the host's highlighting everywhere.
+     *
+     * @param file parsed source PSI, before any lowering callbacks run.
+     * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
+     * @return source ranges and the color-scheme attributes to apply to them.
+     */
+    public fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> = emptyList()
+
+    /**
+     * An editor coloring override in original source coordinates.
+     *
+     * @param range nonempty range within the source file; IDE hosts ignore out-of-bounds ranges.
+     * @param textAttributesKey external name of an IDE color-scheme key, such as `KOTLIN_KEYWORD`,
+     * `KOTLIN_NUMBER` or `DEFAULT_KEYWORD`. Custom keys must be registered by an IDE integration.
+     */
+    public data class Highlighting(public val range: TextRange, public val textAttributesKey: String) {
+        init {
+            require(!range.isEmpty) { "Highlighting range must not be empty" }
+            require(textAttributesKey.isNotBlank()) { "Text attributes key must not be blank" }
+        }
+    }
 
     /**
      * Lowers modified or extended syntax to PSI understood by Kotlin's frontend.

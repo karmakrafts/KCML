@@ -57,6 +57,16 @@ internal class ExampleSyntaxExtension : AbstractExtension(), SyntaxExtension {
         return true
     }
 
+    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> = buildList {
+        for (function in PsiTreeUtil.collectElementsOfType(file, KtNamedFunction::class.java)) {
+            val keyword = function.funKeyword ?: continue
+            if (keyword.text == "fn") add(SyntaxExtension.Highlighting(keyword.textRange, "KOTLIN_KEYWORD"))
+        }
+        for (constant in PsiTreeUtil.collectElementsOfType(file, KtConstantExpression::class.java)) {
+            if (constant.text == "magic") add(SyntaxExtension.Highlighting(constant.textRange, "KOTLIN_NUMBER"))
+        }
+    }
+
     override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile {
         val replacements = buildList {
             for (function in PsiTreeUtil.collectElementsOfType(file, KtNamedFunction::class.java)) {

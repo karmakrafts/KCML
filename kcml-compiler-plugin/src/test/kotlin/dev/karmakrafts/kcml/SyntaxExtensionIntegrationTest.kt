@@ -81,6 +81,9 @@ class SyntaxIntegrationTestPlugin : CompilerPlugin {
 @ExtensionId("syntax_integration_test")
 private class SyntaxIntegrationTestExtension(private val plugin: SyntaxIntegrationTestPlugin) : AbstractExtension(),
     SyntaxExtension {
+    override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> =
+        error("Editor highlighting must not run during compilation")
+
     private fun assertFrontend(frontend: SyntaxFrontend) {
         assertEquals("syntax_integration_test", frontend.pluginId)
         assertSame(plugin, frontend.loader.getPlugin(frontend.pluginId))

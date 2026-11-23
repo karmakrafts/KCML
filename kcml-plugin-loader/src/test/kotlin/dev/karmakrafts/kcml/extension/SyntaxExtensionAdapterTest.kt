@@ -41,6 +41,7 @@ import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.com.intellij.openapi.Disposable
 import org.jetbrains.kotlin.com.intellij.openapi.application.ApplicationManager
 import org.jetbrains.kotlin.com.intellij.openapi.util.Disposer
+import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiErrorElement
 import org.jetbrains.kotlin.com.intellij.psi.TokenType
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
@@ -325,6 +326,11 @@ class SyntaxExtensionAdapterTest {
                 calls += frontend
                 return file
             }
+
+            override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> {
+                calls += frontend
+                return emptyList()
+            }
         }
         val adapter = SyntaxExtensionAdapter(
             listOf("first" to extension, "second" to extension, "first" to extension)
@@ -336,10 +342,36 @@ class SyntaxExtensionAdapterTest {
         adapter.createLexer(KotlinLexer())
         assertFalse(adapter.parse(builder("value"), GrammarRule.EXPRESSION) { fail("Unexpected fallback") })
         adapter.lower(KtPsiFactory(environment.project).createFile("val value = 0"))
+        adapter.highlight(KtPsiFactory(environment.project).createFile("val value = 0"))
 
         assertEquals(setOf("first", "second"), created.keys)
-        assertEquals(List(3) { listOf("first", "second", "first") }.flatten(), calls.map { it.pluginId })
+        assertEquals(List(4) { listOf("first", "second", "first") }.flatten(), calls.map { it.pluginId })
         calls.forEach { assertSame(created.getValue(it.pluginId), it) }
+    }
+
+    @Test
+    fun `highlighting collects original source ranges in extension order`() {
+        val file = KtPsiFactory(environment.project).createFile("val value = 0")
+        val first = SyntaxExtension.Highlighting(TextRange(0, 3), "DEFAULT_KEYWORD")
+        val second = SyntaxExtension.Highlighting(TextRange(12, 13), "DEFAULT_NUMBER")
+        fun extension(expectedPlugin: String, highlighting: SyntaxExtension.Highlighting) = object : TestExtension() {
+            override fun highlight(source: KtFile, frontend: SyntaxFrontend): List<SyntaxExtension.Highlighting> {
+                assertSame(file, source)
+                assertEquals(expectedPlugin, frontend.pluginId)
+                return listOf(highlighting)
+            }
+        }
+        val adapter = adapter(extension("plugin-0", first), TestNoopExtension(), extension("plugin-2", second))
+        assertEquals(listOf(first, second), adapter.highlight(file))
+        assertEquals("val value = 0", file.text)
+    }
+
+    @Test
+    fun `highlighting rejects empty ranges and blank keys`() {
+        assertFailsWith<IllegalArgumentException> { SyntaxExtension.Highlighting(TextRange(1, 1), "DEFAULT_KEYWORD") }
+        for (key in listOf("", " ", "\t\n")) {
+            assertFailsWith<IllegalArgumentException> { SyntaxExtension.Highlighting(TextRange(0, 1), key) }
+        }
     }
 
     @Test
@@ -378,6 +410,7 @@ class SyntaxExtensionAdapterTest {
         for (adapter in listOf(adapter(), adapter(TestNoopExtension()))) {
             assertSame(lexer, adapter.createLexer(lexer))
             assertSame(file, adapter.lower(file))
+            assertTrue(adapter.highlight(file).isEmpty())
             val builder = builder("value")
             assertFalse(adapter.parse(builder, GrammarRule.LOCAL_DECLARATION) { fail("Unexpected fallback") })
             assertEquals(0, builder.currentOffset)
