@@ -43,7 +43,7 @@ import org.jetbrains.kotlin.name.Name
  */
 public class FirExtensionTestAdapter( // @formatter:off
     session: FirSession,
-    public val frontend: TestFrontend,
+    public val frontend: TestFirFrontend,
     public val extension: FirExtension
 ) : FirDeclarationGenerationExtension(session) { // @formatter:on
     /**

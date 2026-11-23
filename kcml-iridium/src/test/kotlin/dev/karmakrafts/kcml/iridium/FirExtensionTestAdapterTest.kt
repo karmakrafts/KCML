@@ -49,7 +49,7 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalTopLevelDeclarationsGenerationApi::class)
 class FirExtensionTestAdapterTest {
     private class AdapterContext(
-        val frontend: TestFrontend,
+        val frontend: TestFirFrontend,
         val owner: FirRegularClassSymbol,
         val constructorSymbol: FirConstructorSymbol,
         val functionSymbol: FirNamedFunctionSymbol,
@@ -82,7 +82,7 @@ class FirExtensionTestAdapterTest {
         )
         compiler shouldNotReport { error() }
         result firMatches {
-            val frontend = TestFrontend(element.moduleData.session, config)
+            val frontend = TestFirFrontend(element.moduleData.session, config)
             getChild<FirRegularClass> { it.symbol.classId == ClassId.topLevel(FqName("test.Example")) } matches {
                 AdapterContext(
                     frontend,

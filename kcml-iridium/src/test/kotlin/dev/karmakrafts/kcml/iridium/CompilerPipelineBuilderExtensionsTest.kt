@@ -88,7 +88,7 @@ class CompilerPipelineBuilderExtensionsTest {
                 result firMatches {
                     assertTrue(frontends.isNotEmpty(), "$target: FIR extension was not invoked")
                     for (frontend in frontends) {
-                        assertIs<TestFrontend>(frontend)
+                        assertIs<TestFirFrontend>(frontend)
                         assertSame(element.moduleData.session, frontend.session)
                         assertSame(config, frontend.config)
                         frontend.config[marker] shouldBe target.name

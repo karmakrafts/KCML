@@ -31,7 +31,7 @@ import org.jetbrains.kotlin.fir.FirSession
  * @property session FIR session used by the compilation.
  * @property config compiler configuration for the compilation.
  */
-public class TestFrontend( // @formatter:off
+public class TestFirFrontend( // @formatter:off
     override val session: FirSession,
     override val config: CompilerConfiguration
 ) : FirFrontend { // @formatter:on

@@ -55,7 +55,7 @@ public fun CompilerPipelineBuilder.kcmlFirExtension(extension: FirExtension) {
             object : FirExtensionRegistrar() {
                 override fun ExtensionRegistrarContext.configurePlugin() {
                     +FirDeclarationGenerationExtension.Factory { session ->
-                        val frontend = TestFrontend(session, config)
+                        val frontend = TestFirFrontend(session, config)
                         FirExtensionTestAdapter(session, frontend, extension)
                     }
                 }

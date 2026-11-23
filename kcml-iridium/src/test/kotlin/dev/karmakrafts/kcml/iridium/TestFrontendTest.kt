@@ -26,7 +26,7 @@ import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 
 class TestFrontendTest {
-    private fun testFrontend(block: (TestFrontend) -> Unit) = runCompilerTest {
+    private fun testFrontend(block: (TestFirFrontend) -> Unit) = runCompilerTest {
         lateinit var config: CompilerConfiguration
         pipeline {
             defaultPipelineSpec()
@@ -34,7 +34,7 @@ class TestFrontendTest {
         }
         compiler shouldNotReport { error() }
         result firMatches {
-            block(TestFrontend(element.moduleData.session, config))
+            block(TestFirFrontend(element.moduleData.session, config))
         }
     }
 
@@ -47,7 +47,7 @@ class TestFrontendTest {
         }
         compiler shouldNotReport { error() }
         result firMatches {
-            val frontend = TestFrontend(element.moduleData.session, config)
+            val frontend = TestFirFrontend(element.moduleData.session, config)
             assertSame(element.moduleData.session, frontend.session)
             assertSame(config, frontend.config)
             frontend.pluginId shouldBe "iridium"
@@ -69,7 +69,7 @@ class TestFrontendTest {
 
     @Test
     fun `Frontends do not share logging or loader services`() = testFrontend { first ->
-        val second = TestFrontend(first.session, first.config)
+        val second = TestFirFrontend(first.session, first.config)
         assertNotSame(first.loggerFactory, second.loggerFactory)
         assertNotSame(first.logger, second.logger)
         assertNotSame(first.loader, second.loader)
