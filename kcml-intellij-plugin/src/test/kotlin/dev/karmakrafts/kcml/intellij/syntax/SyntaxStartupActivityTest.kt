@@ -17,10 +17,12 @@
 package dev.karmakrafts.kcml.intellij.syntax
 
 import com.intellij.facet.FacetManager
+import com.intellij.openapi.application.impl.NonBlockingReadActionImpl
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
 import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.startup.ProjectActivity
+import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.PlatformTestUtil
@@ -34,6 +36,53 @@ class SyntaxStartupActivityTest : LightJavaCodeInsightFixtureTestCase() {
     private val descriptor = object : LightProjectDescriptor() {}
 
     override fun getProjectDescriptor(): LightProjectDescriptor = descriptor
+
+    fun testEditorLookupRetriesConfigurationRestoredAfterStartup() {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin")).toAbsolutePath().normalize()
+        val manager = FacetManager.getInstance(module)
+        val facet = runWriteAction {
+            manager.createFacet(KotlinFacetType.INSTANCE, "Kotlin", null).also {
+                manager.createModifiableModel().apply {
+                    addFacet(it)
+                    commit()
+                }
+            }
+        }
+        val service = SyntaxExtensionService(project)
+        Disposer.register(testRootDisposable, service)
+        try {
+            service.start()
+            NonBlockingReadActionImpl.waitForAsyncTaskCompletion()
+            assertEmpty(service.loadedExtensions())
+            runWriteAction {
+                // Cached settings may become available without a Gradle import notification.
+                facet.configuration.settings.apply {
+                    useProjectSettings = false
+                    compilerArguments = K2JVMCompilerArguments().apply {
+                        pluginOptions = arrayOf(
+                            "plugin:kcml.bootstrap:pluginClasspaths=$exampleJar",
+                            "plugin:kcml.bootstrap:compileTarget=jvm"
+                        )
+                    }
+                    updateMergedArguments()
+                }
+            }
+            assertEquals("jvm", SyntaxConfiguration.fromModule(module)?.target)
+            PlatformTestUtil.waitWithEventsDispatching("Editor lookup discovers restored syntax configuration", {
+                service.runtime(module)?.extensionIds == listOf("example:syntax_example")
+            }, 15)
+            assertEquals("jvm", service.loadedExtensions().single().target)
+        }
+        finally {
+            Disposer.dispose(service)
+            runWriteAction {
+                manager.createModifiableModel().apply {
+                    removeFacet(facet)
+                    commit()
+                }
+            }
+        }
+    }
 
     fun testStartupAndImportedConfigurationLoadExtensionsWithoutOpeningSourceFiles() {
         val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin")).toAbsolutePath().normalize()

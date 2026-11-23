@@ -156,6 +156,11 @@ internal class SyntaxExtensionService( // @formatter:off
         }
         // Editor lookups never wait for discovery or runtime initialization
         start()
+        // Cached module settings can arrive after the initial scan without an import notification
+        ReadAction.nonBlocking<Unit> {
+            loadRuntime(module, SyntaxConfiguration.fromModule(module))
+        }.expireWith(this).expireWhen { module.isDisposed }.coalesceBy(this, module)
+            .submit(AppExecutorUtil.getAppExecutorService())
         return null
     }
 
