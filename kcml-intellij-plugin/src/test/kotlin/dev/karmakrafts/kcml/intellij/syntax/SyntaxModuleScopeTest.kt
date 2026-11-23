@@ -33,6 +33,7 @@ import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.PsiErrorElement
 import com.intellij.psi.PsiManager
 import com.intellij.psi.util.PsiTreeUtil
+import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightFixtureTestCase
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
@@ -158,10 +159,12 @@ class SyntaxModuleScopeTest : JavaCodeInsightFixtureTestCase() {
         return PsiManager.getInstance(project).findFile(file) as KtFile
     }
 
-    private fun analyze(file: KtFile): SyntaxAnalysis.Result? =
-        ApplicationManager.getApplication().executeOnPooledThread<SyntaxAnalysis.Result?> {
+    private fun analyze(file: KtFile): SyntaxAnalysis.Result? {
+        val future = ApplicationManager.getApplication().executeOnPooledThread<SyntaxAnalysis.Result?> {
             runReadActionBlocking { SyntaxAnalysis.result(file) }
-        }.get(30, TimeUnit.SECONDS)
+        }
+        return PlatformTestUtil.waitForFuture(future, TimeUnit.SECONDS.toMillis(30))
+    }
 
     private fun assertHostErrors(file: KtFile) {
         myFixture.configureFromExistingVirtualFile(file.virtualFile)
