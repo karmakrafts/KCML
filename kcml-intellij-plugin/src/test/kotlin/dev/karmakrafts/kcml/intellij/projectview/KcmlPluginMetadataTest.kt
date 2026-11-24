@@ -49,6 +49,7 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             "META-INF/zeta.json" to """{"id":"zeta","name":"Zeta","version":"2.0"}""",
             "META-INF/alpha.json" to """{
                 "id":"alpha","name":"Alpha Plugin","version":"1.0",
+                "authors":[{"name":"Karma Krafts","url":"https://karmakrafts.dev"},{"name":"Contributor"}],
                 "icon":{"light":"icons/light #1.svg","dark":"icons/dark.svg"}
             }""",
             "META-INF/icons/light #1.svg" to "light icon",
@@ -60,12 +61,38 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             val alpha = plugins.first()
             assertEquals("Alpha Plugin", alpha.name)
             assertEquals("1.0", alpha.version)
+            assertEquals(listOf(
+                KcmlPluginMetadata.Author("Karma Krafts", "https://karmakrafts.dev"),
+                KcmlPluginMetadata.Author("Contributor")
+            ), alpha.authors)
+            assertEmpty(plugins.last().authors)
             assertEquals(entries.getValue("META-INF/alpha.json"), alpha.configUrl.readText())
             assertEquals("light icon", alpha.lightIcon!!.readText())
             assertEquals("dark icon", alpha.darkIcon!!.readText())
             assertEquals(if (jar) "jar" else "file", alpha.configUrl.protocol)
             assertNull(plugins.last().lightIcon)
             assertNull(plugins.last().darkIcon)
+        }
+    }
+
+    fun testInvalidOptionalAuthorsDoNotDiscardMetadata() {
+        val entries = linkedMapOf(
+            "META-INF/null.json" to """{"id":"null","authors":null}""",
+            "META-INF/object.json" to """{"id":"object","authors":{}}""",
+            "META-INF/string.json" to """{"id":"string","authors":"Author"}""",
+            "META-INF/empty.json" to """{"id":"empty","authors":[]}""",
+            "META-INF/mixed.json" to """{"id":"mixed","authors":[null,42,"Author",{},
+                {"name":42},{"name":" "},{"name":"Valid","url":42,"future":true}]}"""
+        )
+        for (jar in listOf(false, true)) {
+            val plugins = KcmlPluginMetadata.fromClasspath(listOf(artifact(entries, jar)))
+            assertEquals(5, plugins.size)
+            for (plugin in plugins) {
+                assertEquals(
+                    if (plugin.id == "mixed") listOf(KcmlPluginMetadata.Author("Valid")) else emptyList(),
+                    plugin.authors
+                )
+            }
         }
     }
 

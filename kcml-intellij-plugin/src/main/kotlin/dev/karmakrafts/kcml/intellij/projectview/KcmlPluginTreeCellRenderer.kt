@@ -36,11 +36,13 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
     private val defaultRenderer = NodeRenderer()
     private val icon = JLabel()
     private val nameLabel = JLabel()
+    private val authors = JLabel()
     private val version = JLabel()
     private val text = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         isOpaque = false
         add(nameLabel)
+        add(authors)
         add(version)
     }
     private val entry = JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
@@ -58,10 +60,14 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
         icon.icon = presentation.getIcon(false)?.let(::PluginIcon)
         nameLabel.text = node.value.name
         nameLabel.font = tree.font.deriveFont(Font.BOLD)
+        authors.text = node.value.authors.joinToString(", ") { it.name }
+        authors.font = tree.font
+        authors.isVisible = node.value.authors.isNotEmpty()
         version.text = node.value.version
         version.font = tree.font
         nameLabel.foreground = if (selected) UIUtil.getTreeSelectionForeground(hasFocus) else tree.foreground
         version.foreground = if (selected) nameLabel.foreground else UIUtil.getContextHelpForeground()
+        authors.foreground = version.foreground
         entry.background = if (selected) UIUtil.getTreeSelectionBackground(hasFocus) else tree.background
         entry.toolTipText = presentation.tooltip
         return entry

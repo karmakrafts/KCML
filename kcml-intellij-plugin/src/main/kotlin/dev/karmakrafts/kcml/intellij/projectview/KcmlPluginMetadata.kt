@@ -20,9 +20,11 @@ import com.intellij.openapi.progress.ProgressManager
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.nullable
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
@@ -47,6 +49,9 @@ internal data class KcmlPluginMetadata( // @formatter:off
     @Serializable(with = OptionalStringSerializer::class)
     private val configuredVersion: String? = null,
 
+    @Serializable(with = OptionalAuthorsSerializer::class)
+    val authors: List<Author> = emptyList(),
+
     @Serializable(with = OptionalIconSerializer::class)
     private val icon: Icon? = null
 ) { // @formatter:on
@@ -66,6 +71,14 @@ internal data class KcmlPluginMetadata( // @formatter:off
         private set
 
     @Serializable
+    internal data class Author( // @formatter:off
+        val name: String,
+
+        @Serializable(with = OptionalStringSerializer::class)
+        val url: String? = null
+    ) // @formatter:on
+
+    @Serializable
     internal data class Icon( // @formatter:off
         @Serializable(with = OptionalStringSerializer::class)
         val light: String? = null,
@@ -82,6 +95,15 @@ internal data class KcmlPluginMetadata( // @formatter:off
     private object OptionalIconSerializer : JsonTransformingSerializer<Icon?>(Icon.serializer().nullable) {
         override fun transformDeserialize(element: JsonElement): JsonElement =
             element.takeIf { it is JsonObject } ?: JsonNull
+    }
+
+    private object OptionalAuthorsSerializer : JsonTransformingSerializer<List<Author>>(ListSerializer(Author.serializer())) {
+        override fun transformDeserialize(element: JsonElement): JsonElement = JsonArray(
+            (element as? JsonArray).orEmpty().filter {
+                val name = (it as? JsonObject)?.get("name") as? JsonPrimitive
+                name != null && name.isString && name.content.isNotBlank()
+            }
+        )
     }
 
     companion object {

@@ -49,7 +49,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JLabel
 import javax.swing.JScrollPane
-import javax.swing.tree.DefaultMutableTreeNode
+import javax.swing.tree.TreePath
 
 class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
     private var facet: KotlinFacet? = null
@@ -331,6 +331,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         val plugin = structure.getChildElements(moduleNode).single() as KcmlPluginNode
         plugin.update()
         assertEquals("Example Plugin", plugin.presentation.presentableText)
+        assertEquals(listOf("Karma Krafts"), plugin.value.authors.map { it.name })
         assertEquals("1.0.0", plugin.presentation.locationString)
         assertNotNull(plugin.presentation.getIcon(false))
         assertNotSame(Icons.kcml, plugin.presentation.getIcon(false))
@@ -370,13 +371,23 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="256"><rect width="64" height="256" fill="blue"/></svg>
             """.trimIndent())
             for (id in listOf("wide", "tall", "fallback")) {
+                val authors = if (id == "fallback") "[]" else """[{"name":"Karma Krafts"},{"name":"Contributor"}]"""
                 Files.writeString(metadata.resolve("$id.json"), """
-                    {"id":"$id","name":"Plugin $id","version":"1.2.3","icon":{"light":"$id.svg"}}
+                    {"id":"$id","name":"Plugin $id","authors":$authors,"version":"1.2.3","icon":{"light":"$id.svg"}}
                 """.trimIndent())
             }
+            configure(listOf(directory), "common")
             KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
             val tree = (toolWindow.contentManager.contents.single().component as JScrollPane).viewport.view as Tree
             assertEquals(0, tree.rowHeight)
+            var moduleNode: Any? = null
+            PlatformTestUtil.waitWithEventsDispatching("Plugin tree entries", {
+                val category = categoryNode<KcmlConfiguredPluginsNode>(tree)
+                moduleNode = category?.takeIf { tree.model.getChildCount(it) == 1 }?.let { tree.model.getChild(it, 0) }
+                moduleNode?.let { tree.model.getChildCount(it) == 3 } == true
+            }, 5)
+            tree.expandPath(TreePath(arrayOf(tree.model.root, categoryNode<KcmlConfiguredPluginsNode>(tree), moduleNode)))
+            PlatformTestUtil.waitWithEventsDispatching("Visible plugin rows", { tree.rowCount >= 7 }, 5)
             fun layout(component: Component) {
                 if (component is Container) {
                     component.doLayout()
@@ -388,11 +399,45 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 is Container -> component.components.flatMap(::labels)
                 else -> emptyList()
             }
+            for (index in 0 until tree.model.getChildCount(moduleNode)) {
+                val cell = tree.cellRenderer.getTreeCellRendererComponent(
+                    tree, tree.model.getChild(moduleNode, index), false, false, true, index, false
+                )
+                val preferredSize = cell.preferredSize
+                val textLabels = labels(cell).filter { it.isVisible && it.icon == null }
+                assertTrue("Cell must fit all text lines", preferredSize.height >= textLabels.sumOf { it.preferredSize.height })
+                assertTrue("Cell must fit the longest text line", preferredSize.width >= textLabels.maxOf { it.preferredSize.width })
+                val path = TreePath(arrayOf(tree.model.root, categoryNode<KcmlConfiguredPluginsNode>(tree), moduleNode,
+                    tree.model.getChild(moduleNode, index)))
+                assertEquals(preferredSize.height, tree.getPathBounds(path)!!.height)
+            }
+            tree.setSize(800, 600)
+            tree.addNotify()
+            try {
+                val image = BufferedImage(tree.width, tree.height, BufferedImage.TYPE_INT_ARGB)
+                val graphics = image.createGraphics()
+                try {
+                    tree.paint(graphics)
+                }
+                finally {
+                    graphics.dispose()
+                }
+                val cell = tree.cellRenderer.getTreeCellRendererComponent(
+                    tree, tree.model.getChild(moduleNode, 2), false, false, true, 0, false
+                )
+                val authors = labels(cell).single { it.text == "Karma Krafts, Contributor" }
+                assertEquals(authors.preferredSize.height, authors.height)
+                assertTrue(authors.width >= authors.preferredSize.width)
+            }
+            finally {
+                tree.removeNotify()
+            }
             for (pluginMetadata in KcmlPluginMetadata.fromClasspath(listOf(directory))) {
-                val plugin = KcmlPluginNode(project, pluginMetadata, ViewSettings.DEFAULT).apply { update() }
+                val plugin = (0 until tree.model.getChildCount(moduleNode)).map { tree.model.getChild(moduleNode, it) }
+                    .single { (TreeUtil.getUserObject(it) as? KcmlPluginNode)?.value?.id == pluginMetadata.id }
                 for (selected in listOf(false, true)) {
                     val cell = tree.cellRenderer.getTreeCellRendererComponent(
-                        tree, DefaultMutableTreeNode(plugin), selected, false, true, 0, selected
+                        tree, plugin, selected, false, true, 0, selected
                     )
                     cell.setSize(cell.preferredSize)
                     layout(cell)
@@ -408,6 +453,19 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                     assertTrue(nameBounds.x >= iconBounds.x + iconBounds.width)
                     assertEquals(nameBounds.x, versionBounds.x)
                     assertTrue(versionBounds.y >= nameBounds.y + nameBounds.height)
+                    val authors = name.parent.getComponent(1) as JLabel
+                    assertEquals(pluginMetadata.authors.joinToString(", ") { it.name }, authors.text)
+                    assertEquals(pluginMetadata.authors.isNotEmpty(), authors.isVisible)
+                    if (authors.isVisible) {
+                        assertEquals("Karma Krafts, Contributor", authors.text)
+                        assertEquals(version.foreground, authors.foreground)
+                        val authorBounds = javax.swing.SwingUtilities.convertRectangle(authors.parent, authors.bounds, cell)
+                        assertEquals(authors.preferredSize.height, authorBounds.height)
+                        assertTrue(authorBounds.width >= authors.preferredSize.width)
+                        assertEquals(nameBounds.x, authorBounds.x)
+                        assertTrue(authorBounds.y >= nameBounds.y + nameBounds.height)
+                        assertTrue(versionBounds.y >= authorBounds.y + authorBounds.height)
+                    }
                     assertTrue(cell.height >= JBUI.scale(52))
                     if (pluginMetadata.id != "fallback") {
                         val size = JBUI.scale(40)
