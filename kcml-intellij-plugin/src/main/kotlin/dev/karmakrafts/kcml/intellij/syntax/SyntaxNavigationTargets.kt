@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.syntax
 import com.intellij.psi.PsiElement
 import com.intellij.psi.SmartPointerManager
 import com.intellij.psi.SmartPsiElementPointer
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
 import org.jetbrains.kotlin.analysis.api.KaSession
 import org.jetbrains.kotlin.analysis.api.KaSpiExtensionPoint

@@ -75,6 +75,7 @@ class CustomNativeTargetTest {
 
     private fun String.readNativeTarget(): String = Files.readString(Path.of(this))
 
+    @Suppress("DEPRECATION")
     private fun parseNativePluginOption(option: String): K2NativeCompilerArguments = K2NativeCompilerArguments().apply {
         Class.forName("org.jetbrains.kotlin.cli.common.arguments.ParseCommandLineArgumentsKt").getMethod(
                 "parseCommandLineArguments",
@@ -222,6 +223,7 @@ class CustomNativeTargetTest {
         repeat(2) {
             assertSame(family, nativeFamily(family.name, ".run", "dyn", ".dyn", "static", ".archive"))
             assertSame(Family.LINUX, nativeFamily("LINUX"))
+            @Suppress("DEPRECATION") //
             assertSame(Architecture.ARM64, nativeArchitecture("ARM64", Architecture.ARM64.bitness))
         }
         assertEquals(

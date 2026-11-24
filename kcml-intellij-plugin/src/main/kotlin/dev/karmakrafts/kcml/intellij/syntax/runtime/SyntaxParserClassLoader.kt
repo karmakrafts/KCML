@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.psi.tree.TokenSet
 import dev.karmakrafts.kcml.intellij.util.TypeNames

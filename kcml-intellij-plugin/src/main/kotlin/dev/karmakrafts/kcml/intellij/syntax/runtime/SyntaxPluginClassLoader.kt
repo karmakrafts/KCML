@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.internal.org.objectweb.asm.ClassReader

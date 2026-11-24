@@ -23,6 +23,9 @@ import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.psi.PsiElement
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiPolyVariantReference
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxRuntime
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.isFromResolveExtension
 import org.jetbrains.kotlin.analysis.api.resolve.extensions.resolveExtensionNavigationElements

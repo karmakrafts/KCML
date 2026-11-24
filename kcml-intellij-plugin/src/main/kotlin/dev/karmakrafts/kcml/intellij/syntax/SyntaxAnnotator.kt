@@ -22,6 +22,7 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.editor.colors.TextAttributesKey
 import com.intellij.psi.PsiElement
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysis
 import org.jetbrains.kotlin.psi.KtFile
 
 @OptIn(ExperimentalKcmlApi::class)

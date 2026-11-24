@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.openapi.util.TextRange
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
@@ -31,8 +31,7 @@ class SyntaxHighlightingTest {
         val first = highlight(0, 2, "first")
         val second = highlight(4, 6, "second")
         assertEquals(
-            listOf(first, second),
-            SyntaxHighlighting.normalize(listOf(second, highlight(6, 9, "invalid"), first), 6)
+            listOf(first, second), SyntaxHighlighting.normalize(listOf(second, highlight(6, 9, "invalid"), first), 6)
         )
         assertEquals(emptyList(), SyntaxHighlighting.normalize(listOf(first), 0))
         assertEquals(emptyList(), SyntaxHighlighting.normalize(emptyList(), 6))

@@ -52,7 +52,10 @@ class SyntaxStartupActivityTest : LightJavaCodeInsightFixtureTestCase() {
         Disposer.register(testRootDisposable, service)
         try {
             service.start()
+
+            @Suppress("JetBrainsInternalApiUsage") //
             NonBlockingReadActionImpl.waitForAsyncTaskCompletion()
+
             assertEmpty(service.loadedExtensions())
             runWriteAction {
                 // Cached settings may become available without a Gradle import notification.
@@ -123,8 +126,11 @@ class SyntaxStartupActivityTest : LightJavaCodeInsightFixtureTestCase() {
         }
         try {
             configure("jvm")
+
+            @Suppress("UnresolvedPluginConfigReference") //
             val activity = ExtensionPointName.create<ProjectActivity>("com.intellij.postStartupActivity")
                 .findExtension(SyntaxStartupActivity::class.java)!!
+
             runBlocking { activity.execute(project) }
             awaitExtensions("jvm")
 

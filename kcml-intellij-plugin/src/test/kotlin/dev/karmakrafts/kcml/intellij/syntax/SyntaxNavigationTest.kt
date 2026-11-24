@@ -38,9 +38,8 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightFixtureTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
-import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
 import org.jetbrains.kotlin.analysis.api.KaSession
-import org.jetbrains.kotlin.analysis.api.KaSpiExtensionPoint
 import org.jetbrains.kotlin.analysis.api.session.analyze
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
@@ -52,7 +51,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-@OptIn(KaExperimentalApi::class, KaSpiExtensionPoint::class)
 class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
     private var facet: KotlinFacet? = null
     private lateinit var configured: Module
@@ -217,6 +215,7 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
         assertTrue(html, html.contains("Updated documentation."))
     }
 
+    @Suppress("JetBrainsInternalApiUsage", "OverrideOnly")
     private fun documentationHtml(): String {
         val file = myFixture.file
         val editor = myFixture.editor

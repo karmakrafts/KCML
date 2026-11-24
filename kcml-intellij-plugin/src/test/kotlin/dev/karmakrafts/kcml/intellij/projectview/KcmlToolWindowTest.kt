@@ -561,16 +561,22 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         finally {
             UIManager.put("Tree.collapsedIcon", collapsedIcon)
             UIManager.put("Tree.expandedIcon", expandedIcon)
+
+            @Suppress("DEPRECATION") //
             ToolWindowManager.getInstance(project).unregisterToolWindow(toolWindow.id)
+
             directory.toFile().deleteRecursively()
         }
     }
 
     fun testPluginsCategoryRefreshesAfterMetadataCreationUpdateAndRemoval() {
         val directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "kcml-metadata-refresh-")
+
+        @Suppress("OverrideOnly") //
         val toolWindow = ToolWindowManager.getInstance(project).registerToolWindow(
             RegisterToolWindowTask.notClosable("KCML metadata test", ToolWindowAnchor.BOTTOM)
         )
+
         try {
             configure(listOf(directory), "common")
             val virtualDirectory = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)!!

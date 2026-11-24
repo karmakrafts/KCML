@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.openapi.project.Project
 import dev.karmakrafts.kcml.internal.org.objectweb.asm.ClassWriter
@@ -58,7 +58,7 @@ class SyntaxPluginClassLoaderTest : TestCase() {
                 val classes = executor.invokeAll((0 until 16).map { index ->
                     Callable { loader.loadClass("fixture.Plugin${index % 2}") }
                 }, 10, TimeUnit.SECONDS).map { it.get() }
-                for ((index, type) in classes.withIndex()) {
+                for ([index, type] in classes.withIndex()) {
                     assertSame(classes[index % 2], type)
                     assertSame(Project::class.java, type.getField("project").type)
                     assertEquals("first", type.getField("version").get(null))
@@ -113,11 +113,7 @@ class SyntaxPluginClassLoaderTest : TestCase() {
     private fun classBytes(name: String, version: String): ByteArray = ClassWriter(0).apply {
         visit(Opcodes.V21, Opcodes.ACC_PUBLIC, name, null, "java/lang/Object", null)
         visitField(
-            Opcodes.ACC_PUBLIC,
-            "project",
-            "Lorg/jetbrains/kotlin/com/intellij/openapi/project/Project;",
-            null,
-            null
+            Opcodes.ACC_PUBLIC, "project", "Lorg/jetbrains/kotlin/com/intellij/openapi/project/Project;", null, null
         ).visitEnd()
         visitField(
             Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC or Opcodes.ACC_FINAL,

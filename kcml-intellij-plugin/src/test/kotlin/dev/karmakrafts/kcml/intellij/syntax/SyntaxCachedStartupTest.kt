@@ -85,9 +85,12 @@ class SyntaxCachedStartupTest : HeavyPlatformTestCase() {
             assertNotNull("Kotlin facet must be restored from disk", restored)
             assertNotNull("Restored facet must yield a syntax configuration", SyntaxConfiguration.fromModule(module))
 
+            @Suppress("UnresolvedPluginConfigReference") //
             val activity = ExtensionPointName.create<ProjectActivity>("com.intellij.postStartupActivity")
                 .findExtension(SyntaxStartupActivity::class.java)!!
+
             runBlocking { activity.execute(reopened) }
+
             val service = reopened.service<SyntaxExtensionService>()
             PlatformTestUtil.waitWithEventsDispatching("Cached syntax extensions load after reopen", {
                 service.loadedExtensions().singleOrNull()?.let {

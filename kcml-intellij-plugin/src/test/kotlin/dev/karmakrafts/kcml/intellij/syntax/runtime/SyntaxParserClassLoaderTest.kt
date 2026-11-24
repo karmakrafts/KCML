@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import dev.karmakrafts.kcml.intellij.util.TypeNames
@@ -32,7 +32,7 @@ class SyntaxParserClassLoaderTest : BasePlatformTestCase() {
             val classes = executor.invokeAll((0 until 24).map { index ->
                 Callable { loader.loadClass(names[index % names.size]) }
             }, 10, TimeUnit.SECONDS).map { it.get() }
-            for ((index, type) in classes.withIndex()) {
+            for ([index, type] in classes.withIndex()) {
                 assertSame(loader, type.classLoader)
                 assertSame(classes[index % names.size], type)
                 assertNotSame(javaClass.classLoader.loadClass(type.name), type)

@@ -26,6 +26,9 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.roots.ProjectFileIndex
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.syntax.Completion
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxRuntime
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.analysisContext
 

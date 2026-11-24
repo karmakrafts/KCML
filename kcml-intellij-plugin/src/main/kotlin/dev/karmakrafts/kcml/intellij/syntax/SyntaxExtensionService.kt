@@ -47,6 +47,8 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.util.concurrency.AppExecutorUtil
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxRuntime
 import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinGlobalModuleStateModificationEvent

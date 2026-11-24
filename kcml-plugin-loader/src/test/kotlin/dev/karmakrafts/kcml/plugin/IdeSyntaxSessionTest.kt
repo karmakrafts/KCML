@@ -304,7 +304,11 @@ class IdeSyntaxSessionTest {
             assertEquals(originalExtensionIds, PluginLoaderImpl.syntaxAdapterOrNull?.extensionIds.orEmpty())
         }
         finally {
-            sessions.forEach { runCatching { it.close() } }
+            sessions.forEach { session ->
+                try {
+                    session.close()
+                } catch(_: Throwable) {}
+            }
             executor.shutdownNow()
             preparationExecutor.shutdownNow()
             jars.forEach(Files::deleteIfExists)

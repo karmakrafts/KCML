@@ -37,6 +37,7 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightFixtureTestCase
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysis
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType
 import org.jetbrains.kotlin.psi.KtFile
@@ -60,7 +61,7 @@ class SyntaxModuleScopeTest : JavaCodeInsightFixtureTestCase() {
         plain = runWriteAction {
             ModuleManager.getInstance(project).newModule("${plainRoot.path}/plain.iml", "JAVA_MODULE")
         }
-        for ((module, root) in listOf(configured to configuredRoot, plain to plainRoot)) {
+        for ([module, root] in listOf(configured to configuredRoot, plain to plainRoot)) {
             PsiTestUtil.addContentRoot(module, root)
             PsiTestUtil.addSourceRoot(module, myFixture.tempDirFixture.findOrCreateDir("${root.name}/src"))
             val manager = FacetManager.getInstance(module)
@@ -140,8 +141,7 @@ class SyntaxModuleScopeTest : JavaCodeInsightFixtureTestCase() {
         val hostHighlights = myFixture.doHighlighting()
         assertTrue("Raw Kotlin unresolved references must remain visible: $hostHighlights", hostHighlights.any {
             it.severity == HighlightSeverity.ERROR && it.description?.contains("UNRESOLVED_REFERENCE") == true && unresolved.text.substring(
-                it.startOffset,
-                it.endOffset
+                it.startOffset, it.endOffset
             ) == "magic"
         })
         myFixture.configureFromExistingVirtualFile(enabled.virtualFile)

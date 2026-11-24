@@ -41,8 +41,8 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightFixtureTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
-import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.KaSpiExtensionPoint
 import org.jetbrains.kotlin.analysis.api.session.analyze
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
@@ -55,7 +55,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-@OptIn(KaExperimentalApi::class, KaPlatformInterface::class, KaSpiExtensionPoint::class)
+@OptIn(KaExperimentalApi::class, KaSpiExtensionPoint::class)
 class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
     private var facet: KotlinFacet? = null
     private lateinit var configured: Module
@@ -101,7 +101,10 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
         """.trimIndent()
         )
         configureSyntax()
+
+        @Suppress("JetBrainsInternalApiUsage") //
         val contributors = CompletionContributor.forLanguage(KotlinLanguage.INSTANCE, myFixture.editor)
+
         assertTrue(
             contributors.map { it.javaClass.name }.toString(),
             contributors.indexOfFirst { it is SyntaxCompletionContributor } < contributors.indexOfFirst {
@@ -216,15 +219,11 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
         myFixture.configureFromExistingVirtualFile(usage)
         myFixture.editor.caretModel.moveToOffset(myFixture.file.textLength)
         assertContainsElements(
-            myFixture.completeBasic().orEmpty().map { it.lookupString },
-            "generatedFirst",
-            "generatedSecond"
+            myFixture.completeBasic().orEmpty().map { it.lookupString }, "generatedFirst", "generatedSecond"
         )
         LookupManager.hideActiveLookup(project)
         runWriteAction {
-            FileDocumentManager.getInstance().getDocument(library)!!.setText(
-                "fn generatedNewFirst() = magic\nfn generatedNewSecond() = magic"
-            )
+            FileDocumentManager.getInstance().getDocument(library)!!.setText("fn generatedNewFirst() = magic\nfn generatedNewSecond() = magic")
             PsiDocumentManager.getInstance(project).commitAllDocuments()
         }
         val updated = myFixture.completeBasic().orEmpty().map { it.lookupString }

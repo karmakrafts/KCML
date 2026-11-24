@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.openapi.roots.ProjectFileIndex
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi

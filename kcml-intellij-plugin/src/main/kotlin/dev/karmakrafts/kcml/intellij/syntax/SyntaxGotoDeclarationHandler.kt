@@ -22,9 +22,7 @@ import com.intellij.psi.PsiElement
 
 internal class SyntaxGotoDeclarationHandler : GotoDeclarationHandler {
     override fun getGotoDeclarationTargets(
-        sourceElement: PsiElement?,
-        offset: Int,
-        editor: Editor
+        sourceElement: PsiElement?, offset: Int, editor: Editor
     ): Array<PsiElement>? {
         val file = sourceElement?.containingFile ?: return null
         // The registration is shared; do not load Kotlin implementation classes for other languages.

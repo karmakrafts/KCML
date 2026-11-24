@@ -23,6 +23,9 @@ import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.platform.backend.documentation.DocumentationTarget
 import com.intellij.platform.backend.documentation.DocumentationTargetProvider
 import com.intellij.psi.PsiFile
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxRuntime
 import org.jetbrains.kotlin.psi.KtFile
 import com.intellij.lang.documentation.impl.documentationTargets as fileDocumentationTargets
 

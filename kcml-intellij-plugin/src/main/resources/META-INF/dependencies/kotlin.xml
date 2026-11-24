@@ -16,20 +16,6 @@
 
 <idea-plugin>
     <extensions defaultExtensionNs="com.intellij">
-        <postStartupActivity implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxStartupActivity"/>
-        <toolWindow id="KCML" anchor="bottom" icon="/icons/dev/karmakrafts/kcml/intellij/kcml-tool-window.svg"
-                    factoryClass="dev.karmakrafts.kcml.intellij.projectview.KcmlToolWindowFactory"/>
-        <annotator language="kotlin" implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxAnnotator"
-                   order="first"/>
-        <daemon.highlightInfoFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter"/>
-        <highlightErrorFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxErrorFilter"/>
-        <gotoDeclarationHandler implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxGotoDeclarationHandler"
-                                order="first"/>
-        <platform.backend.documentation.targetProvider
-                implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxDocumentationTargetProvider" order="first"/>
-        <lang.inspectionSuppressor language="kotlin"
-                                  implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxInspectionSuppressor"/>
-
         <!-- Icon providers -->
         <fileIconProvider implementation="dev.karmakrafts.kcml.intellij.icon.PluginConfigIconProvider"/>
         <iconProvider implementation="dev.karmakrafts.kcml.intellij.icon.CompileTargetIconProvider" order="first"/>
@@ -108,10 +94,27 @@
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
         <completion.confidence language="JSON" order="first"
                                implementationClass="dev.karmakrafts.kcml.intellij.completion.PluginIdCompletionConfidence"/>
+
+        <!-- Custom syntax plugin support -->
+        <postStartupActivity implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxStartupActivity"/>
+        <toolWindow id="KCML" anchor="bottom" icon="/icons/dev/karmakrafts/kcml/intellij/kcml-tool-window.svg"
+                    factoryClass="dev.karmakrafts.kcml.intellij.projectview.KcmlToolWindowFactory"/>
+        <annotator language="kotlin" implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxAnnotator"
+                   order="first"/>
+        <daemon.highlightInfoFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter"/>
+        <highlightErrorFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxErrorFilter"/>
+        <gotoDeclarationHandler implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxGotoDeclarationHandler"
+                                order="first"/>
+        <platform.backend.documentation.targetProvider
+                implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxDocumentationTargetProvider" order="first"/>
+        <lang.inspectionSuppressor language="kotlin"
+                                   implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxInspectionSuppressor"/>
     </extensions>
 
+    <!-- In order to modify the Kotlin syntax/grammar, we need to use a Kotlin internal extension point -->
     <extensions defaultExtensionNs="org.jetbrains.kotlin">
         <kaResolveExtensionProvider implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxResolveExtensionProvider"/>
+        <!--suppress JetBrainsInternalExtensionsUsage -->
         <k2KaModuleFactory implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxModuleFactory"/>
     </extensions>
 </idea-plugin>

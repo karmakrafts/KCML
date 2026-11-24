@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.daemon.impl.HighlightInfo
@@ -25,7 +25,6 @@ import com.intellij.codeInspection.LocalInspectionTool
 import com.intellij.codeInspection.ProblemsHolder
 import com.intellij.facet.FacetManager
 import com.intellij.lang.LanguageAnnotators
-import com.intellij.lang.annotation.Annotator
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.lexer.DelegateLexer
 import com.intellij.lexer.Lexer
@@ -69,6 +68,10 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
+import dev.karmakrafts.kcml.intellij.syntax.SyntaxConfiguration
+import dev.karmakrafts.kcml.intellij.syntax.SyntaxExtensionService
+import dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter
+import dev.karmakrafts.kcml.intellij.syntax.SyntaxProblemGroup
 import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.internal.org.objectweb.asm.ClassReader
@@ -292,10 +295,10 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         ).use { runtime ->
             val expected = text.replace("fn ", "fun ").replace("magic", "42")
             assertEquals(expected, runtime.lower(source).text)
-            val result = runtime.analyzeIfOpen(source)!!
-            assertEquals(expected, result.lowered.text)
-            assertEquals(5, result.highlighting.size)
-            assertTrue(PsiTreeUtil.collectElementsOfType(result.lowered, PsiErrorElement::class.java).isEmpty())
+            (val lowered, val highlighting) = runtime.analyzeIfOpen(source)!!
+            assertEquals(expected, lowered.text)
+            assertEquals(5, highlighting.size)
+            assertTrue(PsiTreeUtil.collectElementsOfType(lowered, PsiErrorElement::class.java).isEmpty())
             assertEquals(text, source.text)
         }
     }
@@ -304,8 +307,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         loadRuntime(configuration(), project.service())
         for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
             myFixture.configureByText(
-                "Custom.kt",
-                "// customCompletion\nfun customKotlin() = 1\nfun usage() = cus<caret>"
+                "Custom.kt", "// customCompletion\nfun customKotlin() = 1\nfun usage() = cus<caret>"
             )
             val variants = myFixture.complete(type).orEmpty()
             assertSameElements(variants.map { it.lookupString }, "customOne", "customTwo")
@@ -323,8 +325,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         loadRuntime(configuration(), project.service())
         for (type in listOf(CompletionType.BASIC, CompletionType.SMART)) {
             myFixture.configureByText(
-                "Custom.kt",
-                "// suppressCompletion\nfun customOne() = 1\nfun usage() = cus<caret>"
+                "Custom.kt", "// suppressCompletion\nfun customOne() = 1\nfun usage() = cus<caret>"
             )
             assertEmpty(myFixture.complete(type).orEmpty().toList())
             myFixture.checkResult("// suppressCompletion\nfun customOne() = 1\nfun usage() = cus<caret>")
@@ -354,8 +355,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         enableSemicolonInspection()
         loadRuntime(configuration(), project.service())
         myFixture.configureByText(
-            "Inspections.kt",
-            "// suppressTokenInspections\nfun usage() { inspectMe }\nval unrelated = 3;"
+            "Inspections.kt", "// suppressTokenInspections\nfun usage() { inspectMe }\nval unrelated = 3;"
         )
         val source = myFixture.file as KtFile
         val analysis = syntaxAnalysis(source)
@@ -392,8 +392,8 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         loadRuntime(configuration(), service)
         myFixture.configureByText("Inspections.kt", "// forwardInspections\nfun usage() { inspectMe }")
         val source = myFixture.file as KtFile
-        val before = syntaxAnalysis(source)
-        assertSize(2, before.inspections)
+        (val generation, val inspections) = syntaxAnalysis(source)
+        assertSize(2, inspections)
         val runtime = service.runtime(module)
         val profile = InspectionProjectProfileManager.getInstance(project).currentProfile
         profile.getTools("RedundantSemicolon", project).apply {
@@ -401,9 +401,9 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             defaultState.isEnabled = false
         }
         project.messageBus.syncPublisher(ProfileChangeAdapter.TOPIC).profileChanged(profile)
-        val after = syntaxAnalysis(source)
-        assertTrue(after.generation > before.generation)
-        assertEmpty(after.inspections)
+        (val generation2 = generation, val inspections2 = inspections) = syntaxAnalysis(source)
+        assertTrue(generation2 > generation)
+        assertEmpty(inspections2)
         assertSame("Profile changes must not reload the syntax runtime", runtime, service.runtime(module))
     }
 
@@ -414,9 +414,9 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             "example/nested/Matching.kt", "package example.nested\nfn answer() = magic"
         ) as KtFile
         myFixture.configureFromExistingVirtualFile(source.virtualFile)
-        val analysis = syntaxAnalysis(source)
-        assertTrue(analysis.desugared)
-        assertEmpty(analysis.inspections)
+        (val inspections, val desugared) = syntaxAnalysis(source)
+        assertTrue(desugared)
+        assertEmpty(inspections)
         assertEmpty(myFixture.doHighlighting().filter { it.description?.contains("Package directive") == true })
         assertEquals("package example.nested\nfn answer() = magic", source.text)
     }
@@ -503,9 +503,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         """.trimIndent()
         val source = myFixture.configureByText("Example.kt", text) as KtFile
         SyntaxRuntime(
-            configuration.compilerConfiguration(),
-            listOf(exampleJar.toUri().toURL()),
-            emptyList()
+            configuration.compilerConfiguration(), listOf(exampleJar.toUri().toURL()), emptyList()
         ).use { runtime ->
             val result = runtime.analyzeIfOpen(source)!!
             val expected = listOf(
@@ -513,7 +511,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
                 text.indexOf("fn local") to "KOTLIN_KEYWORD",
                 text.indexOf("magic", text.indexOf("fn local")) to "KOTLIN_NUMBER",
                 text.indexOf("magic +") to "KOTLIN_NUMBER"
-            ).map { (start, key) ->
+            ).map { [start, key] ->
                 Highlighting(TextRange(start, start + if (key == "KOTLIN_KEYWORD") 2 else 5), key)
             }
             assertEquals(
@@ -653,6 +651,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         }
     }
 
+    @Suppress("JetBrainsInternalApiUsage")
     fun testUnconfiguredEditorLookupDoesNotKeepCompletedProgressAlive() {
         val service = syntaxService
         service.start()
@@ -728,8 +727,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
                 }
                 val failure = assertFailsWith<ExecutionException> { canceled.get(5, TimeUnit.SECONDS) }
                 assertTrue(
-                    "Canceled analysis must not wait for a busy runtime",
-                    failure.cause is ProcessCanceledException
+                    "Canceled analysis must not wait for a busy runtime", failure.cause is ProcessCanceledException
                 )
                 service.refresh()
                 assertEmpty(service.loadedExtensions())
@@ -740,9 +738,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             }
         }
         PlatformTestUtil.waitWithEventsDispatching(
-            "Runtime closes after its active callback",
-            { !runtime.hasExtensions },
-            10
+            "Runtime closes after its active callback", { !runtime.hasExtensions }, 10
         )
     }
 
@@ -758,10 +754,10 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
 
         val configuration = configuration()
         val first = loadRuntime(configuration)
-        val snapshot = service.loadedExtensions().single()
-        assertSame(module, snapshot.module)
-        assertEquals("jvm", snapshot.target)
-        assertEquals(listOf("ide_fixture:syntax"), snapshot.extensionIds)
+        (val loadedModule = module, val target, val extensionIds) = service.loadedExtensions().single()
+        assertSame(module, loadedModule)
+        assertEquals("jvm", target)
+        assertEquals(listOf("ide_fixture:syntax"), extensionIds)
         assertEquals(1, changes.get())
         assertSame(first, service.runtime(module, configuration))
         assertEquals(1, changes.get())
@@ -770,7 +766,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         assertFalse(empty.hasExtensions)
         PlatformTestUtil.waitWithEventsDispatching("Replaced runtime closes", { first.extensionIds.isEmpty() }, 10)
         assertEmpty(service.loadedExtensions())
-        assertEquals(listOf("ide_fixture:syntax"), snapshot.extensionIds)
+        assertEquals(listOf("ide_fixture:syntax"), extensionIds)
         assertEquals(2, changes.get())
 
         loadRuntime(configuration)
@@ -855,7 +851,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             compilerArguments = K2JVMCompilerArguments()
             compilerSettings = CompilerSettings().apply {
                 additionalArguments =
-                    "-P \"plugin:kcml.bootstrap:pluginClasspaths=$exampleJar\" " + "-P plugin:kcml.bootstrap:compileTarget=exampleJvm"
+                    "-P \"plugin:kcml.bootstrap:pluginClasspaths=$exampleJar\" -P plugin:kcml.bootstrap:compileTarget=exampleJvm"
             }
         }
         runWriteAction {
@@ -893,7 +889,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         """.trimIndent()
         myFixture.configureByText("Semantic.kt", text)
         val highlights = myFixture.doHighlighting(HighlightSeverity.INFORMATION)
-        for ((token, key) in listOf(
+        for ([token, key] in listOf(
             "Widget()" to KotlinHighlightingColors.CONSTRUCTOR_CALL,
             "identity(widget)" to KotlinHighlightingColors.PACKAGE_FUNCTION_CALL,
             "widget)" to KotlinHighlightingColors.LOCAL_VARIABLE,
@@ -959,9 +955,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         }.get(30, TimeUnit.SECONDS)
         assertNotNull(result)
         assertSame(
-            "Highlight filters on the UI thread must reuse completed analysis",
-            result,
-            SyntaxAnalysis.result(source)
+            "Highlight filters on the UI thread must reuse completed analysis", result, SyntaxAnalysis.result(source)
         )
         val unresolved = result!!.diagnostics.filter { diagnostic -> diagnostic.message.contains("missingName") }
         assertFalse(result.diagnostics.toString(), unresolved.isEmpty())
@@ -976,7 +970,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             )
         })
         assertEquals(text, source.text)
-        LanguageAnnotators.INSTANCE.addExplicitExtension(KotlinLanguage.INSTANCE, Annotator { element, holder ->
+        LanguageAnnotators.INSTANCE.addExplicitExtension(KotlinLanguage.INSTANCE, { element, holder ->
             if (element is KtProperty && element.name == "result") {
                 holder.newAnnotation(HighlightSeverity.WARNING, "Unrelated annotation")
                     .range(element.nameIdentifier!!)
@@ -990,8 +984,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
                 object : KtVisitorVoid() {
                     override fun visitProperty(property: KtProperty) {
                         if (property.name == "result") holder.registerProblem(
-                            property.nameIdentifier!!,
-                            "Unrelated inspection"
+                            property.nameIdentifier!!, "Unrelated inspection"
                         )
                     }
                 }
@@ -1008,9 +1001,8 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             highlights.filter { it.severity == HighlightSeverity.ERROR }.all {
                 text.substring(it.startOffset, it.endOffset) == "missingName"
             })
-        for ((token, key) in listOf(
-            "fn" to KotlinHighlightingColors.KEYWORD,
-            "magic" to KotlinHighlightingColors.NUMBER
+        for ([token, key] in listOf(
+            "fn" to KotlinHighlightingColors.KEYWORD, "magic" to KotlinHighlightingColors.NUMBER
         )) {
             val start = text.indexOf(token)
             assertTrue("Missing $token highlighting: $highlights", highlights.any { info ->
@@ -1108,8 +1100,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
     }
 
     private fun loadRuntime(
-        configuration: SyntaxConfiguration,
-        service: SyntaxExtensionService = syntaxService
+        configuration: SyntaxConfiguration, service: SyntaxExtensionService = syntaxService
     ): SyntaxRuntime = service.loadRuntime(module, configuration).get(15, TimeUnit.SECONDS)!!
 
     private fun withBlockedPlugin(phase: String, action: (CountDownLatch, CountDownLatch) -> Unit) {

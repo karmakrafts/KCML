@@ -99,6 +99,7 @@ class KonanTargetsTest {
         assertSame(family, Family::class.java.enumConstants.last())
     }
 
+    @Suppress("DEPRECATION")
     @Test
     fun `creates and registers architectures with their bitness`() {
         val name32 = "KCML_TEST_ARCHITECTURE_32"

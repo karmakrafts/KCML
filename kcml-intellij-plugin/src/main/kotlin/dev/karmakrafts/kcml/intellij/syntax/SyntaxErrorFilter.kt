@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.intellij.syntax
 
 import com.intellij.codeInsight.highlighting.HighlightErrorFilter
 import com.intellij.psi.PsiErrorElement
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysis
 import org.jetbrains.kotlin.psi.KtFile
 
 internal class SyntaxErrorFilter : HighlightErrorFilter() {

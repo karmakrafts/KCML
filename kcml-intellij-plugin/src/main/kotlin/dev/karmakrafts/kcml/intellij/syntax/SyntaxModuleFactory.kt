@@ -20,6 +20,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.psi.PsiFile
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysisContext
 import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.platform.projectStructure.KaDanglingFileModuleImpl
 import org.jetbrains.kotlin.analysis.api.projectStructure.KaDanglingFileResolutionMode

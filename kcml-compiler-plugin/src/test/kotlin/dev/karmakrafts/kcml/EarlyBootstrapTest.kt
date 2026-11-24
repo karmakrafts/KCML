@@ -282,6 +282,7 @@ object EarlyBootstrapProcess {
         path.toString()
     }
 
+    @Suppress("DEPRECATION")
     private fun assertNativeMetadata(target: CompileTarget) {
         assertEquals("Custom Native", target.name)
         assertEquals(setOf("custom_native"), target.type.aliases)

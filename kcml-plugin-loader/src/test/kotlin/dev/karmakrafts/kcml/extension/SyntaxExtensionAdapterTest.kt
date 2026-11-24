@@ -189,7 +189,10 @@ class SyntaxExtensionAdapterTest {
         assertEquals(listOf("decline", "accept"), calls)
         assertEquals("second", builder.tokenText)
         builder.advanceLexer()
+
+        @Suppress("DEPRECATION") //
         root.done(KtNodeTypes.KT_FILE)
+
         assertEquals(listOf("retained diagnostic"), errorDescriptions(builder.treeBuilt))
     }
 
@@ -409,19 +412,19 @@ class SyntaxExtensionAdapterTest {
 
     @Test
     fun `highlighting collects original source ranges in extension order`() {
-        val file = KtPsiFactory(environment.project).createFile("val value = 0")
+        val originalFile = KtPsiFactory(environment.project).createFile("val value = 0")
         val first = Highlighting(TextRange(0, 3), "DEFAULT_KEYWORD")
         val second = Highlighting(TextRange(12, 13), "DEFAULT_NUMBER")
         fun extension(expectedPlugin: String, highlighting: Highlighting) = object : TestExtension() {
-            override fun highlight(source: KtFile, frontend: SyntaxFrontend): List<Highlighting> {
-                assertSame(file, source)
+            override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> {
+                assertSame(originalFile, file)
                 assertEquals(expectedPlugin, frontend.pluginId)
                 return listOf(highlighting)
             }
         }
         val adapter = adapter(extension("plugin-0", first), TestNoopExtension(), extension("plugin-2", second))
-        assertEquals(listOf(first, second), adapter.highlight(file))
-        assertEquals("val value = 0", file.text)
+        assertEquals(listOf(first, second), adapter.highlight(originalFile))
+        assertEquals("val value = 0", originalFile.text)
     }
 
     @Test
@@ -434,13 +437,13 @@ class SyntaxExtensionAdapterTest {
 
     @Test
     fun `declined completions visit extensions in reverse order with original source arguments`() {
-        val file = KtPsiFactory(environment.project).createFile("val value = 0")
-        val offset = file.textLength
+        val originalFile = KtPsiFactory(environment.project).createFile("val value = 0")
+        val offset = originalFile.textLength
         val calls = mutableListOf<String>()
         fun extension(expectedPlugin: String) = object : TestExtension() {
-            override fun complete(source: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
-                assertSame(file, source)
-                assertEquals(file.textLength, offset)
+            override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
+                assertSame(originalFile, file)
+                assertEquals(originalFile.textLength, offset)
                 assertTrue(smart)
                 assertEquals(expectedPlugin, frontend.pluginId)
                 calls += frontend.pluginId
@@ -451,15 +454,15 @@ class SyntaxExtensionAdapterTest {
                 fail("Completion must not lower the original source")
         }
 
-        assertNull(adapter(extension("plugin-0"), extension("plugin-1")).complete(file, offset, true))
+        assertNull(adapter(extension("plugin-0"), extension("plugin-1")).complete(originalFile, offset, true))
         assertEquals(listOf("plugin-1", "plugin-0"), calls)
-        assertEquals("val value = 0", file.text)
+        assertEquals("val value = 0", originalFile.text)
     }
 
     @Test
     fun `later completion overrides earlier extensions including empty results`() {
-        val file = KtPsiFactory(environment.project).createFile("val value = 0")
-        val element = file.declarations.single() as KtProperty
+        val originalFile = KtPsiFactory(environment.project).createFile("val value = 0")
+        val element = originalFile.declarations.single() as KtProperty
         val custom = listOf(Completion("custom", "custom()", "()", "Unit", element))
         for (result in listOf(emptyList(), custom)) {
             val calls = mutableListOf<String>()
@@ -468,8 +471,8 @@ class SyntaxExtensionAdapterTest {
                     fail("An earlier completion override must not run")
             }
             val accepting = object : TestExtension() {
-                override fun complete(source: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion> {
-                    assertSame(file, source)
+                override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion> {
+                    assertSame(originalFile, file)
                     assertEquals(4, offset)
                     assertFalse(smart)
                     assertEquals("plugin-1", frontend.pluginId)
@@ -485,7 +488,7 @@ class SyntaxExtensionAdapterTest {
                 }
             }
 
-            assertSame(result, adapter(earlier, accepting, declining).complete(file, 4, false))
+            assertSame(result, adapter(earlier, accepting, declining).complete(originalFile, 4, false))
             assertEquals(listOf("decline", "accept"), calls)
         }
     }
@@ -533,19 +536,19 @@ class SyntaxExtensionAdapterTest {
     @Test
     fun `inspection rules retain all ranges in reverse extension order and original per-extension order`() {
         val source = "// \uD83D\uDE00\nfun example() { test }"
-        val file = KtPsiFactory(environment.project).createFile(source)
+        val originalFile = KtPsiFactory(environment.project).createFile(source)
         val start = source.indexOf("test")
         val whole = TextRange(start, start + 4)
-        val element = file.findElementAt(start)!!
+        val element = originalFile.findElementAt(start)!!
         assertEquals(whole, element.textRange)
         val earlier = listOf(InspectionRule(element), InspectionRule(element, InspectionMode.SUPPRESS, TextRange(0, 2)))
         val later = listOf(InspectionRule(element, InspectionMode.SUPPRESS), InspectionRule(element))
         val calls = mutableListOf<String>()
         fun extension(expectedPlugin: String, rules: List<InspectionRule>) = object : TestExtension() {
-            override fun inspectionRules(original: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
-                assertSame(file, original)
-                assertEquals(source, original.text)
-                assertEquals("test", original.text.substring(whole.startOffset, whole.endOffset))
+            override fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
+                assertSame(originalFile, file)
+                assertEquals(source, file.text)
+                assertEquals("test", file.text.substring(whole.startOffset, whole.endOffset))
                 assertEquals(expectedPlugin, frontend.pluginId)
                 calls += frontend.pluginId
                 return rules
@@ -556,13 +559,13 @@ class SyntaxExtensionAdapterTest {
         }
         val adapter = adapter(extension("plugin-0", earlier), TestNoopExtension(), extension("plugin-2", later))
 
-        val rules = adapter.inspectionRules(file)
+        val rules = adapter.inspectionRules(originalFile)
         assertEquals(later + earlier, rules)
         (later + earlier).zip(rules).forEach { (expected, actual) -> assertSame(expected, actual) }
         rules.forEach { assertSame(element, it.element) }
         assertEquals(listOf(whole, whole, whole, TextRange(start, start + 2)), rules.map { it.range })
         assertEquals(listOf("plugin-2", "plugin-0"), calls)
-        assertEquals(source, file.text)
+        assertEquals(source, originalFile.text)
     }
 
     @Test
@@ -595,20 +598,20 @@ class SyntaxExtensionAdapterTest {
     @Test
     fun `custom inspections aggregate in registration order without deduplication or rule suppression`() {
         val source = "// \uD83D\uDE00\nfun example() { test }"
-        val file = KtPsiFactory(environment.project).createFile(source)
+        val originalFile = KtPsiFactory(environment.project).createFile(source)
         val start = source.indexOf("test")
         val range = TextRange(start, start + 4)
-        val element = file.findElementAt(start)!!
+        val element = originalFile.findElementAt(start)!!
         assertEquals(range, element.textRange)
         val findings = InspectionSeverity.entries.map { Inspection(element, "Prefer foo", it) }
         val earlier = listOf(findings[0], findings[1], findings[0])
         val later = listOf(findings[2], findings[3], findings[0])
         val calls = mutableListOf<String>()
         fun extension(expectedPlugin: String, inspections: List<Inspection>) = object : TestExtension() {
-            override fun inspect(original: KtFile, frontend: SyntaxFrontend): List<Inspection> {
-                assertSame(file, original)
-                assertEquals(source, original.text)
-                assertEquals("test", original.text.substring(range.startOffset, range.endOffset))
+            override fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> {
+                assertSame(originalFile, file)
+                assertEquals(source, file.text)
+                assertEquals("test", file.text.substring(range.startOffset, range.endOffset))
                 assertEquals(expectedPlugin, frontend.pluginId)
                 calls += frontend.pluginId
                 return inspections
@@ -622,8 +625,8 @@ class SyntaxExtensionAdapterTest {
         }
         val adapter = adapter(extension("plugin-0", earlier), TestNoopExtension(), extension("plugin-2", later))
 
-        assertEquals(List(2) { InspectionRule(element, InspectionMode.SUPPRESS) }, adapter.inspectionRules(file))
-        val inspections = adapter.inspect(file)
+        assertEquals(List(2) { InspectionRule(element, InspectionMode.SUPPRESS) }, adapter.inspectionRules(originalFile))
+        val inspections = adapter.inspect(originalFile)
         assertEquals(earlier + later, inspections)
         (earlier + later).zip(inspections).forEach { (expected, actual) -> assertSame(expected, actual) }
         inspections.forEach {
@@ -631,7 +634,7 @@ class SyntaxExtensionAdapterTest {
             assertEquals(range, it.range)
         }
         assertEquals(listOf("plugin-0", "plugin-2"), calls)
-        assertEquals(source, file.text)
+        assertEquals(source, originalFile.text)
     }
 
     @Test
@@ -672,9 +675,9 @@ class SyntaxExtensionAdapterTest {
 
     @Test
     fun `inspection ranges are captured before in-place PSI lowering changes offsets and lengths`() {
-        val file = KtPsiFactory(environment.project).createFile("val prefix = 0\nval value = 1")
-        val prefix = file.declarations[0] as KtProperty
-        val element = file.declarations[1] as KtProperty
+        val originalFile = KtPsiFactory(environment.project).createFile("val prefix = 0\nval value = 1")
+        val prefix = originalFile.declarations[0] as KtProperty
+        val element = originalFile.declarations[1] as KtProperty
         val subrange = TextRange(4, 9)
         val rule = InspectionRule(element)
         val partialRule = InspectionRule(element, rangeInElement = subrange)
@@ -689,18 +692,18 @@ class SyntaxExtensionAdapterTest {
             parent.subtreeChanged()
         }
         val extension = object : TestExtension() {
-            override fun lower(source: KtFile, frontend: SyntaxFrontend): KtFile {
-                assertSame(file, source)
+            override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile {
+                assertSame(originalFile, file)
                 ApplicationManager.getApplication().runWriteAction {
                     rename(prefix.nameIdentifier!!, "longerPrefix")
                     rename(element.nameIdentifier!!, "longerValue")
                 }
-                return source
+                return file
             }
         }
 
-        assertSame(file, adapter(extension).lower(file))
-        assertEquals("val longerPrefix = 0\nval longerValue = 1", file.text)
+        assertSame(originalFile, adapter(extension).lower(originalFile))
+        assertEquals("val longerPrefix = 0\nval longerValue = 1", originalFile.text)
         assertTrue(element.textRange.startOffset > whole.startOffset)
         assertTrue(element.textLength > whole.length)
         assertEquals(whole, rule.range)

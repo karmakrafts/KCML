@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.codeHighlighting.HighlightDisplayLevel
 import com.intellij.codeInsight.daemon.HighlightDisplayKey
@@ -61,7 +61,7 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
     override fun tearDown() {
         try {
             savedLevel?.let { profile.setErrorLevel(HighlightDisplayKey.find(inspectionId)!!, it, project) }
-            for ((tools, enabled, defaultEnabled) in savedStates) {
+            for ([tools, enabled, defaultEnabled] in savedStates) {
                 tools.isEnabled = enabled
                 tools.defaultState.isEnabled = defaultEnabled
             }
@@ -75,13 +75,14 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
     fun testAllLoweredSubnodeReportsReachTheWholeSourceToken() {
         val source = "fun example() {\n    §\n}"
         val token = tokenRange(source)
-        val result =
-            collect(source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(rule(source, token)))
-        assertEquals(setOf(inspectionId), result.toolIds)
-        assertEquals(2, result.problems.size)
-        assertEquals(listOf(token, token), result.problems.map { it.range })
-        assertEquals(1, result.problems.map { it.message }.distinct().size)
-        assertTrue(result.problems.all { it.severity == HighlightSeverity.WARNING && it.message.isNotBlank() })
+        (val problems, val toolIds) = collect(
+            source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(rule(source, token))
+        )
+        assertEquals(setOf(inspectionId), toolIds)
+        assertEquals(2, problems.size)
+        assertEquals(listOf(token, token), problems.map { it.range })
+        assertEquals(1, problems.map { it.message }.distinct().size)
+        assertTrue(problems.all { it.severity == HighlightSeverity.WARNING && it.message.isNotBlank() })
     }
 
     fun testSuppressRuleKeepsUnrelatedInspections() {
@@ -118,24 +119,22 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
         profile.setErrorLevel(HighlightDisplayKey.find(inspectionId)!!, HighlightDisplayLevel.ERROR, project)
         assertEquals(HighlightSeverity.ERROR, collect(source, source).problems.single().severity)
         profile.getTools(inspectionId, project).isEnabled = false
-        val disabled = collect(source, source)
-        assertEmpty(disabled.problems)
-        assertEmpty(disabled.toolIds)
+        (val problems, val toolIds) = collect(source, source)
+        assertEmpty(problems)
+        assertEmpty(toolIds)
     }
 
     fun testKotlinInspectionSuppressionIsPreserved() {
         val source = "@Suppress(\"RedundantSemicolon\")\nfun example() {\n    val value = 1;\n}"
-        val result = collect(source, source)
-        assertContainsElements(result.toolIds, inspectionId)
-        assertEmpty(result.problems)
+        (val problems, val toolIds) = collect(source, source)
+        assertContainsElements(toolIds, inspectionId)
+        assertEmpty(problems)
     }
 
     private fun tokenRange(source: String): TextRange = source.indexOf('§').let { TextRange(it, it + 1) }
 
     private fun rule(
-        source: String,
-        range: TextRange,
-        mode: InspectionMode = InspectionMode.DESUGARED
+        source: String, range: TextRange, mode: InspectionMode = InspectionMode.DESUGARED
     ): InspectionRule = InspectionRule(KtPsiFactory(project).createFile("Inspections.kt", source), mode, range)
 
     private fun collect(

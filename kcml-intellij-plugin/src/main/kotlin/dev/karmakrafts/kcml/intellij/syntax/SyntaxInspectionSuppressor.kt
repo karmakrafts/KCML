@@ -20,6 +20,7 @@ import com.intellij.codeInspection.InspectionSuppressor
 import com.intellij.codeInspection.SuppressQuickFix
 import com.intellij.psi.PsiElement
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxAnalysis
 import org.jetbrains.kotlin.psi.KtFile
 
 @OptIn(ExperimentalKcmlApi::class)

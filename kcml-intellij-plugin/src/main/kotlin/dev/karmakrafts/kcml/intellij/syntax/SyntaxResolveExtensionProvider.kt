@@ -23,6 +23,7 @@ import com.intellij.openapi.project.DumbService
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.FileTypeIndex
 import com.intellij.psi.search.GlobalSearchScope
+import dev.karmakrafts.kcml.intellij.syntax.runtime.SyntaxOffsetMap
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
 import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.KaSpiExtensionPoint

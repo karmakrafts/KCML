@@ -81,6 +81,7 @@ object NativeTargetHooks {
             ?: BinaryFormat.ELF.takeIf { target.family !in builtinFamilies }
     }
 
+    @Suppress("DEPRECATION")
     @JvmStatic
     fun onPointerBits(target: KonanTarget): Int? =
         target.architecture.bitness.takeIf { target.architecture !in builtinArchitectures }

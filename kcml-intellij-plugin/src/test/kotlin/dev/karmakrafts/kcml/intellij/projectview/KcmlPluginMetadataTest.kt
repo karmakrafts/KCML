@@ -26,6 +26,7 @@ import java.nio.file.Path
 import java.util.jar.JarEntry
 import java.util.jar.JarOutputStream
 
+@Suppress("DEPRECATION")
 class KcmlPluginMetadataTest : LightPlatformTestCase() {
     private lateinit var directory: Path
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.lang.ASTFactory
 import com.intellij.lang.ASTNode
@@ -79,6 +79,7 @@ internal class SyntaxRuntime( // @formatter:off
                 left: ASTNode?, right: ASTNode?
             ): SpaceRequirements = super.spaceExistenceTypeBetweenTokens(left, right)
 
+            @Suppress("DEPRECATION")
             @Deprecated("Deprecated in Java", replaceWith = ReplaceWith("spaceExistenceTypeBetweenTokens"))
             override fun spaceExistanceTypeBetweenTokens(
                 left: ASTNode?, right: ASTNode?

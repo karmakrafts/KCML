@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.intellij.syntax
+package dev.karmakrafts.kcml.intellij.syntax.runtime
 
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
@@ -32,6 +32,7 @@ import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
 import dev.karmakrafts.kcml.api.extension.syntax.Inspection
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionSeverity
+import dev.karmakrafts.kcml.intellij.syntax.SyntaxExtensionService
 import org.jetbrains.kotlin.analysis.api.components.KaDiagnosticCheckerFilter
 import org.jetbrains.kotlin.analysis.api.components.collectDiagnostics
 import org.jetbrains.kotlin.analysis.api.diagnostics.KaSeverity
