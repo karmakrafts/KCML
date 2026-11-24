@@ -218,13 +218,90 @@ class OnlyOnUsageInspectionTest : InspectionFixtureTestCase(
     fun testSubtypeCompatibility() = check(
         """
         interface CustomTarget : JvmCompileTarget { companion object : CompileTargetType }
+        typealias CustomTargetAlias = CustomTarget
+        interface IndirectTarget : CustomTargetAlias { companion object : CompileTargetType }
+        interface SiblingTarget : JvmCompileTarget { companion object : CompileTargetType }
         @OnlyOn(CustomTarget::class) fun custom() = Unit
         @OnlyOn(CompileTarget::class) fun anyTarget() = Unit
+        @OnlyOn(IndirectTarget::class) fun indirect() = Unit
         @OnlyOn(CustomTarget::class)
-        fun use() { jvm(); custom(); anyTarget(); <error descr="$ERROR">js()</error> }
+        fun use() { jvm(); custom(); anyTarget(); <error descr="$ERROR">js()</error>; <error descr="$ERROR">indirect()</error> }
+        @OnlyOn(IndirectTarget::class)
+        fun useIndirect() { jvm(); custom(); indirect(); anyTarget(); <error descr="$ERROR">js()</error> }
         fun CompileTargetProvider.scopes() {
             whenCompilingFor(CustomTarget) { jvm(); custom(); anyTarget() }
             whenCompilingFor(JvmCompileTarget) { <error descr="$ERROR">custom()</error>; anyTarget() }
+            whenCompilingFor(IndirectTarget) { jvm(); custom(); indirect(); anyTarget() }
+            whenCompilingFor(SiblingTarget) { jvm(); <error descr="$ERROR">custom()</error> }
+            whenCompilingFor(CustomTarget, IndirectTarget) { jvm(); custom(); <error descr="$ERROR">indirect()</error> }
+            whenCompilingFor(JvmCompileTarget) {
+                whenCompilingFor(IndirectTarget) { jvm(); custom(); indirect() }
+            }
+            whenCompilingFor(IndirectTarget) {
+                whenCompilingFor(JvmCompileTarget) { jvm(); custom(); indirect() }
+            }
+        }
+    """
+    )
+
+    fun testInheritedTargetRestrictionsOnNestedElements() = check(
+        """
+        interface CustomTarget : JvmCompileTarget { companion object : CompileTargetType }
+        @OnlyOn(JvmCompileTarget::class)
+        class Restricted {
+            class Nested { val value = 0; fun member() = Unit }
+            val property = 0
+            fun member() = Unit
+        }
+        @OnlyOn(JvmCompileTarget::class) val property = 0
+        @get:OnlyOn(JvmCompileTarget::class)
+        @set:OnlyOn(JvmCompileTarget::class)
+        var accessor = 0
+        @field:OnlyOn(JvmCompileTarget::class) var field = 0
+        @OnlyOn(JvmCompileTarget::class) typealias RestrictedAlias = String
+        fun withJvm(block: @OnlyOn(JvmCompileTarget::class) () -> Unit) = Unit
+        @OnlyOn(CustomTarget::class) val subtypeProperty = jvm()
+        @field:OnlyOn(CustomTarget::class) val subtypeField = jvm()
+        @field:OnlyOn(CustomTarget::class) val mismatchedField = <error descr="$ERROR">js()</error>
+        var subtypeAccessors: Unit
+            @OnlyOn(CustomTarget::class) get() = jvm()
+            @OnlyOn(CustomTarget::class) set(value) { jvm(); <error descr="$ERROR">js()</error> }
+        val subtypeBlock: @OnlyOn(CustomTarget::class) () -> Unit = { jvm(); <error descr="$ERROR">js()</error> }
+        @OnlyOn(CustomTarget::class)
+        class SubtypeScope {
+            class Nested {
+                val value = jvm()
+                fun use() { jvm(); <error descr="$ERROR">js()</error> }
+            }
+            @OnlyOn(JvmCompileTarget::class)
+            val value = jvm()
+            var valueWithAccessors: Unit
+                @OnlyOn(JvmCompileTarget::class) get() = jvm()
+                @OnlyOn(JvmCompileTarget::class) set(value) { jvm(); <error descr="$ERROR">js()</error> }
+            fun use() {
+                val instance = Restricted()
+                instance.member()
+                val read = instance.property
+                val nested = Restricted.Nested()
+                nested.member()
+                val nestedRead = nested.value
+                val topLevelRead = property
+                accessor = accessor + 1
+                field = field + 1
+                val alias: RestrictedAlias = ""
+                val block: @OnlyOn(JvmCompileTarget::class) () -> Unit = { jvm() }
+                block()
+                withJvm { jvm() }
+            }
+        }
+        @OnlyOn(JsCompileTarget::class)
+        fun unrelated() {
+            <error descr="$ERROR">Restricted()</error>
+            <error descr="$ERROR">Restricted</error>.<error descr="$ERROR">Nested()</error>
+            val read = <error descr="$ERROR">property</error>
+            <error descr="$ERROR">accessor</error> = 1
+            <error descr="$ERROR">field</error> = 1
+            val alias: <error descr="$ERROR">RestrictedAlias</error> = ""
         }
     """
     )

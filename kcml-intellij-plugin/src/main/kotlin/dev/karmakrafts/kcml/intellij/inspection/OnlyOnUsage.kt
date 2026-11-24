@@ -36,6 +36,8 @@ import org.jetbrains.kotlin.analysis.api.types.KaClassType
 import org.jetbrains.kotlin.analysis.api.types.KaFunctionType
 import org.jetbrains.kotlin.idea.references.mainReference
 import org.jetbrains.kotlin.lexer.KtTokens
+import org.jetbrains.kotlin.name.ClassId
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.psi.KtBinaryExpression
 import org.jetbrains.kotlin.psi.KtCallExpression
 import org.jetbrains.kotlin.psi.KtCollectionLiteralExpression
@@ -58,8 +60,11 @@ internal object OnlyOnUsage {
 
     private val key = OnlyOnAnalysis.key<Map<KtSimpleNameExpression, Problem>>("kcml.onlyOn.usage")
 
-    private data class Target(val name: String, val ancestors: Set<String>) {
-        fun accepts(other: Target): Boolean = name in other.ancestors
+    private data class Target(val symbol: KaClassSymbol) {
+        context(session: KaSession)
+        fun accepts(other: Target): Boolean = with(session) {
+            symbol == other.symbol || other.symbol.isSubClassOf(symbol)
+        }
     }
 
     fun problem(expression: KtSimpleNameExpression): Problem? {
@@ -179,21 +184,12 @@ internal object OnlyOnUsage {
             return target(expanded)
         }
         val klass = symbol as? KaClassSymbol ?: return null
-        val name = klass.classId?.asFqNameString() ?: return null
-        val ancestors = mutableSetOf(name)
-        fun collect(current: KaClassSymbol) {
-            for (type in current.superTypes.filterIsInstance<KaClassType>()) {
-                if (!ancestors.add(type.classId.asFqNameString())) continue
-                val superClass = type.symbol as? KaClassSymbol ?: continue
-                collect(superClass)
-            }
-        }
-        collect(klass)
-        if (TypeNames.COMPILE_TARGET !in ancestors) {
+        val compileTarget = findClass(ClassId.topLevel(FqName(TypeNames.COMPILE_TARGET))) ?: return null
+        if (klass != compileTarget && !klass.isSubClassOf(compileTarget)) {
             val owner = klass.containingDeclaration as? KaClassSymbol ?: return null
             return target(owner)
         }
-        return Target(name, ancestors)
+        return Target(klass)
     }
 
     private fun KaSession.context(expression: KtExpression): Set<Target>? {
@@ -204,7 +200,13 @@ internal object OnlyOnUsage {
                 is KtLambdaExpression -> lambdaContext(current)
                 is KtDeclaration -> {
                     val symbol = current.symbol as? KaAnnotated
-                    if (symbol == null) emptyList() else annotations(symbol)
+                    buildList {
+                        if (symbol != null) addAll(annotations(symbol))
+                        if (symbol is KaPropertySymbol) {
+                            val backingField = symbol.backingFieldSymbol
+                            if (backingField != null) addAll(annotations(backingField))
+                        }
+                    }
                 }
 
                 else -> emptyList()
@@ -218,6 +220,7 @@ internal object OnlyOnUsage {
         return result
     }
 
+    context(session: KaSession)
     private fun intersect(first: Set<Target>, second: Set<Target>): Set<Target> = buildSet {
         for (left in first) for (right in second) {
             when {

@@ -27,6 +27,9 @@ import kotlin.reflect.KClass
  * However, referencing code annotated with this annotation outside a designated [whenCompilingFor] scope
  * is discouraged and will cause an inspection warning to appear.
  *
+ * Each allowed target includes the target itself and all its subtypes. This applies to every supported
+ * annotation location, and target constraints also apply to nested declarations and expressions.
+ *
  * This warning may be suppressed by using the `KCML_TARGET_SPECIFIC_CODE` inspection identifier.
  *
  * Referencing code allowing the [JvmCompileTarget] while inside a [JsCompileTarget] for example,
