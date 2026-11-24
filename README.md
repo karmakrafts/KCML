@@ -28,6 +28,32 @@ every available Kotlin Multiplatform target to allow customization beyond IR.
 
 This project is in no way associated with Kotlin or JetBrains. Use at your own risk!
 
+### Features
+
+- Stable APIs for defining compiler plugins
+- Stable APIs for defining IR and FIR extensions
+- Stable API for creating Gradle support plugins
+- Rich plugin metadata using a JSON config (including dependency plugins)
+- Interoperability between different plugins
+  - Depending directly on other plugins
+  - Using Inter-Plugin Messaging (IPMs)
+- Custom compile targets for any backend
+  - Including custom LLVM target configurations
+- Mixins for creating your own compiler hooks
+- Gradle DSL
+- Gradle integration for the compiler agent to obtain debugging information
+- Custom syntax extensions for Kotlin based on PSI desugaring
+  - Shared by compiler and IDE!
+- Full IntelliJ IDE integration
+  - Inspections
+  - Smart completion
+  - Navigation
+  - Syntax extension runtime
+  - Custom tool window
+- Integration with the [Iridium](https://github.com/karmakrafts/Iridium) test framework
+
+Any many, many more.
+
 ### How it works
 
 ![KCML Architecture Diagram](docs/architecture.svg)
