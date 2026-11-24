@@ -23,6 +23,10 @@
                    order="first"/>
         <daemon.highlightInfoFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxHighlightInfoFilter"/>
         <highlightErrorFilter implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxErrorFilter"/>
+        <gotoDeclarationHandler implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxGotoDeclarationHandler"
+                                order="first"/>
+        <platform.backend.documentation.targetProvider
+                implementation="dev.karmakrafts.kcml.intellij.syntax.SyntaxDocumentationTargetProvider" order="first"/>
         <lang.inspectionSuppressor language="kotlin"
                                   implementationClass="dev.karmakrafts.kcml.intellij.syntax.SyntaxInspectionSuppressor"/>
 

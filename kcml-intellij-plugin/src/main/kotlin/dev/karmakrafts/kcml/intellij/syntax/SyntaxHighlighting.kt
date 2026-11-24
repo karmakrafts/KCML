@@ -16,13 +16,48 @@
 
 package dev.karmakrafts.kcml.intellij.syntax
 
+import com.intellij.codeInsight.daemon.impl.HighlightVisitor
+import com.intellij.codeInsight.daemon.impl.analysis.HighlightInfoHolder
+import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.TextRange
+import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import org.jetbrains.kotlin.idea.base.highlighting.KotlinBeforeResolveHighlightingVisitor
+import org.jetbrains.kotlin.psi.KtFile
 import java.util.*
 
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxHighlighting {
+    fun collect(file: KtFile, offsets: SyntaxOffsetMap): List<Highlighting> {
+        val holder = HighlightInfoHolder(file)
+        // Clone the daemon visitors so background syntax analysis never shares their mutable state.
+        for (extension in HighlightVisitor.EP_HIGHLIGHT_VISITOR.getExtensionList(file.project)) {
+            // Kotlin marks its semantic base class internal; interact through the platform visitor API.
+            val semantic = generateSequence<Class<*>>(extension.javaClass) { it.superclass }.any {
+                it.name == "org.jetbrains.kotlin.idea.highlighting.visitor.KotlinAbstractSemanticHighlightingVisitor"
+            }
+            if (!semantic && extension !is KotlinBeforeResolveHighlightingVisitor) continue
+            ProgressManager.checkCanceled()
+            val visitor = extension.clone()
+            visitor.analyze(file, true, holder) {
+                PsiTreeUtil.processElements(file) { element ->
+                    ProgressManager.checkCanceled()
+                    visitor.visit(element)
+                    true
+                }
+            }
+        }
+        return buildList {
+            for (index in 0 until holder.size()) {
+                val info = holder[index]
+                val key = info.forcedTextAttributesKey ?: info.type.attributesKey
+                val range = offsets.toSource(TextRange(info.startOffset, info.endOffset))
+                if (!range.isEmpty) add(Highlighting(range, key.externalName))
+            }
+        }
+    }
+
     fun normalize(highlighting: List<Highlighting>, sourceLength: Int): List<Highlighting> {
         // Keep non-overlapping overrides indexed by start offset for ordered overlap lookups
         val ranges = TreeMap<Int, Highlighting>()

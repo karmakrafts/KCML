@@ -96,6 +96,9 @@ internal object SyntaxAnalysis {
             val offsets = SyntaxOffsetMap(file.text, lowered.text)
             val diagnostics = collectSyntaxDiagnostics(lowered, offsets) + collectSemanticDiagnostics(lowered, offsets)
             val desugared = file.text != lowered.text
+            val colors = if (desugared) SyntaxHighlighting.normalize(
+                SyntaxHighlighting.collect(lowered, offsets) + highlighting, file.textLength
+            ) else highlighting
             (val problems, val toolIds) = if (desugared || inspectionRules.isNotEmpty()) {
                 SyntaxInspections.collect(file, lowered, offsets, inspectionRules)
             }
@@ -103,7 +106,7 @@ internal object SyntaxAnalysis {
             // Never replace diagnostics with results from a session invalidated during analysis.
             if (generation != service.modificationCount) return null
             val result = Result(
-                stamp, generation, diagnostics, highlighting, problems.filter { problem ->
+                stamp, generation, diagnostics, colors, problems.filter { problem ->
                 desugared || inspectionRules.any { it.range.intersects(problem.range) }
             } + inspections.map {
                 val severity = when (it.severity) {

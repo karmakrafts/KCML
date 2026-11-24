@@ -788,6 +788,58 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("fun answer() = 42", runtime!!.lower(source).text)
     }
 
+    fun testKotlinSemanticHighlightingSurvivesPartialDesugaring() {
+        assertKotlinSemanticHighlighting("fun")
+    }
+
+    fun testKotlinSemanticHighlightingInsideDesugaredDeclarations() {
+        assertKotlinSemanticHighlighting("fn")
+    }
+
+    private fun assertKotlinSemanticHighlighting(keyword: String) {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin"))
+        loadRuntime(configuration().copy(paths = listOf(exampleJar), options = emptyList()), project.service())
+        val text = """
+            class Widget
+            $keyword identity(value: Widget): Widget = value
+            $keyword usage() { val generated = magic; val widget = Widget(); identity(widget) }
+        """.trimIndent()
+        myFixture.configureByText("Semantic.kt", text)
+        val highlights = myFixture.doHighlighting(HighlightSeverity.INFORMATION)
+        for ((token, key) in listOf(
+            "Widget()" to KotlinHighlightingColors.CONSTRUCTOR_CALL,
+            "identity(widget)" to KotlinHighlightingColors.PACKAGE_FUNCTION_CALL,
+            "widget)" to KotlinHighlightingColors.LOCAL_VARIABLE,
+            "value\n" to KotlinHighlightingColors.PARAMETER
+        )) {
+            val name = token.takeWhile { it.isLetter() }
+            val start = text.indexOf(token)
+            assertTrue("Missing semantic color ${key.externalName} on $name: $highlights", highlights.any {
+                it.startOffset == start && it.endOffset == start + name.length && it.forcedTextAttributesKey == key
+            })
+        }
+        val magic = text.indexOf("magic")
+        assertTrue("Extension overrides must retain precedence", highlights.any {
+            it.startOffset == magic && it.endOffset == magic + 5 &&
+                it.forcedTextAttributesKey == KotlinHighlightingColors.NUMBER
+        })
+        assertEquals(text, myFixture.file.text)
+    }
+
+    fun testUnchangedKotlinKeepsNativeSemanticHighlighting() {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin"))
+        loadRuntime(configuration().copy(paths = listOf(exampleJar), options = emptyList()), project.service())
+        val text = "class Widget\nfun usage() = Widget()"
+        val source = myFixture.configureByText("Ordinary.kt", text) as KtFile
+        val highlights = myFixture.doHighlighting(HighlightInfoType.SYMBOL_TYPE_SEVERITY)
+        assertFalse(syntaxAnalysis(source).desugared)
+        val start = text.lastIndexOf("Widget")
+        assertTrue("Unchanged Kotlin must keep its constructor color: $highlights", highlights.any {
+            it.startOffset == start && it.endOffset == start + 6 &&
+                (it.forcedTextAttributesKey ?: it.type.attributesKey) == KotlinHighlightingColors.CONSTRUCTOR_CALL
+        })
+    }
+
     // Producer assertions need the daemon's internal origin queries, just like the production filter.
     @Suppress("JetBrainsInternalApiUsage")
     fun testExamplePluginDiagnosticsFromImportedFacet() {
