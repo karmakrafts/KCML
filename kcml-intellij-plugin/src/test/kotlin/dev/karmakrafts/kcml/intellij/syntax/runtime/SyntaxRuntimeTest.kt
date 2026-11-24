@@ -746,10 +746,16 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         val service = syntaxService
         assertEmpty(service.loadedExtensions())
         val changes = AtomicInteger()
+        fun awaitChanges(expected: Int) {
+            PlatformTestUtil.waitWithEventsDispatching(
+                "Runtime change listeners notified $expected times", { changes.get() >= expected }, 10
+            )
+            assertEquals(expected, changes.get())
+        }
         service.addListener(testRootDisposable) { changes.incrementAndGet() }
         val disposable = Disposer.newDisposable()
-        var disposedChanges = 0
-        service.addListener(disposable) { disposedChanges++ }
+        val disposedChanges = AtomicInteger()
+        service.addListener(disposable) { disposedChanges.incrementAndGet() }
         Disposer.dispose(disposable)
 
         val configuration = configuration()
@@ -758,7 +764,7 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         assertSame(module, loadedModule)
         assertEquals("jvm", target)
         assertEquals(listOf("ide_fixture:syntax"), extensionIds)
-        assertEquals(1, changes.get())
+        awaitChanges(1)
         assertSame(first, service.runtime(module, configuration))
         assertEquals(1, changes.get())
 
@@ -767,19 +773,20 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         PlatformTestUtil.waitWithEventsDispatching("Replaced runtime closes", { first.extensionIds.isEmpty() }, 10)
         assertEmpty(service.loadedExtensions())
         assertEquals(listOf("ide_fixture:syntax"), extensionIds)
-        assertEquals(2, changes.get())
+        awaitChanges(2)
 
         loadRuntime(configuration)
         assertEquals(listOf("ide_fixture:syntax"), service.loadedExtensions().single().extensionIds)
-        assertEquals(3, changes.get())
+        awaitChanges(3)
         service.loadRuntime(module, null).get(10, TimeUnit.SECONDS)
         assertEmpty(service.loadedExtensions())
-        assertEquals(4, changes.get())
+        awaitChanges(4)
         loadRuntime(configuration)
+        awaitChanges(5)
         service.refresh()
         assertEmpty(service.loadedExtensions())
-        assertEquals(6, changes.get())
-        assertEquals(0, disposedChanges)
+        awaitChanges(6)
+        assertEquals(0, disposedChanges.get())
     }
 
     fun testDevelopmentClassDirectoryReloadsNestedClasses() {
