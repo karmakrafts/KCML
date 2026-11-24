@@ -38,6 +38,9 @@ public interface PluginMetadata {
     /** Optional semantic version of this plugin distribution. */
     public val version: Version?
 
+    /** A list of authors of this plugin. */
+    public val authors: List<PluginAuthor>
+
     /** Optional URL where users can report problems with this plugin. */
     public val issueTrackerUrl: String?
 

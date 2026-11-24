@@ -3,6 +3,12 @@
     "name": "Example Plugin",
     "version": "1.0.0",
     "issue_tracker_url": "https://git.karmakrafts.dev/kk/kcml/-/work_items",
+    "authors": [
+        {
+            "name": "Karma Krafts",
+            "url": "https://karmakrafts.dev"
+        }
+    ],
     "icon": {
         "dark": "example.svg",
         "light": "example.svg"

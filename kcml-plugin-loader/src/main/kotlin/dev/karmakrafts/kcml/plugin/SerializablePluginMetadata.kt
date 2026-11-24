@@ -28,6 +28,7 @@ data class SerializablePluginMetadata(
     override val id: String,
     override val name: String? = null,
     override val version: Version? = null,
+    override val authors: List<SerializablePluginAuthor> = emptyList(),
     @SerialName("issue_tracker_url") override val issueTrackerUrl: String? = null,
     override val dependencies: List<SerializablePluginDependency> = emptyList()
 ) : PluginMetadata
