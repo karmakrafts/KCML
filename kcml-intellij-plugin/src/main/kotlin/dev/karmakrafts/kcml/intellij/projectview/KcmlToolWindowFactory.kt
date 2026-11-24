@@ -16,7 +16,6 @@
 
 package dev.karmakrafts.kcml.intellij.projectview
 
-import com.intellij.ide.util.treeView.NodeRenderer
 import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbAware
 import com.intellij.openapi.project.Project
@@ -37,7 +36,8 @@ internal class KcmlToolWindowFactory : ToolWindowFactory, DumbAware {
         val disposable = Disposer.newDisposable("KCML tree")
         val model = StructureTreeModel(KcmlPluginTreeStructure(project), disposable)
         val tree = Tree(AsyncTreeModel(model, disposable)).apply {
-            cellRenderer = NodeRenderer()
+            cellRenderer = KcmlPluginTreeCellRenderer()
+            rowHeight = 0
             isRootVisible = false
             showsRootHandles = true
         }

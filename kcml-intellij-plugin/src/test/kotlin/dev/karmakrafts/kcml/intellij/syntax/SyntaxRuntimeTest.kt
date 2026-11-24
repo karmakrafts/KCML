@@ -389,6 +389,42 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         assertSame("Profile changes must not reload the syntax runtime", runtime, service.runtime(module))
     }
 
+    fun testDesugaredPackageMatchesSourceDirectory() {
+        enablePackageDirectoryInspection()
+        loadRuntime(configuration(), project.service())
+        val source = myFixture.addFileToProject(
+            "example/nested/Matching.kt", "package example.nested\nfn answer() = magic"
+        ) as KtFile
+        myFixture.configureFromExistingVirtualFile(source.virtualFile)
+        val analysis = syntaxAnalysis(source)
+        assertTrue(analysis.desugared)
+        assertEmpty(analysis.inspections)
+        assertEmpty(myFixture.doHighlighting().filter { it.description?.contains("Package directive") == true })
+        assertEquals("package example.nested\nfn answer() = magic", source.text)
+    }
+
+    fun testDesugaredPackageMismatchIsStillReported() {
+        enablePackageDirectoryInspection()
+        loadRuntime(configuration(), project.service())
+        val source = myFixture.addFileToProject(
+            "example/nested/Mismatched.kt", "package wrong\nfn answer() = magic"
+        ) as KtFile
+        myFixture.configureFromExistingVirtualFile(source.virtualFile)
+        val problems = syntaxAnalysis(source).inspections
+        assertSize(1, problems)
+        assertTrue(problems.single().message.contains("Package directive"))
+        assertEquals(source.packageDirective!!.textRange, problems.single().range)
+        assertEquals("package wrong\nfn answer() = magic", source.text)
+    }
+
+    private fun enablePackageDirectoryInspection() {
+        val inspection = Class.forName(
+            "org.jetbrains.kotlin.idea.codeInsight.inspections.PackageDirectoryMismatchInspection", true,
+            KotlinLanguage.INSTANCE.javaClass.classLoader
+        ).getDeclaredConstructor().newInstance() as LocalInspectionTool
+        myFixture.enableInspections(inspection)
+    }
+
     private fun enableSemicolonInspection() {
         val inspection = Class.forName(
             "org.jetbrains.kotlin.idea.codeInsight.inspections.RedundantSemicolonInspection", true,

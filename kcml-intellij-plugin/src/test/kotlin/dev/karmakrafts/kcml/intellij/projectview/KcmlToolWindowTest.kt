@@ -34,16 +34,22 @@ import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import com.intellij.ui.tree.AsyncTreeModel
 import com.intellij.ui.tree.StructureTreeModel
 import com.intellij.ui.treeStructure.Tree
+import com.intellij.util.ui.JBUI
 import com.intellij.util.ui.tree.TreeUtil
 import dev.karmakrafts.kcml.intellij.icon.Icons
 import dev.karmakrafts.kcml.intellij.syntax.SyntaxExtensionService
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType
+import java.awt.Component
+import java.awt.Container
+import java.awt.image.BufferedImage
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import javax.swing.JLabel
 import javax.swing.JScrollPane
+import javax.swing.tree.DefaultMutableTreeNode
 
 class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
     private var facet: KotlinFacet? = null
@@ -346,6 +352,88 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             assertSame(Icons.kcml, plugin.presentation.getIcon(false))
         }
         finally {
+            directory.toFile().deleteRecursively()
+        }
+    }
+
+    fun testPluginEntriesHaveBoundedIconsAndStackedText() {
+        val directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "kcml-plugin-layout-")
+        val toolWindow = ToolWindowManager.getInstance(project).registerToolWindow(
+            RegisterToolWindowTask.notClosable("KCML layout test", ToolWindowAnchor.BOTTOM)
+        )
+        try {
+            val metadata = Files.createDirectories(directory.resolve("META-INF"))
+            Files.writeString(metadata.resolve("wide.svg"), """
+                <svg xmlns="http://www.w3.org/2000/svg" width="256" height="128"><rect width="256" height="128" fill="red"/></svg>
+            """.trimIndent())
+            Files.writeString(metadata.resolve("tall.svg"), """
+                <svg xmlns="http://www.w3.org/2000/svg" width="64" height="256"><rect width="64" height="256" fill="blue"/></svg>
+            """.trimIndent())
+            for (id in listOf("wide", "tall", "fallback")) {
+                Files.writeString(metadata.resolve("$id.json"), """
+                    {"id":"$id","name":"Plugin $id","version":"1.2.3","icon":{"light":"$id.svg"}}
+                """.trimIndent())
+            }
+            KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
+            val tree = (toolWindow.contentManager.contents.single().component as JScrollPane).viewport.view as Tree
+            assertEquals(0, tree.rowHeight)
+            fun layout(component: Component) {
+                if (component is Container) {
+                    component.doLayout()
+                    component.components.forEach(::layout)
+                }
+            }
+            fun labels(component: Component): List<JLabel> = when (component) {
+                is JLabel -> listOf(component)
+                is Container -> component.components.flatMap(::labels)
+                else -> emptyList()
+            }
+            for (pluginMetadata in KcmlPluginMetadata.fromClasspath(listOf(directory))) {
+                val plugin = KcmlPluginNode(project, pluginMetadata, ViewSettings.DEFAULT).apply { update() }
+                for (selected in listOf(false, true)) {
+                    val cell = tree.cellRenderer.getTreeCellRendererComponent(
+                        tree, DefaultMutableTreeNode(plugin), selected, false, true, 0, selected
+                    )
+                    cell.setSize(cell.preferredSize)
+                    layout(cell)
+                    val labels = labels(cell)
+                    val icon = labels.single { it.icon != null }
+                    val name = labels.single { it.text == pluginMetadata.name }
+                    val version = labels.single { it.text == pluginMetadata.version }
+                    assertEquals(JBUI.scale(40), icon.icon.iconWidth)
+                    assertEquals(JBUI.scale(40), icon.icon.iconHeight)
+                    val iconBounds = javax.swing.SwingUtilities.convertRectangle(icon.parent, icon.bounds, cell)
+                    val nameBounds = javax.swing.SwingUtilities.convertRectangle(name.parent, name.bounds, cell)
+                    val versionBounds = javax.swing.SwingUtilities.convertRectangle(version.parent, version.bounds, cell)
+                    assertTrue(nameBounds.x >= iconBounds.x + iconBounds.width)
+                    assertEquals(nameBounds.x, versionBounds.x)
+                    assertTrue(versionBounds.y >= nameBounds.y + nameBounds.height)
+                    assertTrue(cell.height >= JBUI.scale(52))
+                    if (pluginMetadata.id != "fallback") {
+                        val size = JBUI.scale(40)
+                        val image = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+                        val graphics = image.createGraphics()
+                        try {
+                            icon.icon.paintIcon(tree, graphics, 0, 0)
+                        }
+                        finally {
+                            graphics.dispose()
+                        }
+                        val paintedPixels = (0 until size).flatMap { x ->
+                            (0 until size).filter { y -> image.getRGB(x, y).ushr(24) != 0 }.map { y -> x to y }
+                        }
+                        assertFalse(paintedPixels.isEmpty())
+                        val width = paintedPixels.maxOf { it.first } - paintedPixels.minOf { it.first } + 1
+                        val height = paintedPixels.maxOf { it.second } - paintedPixels.minOf { it.second } + 1
+                        assertEquals(size, maxOf(width, height))
+                        val expectedRatio = if (pluginMetadata.id == "wide") 2.0 else 0.25
+                        assertEquals(expectedRatio, width.toDouble() / height, 0.1)
+                    }
+                }
+            }
+        }
+        finally {
+            ToolWindowManager.getInstance(project).unregisterToolWindow(toolWindow.id)
             directory.toFile().deleteRecursively()
         }
     }

@@ -25,12 +25,17 @@ import com.intellij.codeInspection.ex.LocalInspectionToolWrapper
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.util.TextRange
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.profile.codeInspection.InspectionProjectProfileManager
+import com.intellij.psi.PsiManager
+import com.intellij.psi.SingleRootFileViewProvider
+import com.intellij.testFramework.LightVirtualFile
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionMode
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
+import org.jetbrains.kotlin.idea.KotlinFileType
+import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.psi.KtPsiFactory
 
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxInspections {
@@ -60,7 +65,12 @@ internal object SyntaxInspections {
             }
         if (tools.isEmpty()) return Result(emptyList(), emptySet())
         // Problem descriptors require physical PSI, but never anchor fixes in the editor's source tree.
-        val inspectionFile = KtPsiFactory(source.project).createPhysicalFile(source.name, lowered.text).apply {
+        // Directory-based inspections must still see the source location, not a parentless scratch file.
+        val virtualFile = object : LightVirtualFile(source.name, KotlinFileType.INSTANCE, lowered.text) {
+            override fun getParent(): VirtualFile? = source.virtualFile?.parent
+        }
+        val view = SingleRootFileViewProvider(PsiManager.getInstance(source.project), virtualFile, true)
+        val inspectionFile = (view.getPsi(KotlinLanguage.INSTANCE) as KtFile).apply {
             originalFile = source.originalFile
         }
         SyntaxAnalysisContext.attach(inspectionFile, source)

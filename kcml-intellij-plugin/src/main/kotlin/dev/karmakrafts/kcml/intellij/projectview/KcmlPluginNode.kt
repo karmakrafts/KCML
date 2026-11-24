@@ -24,7 +24,6 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.IconLoader
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.JBColor
-import com.intellij.util.IconUtil
 import dev.karmakrafts.kcml.intellij.icon.Icons
 import javax.swing.Icon
 
@@ -46,10 +45,7 @@ internal class KcmlPluginNode(
         val url = if (!JBColor.isBright()) value.darkIcon ?: value.lightIcon
         else value.lightIcon ?: value.darkIcon
         if (url == null) return Icons.kcml
-        val icon = IconLoader.findIcon(url) ?: return Icons.kcml
-        val size = maxOf(icon.iconWidth, icon.iconHeight)
-        if (size <= 0) return Icons.kcml
-        return if (size == 16) icon else IconUtil.scale(icon, null, 16F / size)
+        return IconLoader.findIcon(url) ?: Icons.kcml
     }
 
     override fun getChildren(): Collection<AbstractTreeNode<*>> = emptyList()
