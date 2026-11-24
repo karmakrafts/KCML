@@ -25,7 +25,9 @@ import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.lexer.KotlinLexer
 import org.jetbrains.kotlin.psi.KtFile
+import java.lang.reflect.Field
 import java.lang.reflect.InvocationTargetException
+import java.lang.reflect.Method
 
 @OptIn(ExperimentalKcmlApi::class, InternalKcmlApi::class)
 @KCMLHookApi
@@ -135,19 +137,20 @@ object SyntaxHooks {
     private object ParserAccess {
         val kotlinParsing: Class<*> = Class.forName("org.jetbrains.kotlin.parsing.KotlinParsing")
         private val expressionParsing = Class.forName("org.jetbrains.kotlin.parsing.KotlinExpressionParsing")
-        val builder = kotlinParsing.superclass.getDeclaredField("myBuilder").apply { isAccessible = true }
-        val kotlinParser = expressionParsing.getDeclaredField("myKotlinParsing").apply { isAccessible = true }
-        val expressionParser = kotlinParsing.getDeclaredField("myExpressionParsing").apply { isAccessible = true }
-        val topLevel = kotlinParsing.getDeclaredMethod("parseTopLevelDeclaration").apply { isAccessible = true }
-        val member = kotlinParsing.getDeclaredMethod("parseMemberDeclaration").apply { isAccessible = true }
-        val type = kotlinParsing.getDeclaredMethod("parseTypeRef").apply { isAccessible = true }
-        val local = expressionParsing.getDeclaredMethod(
+        val builder: Field = kotlinParsing.superclass.getDeclaredField("myBuilder").apply { isAccessible = true }
+        val kotlinParser: Field = expressionParsing.getDeclaredField("myKotlinParsing").apply { isAccessible = true }
+        val expressionParser: Field =
+            kotlinParsing.getDeclaredField("myExpressionParsing").apply { isAccessible = true }
+        val topLevel: Method = kotlinParsing.getDeclaredMethod("parseTopLevelDeclaration").apply { isAccessible = true }
+        val member: Method = kotlinParsing.getDeclaredMethod("parseMemberDeclaration").apply { isAccessible = true }
+        val type: Method = kotlinParsing.getDeclaredMethod("parseTypeRef").apply { isAccessible = true }
+        val local: Method = expressionParsing.getDeclaredMethod(
             "parseLocalDeclaration", Boolean::class.javaPrimitiveType, Boolean::class.javaPrimitiveType
         ).apply { isAccessible = true }
-        val statement = expressionParsing.getDeclaredMethod(
+        val statement: Method = expressionParsing.getDeclaredMethod(
             "parseStatement", Boolean::class.javaPrimitiveType
         ).apply { isAccessible = true }
-        val expression = expressionParsing.getDeclaredMethod("parseExpression").apply { isAccessible = true }
-        val atomic = expressionParsing.getDeclaredMethod("parseAtomicExpression").apply { isAccessible = true }
+        val expression: Method = expressionParsing.getDeclaredMethod("parseExpression").apply { isAccessible = true }
+        val atomic: Method = expressionParsing.getDeclaredMethod("parseAtomicExpression").apply { isAccessible = true }
     }
 }

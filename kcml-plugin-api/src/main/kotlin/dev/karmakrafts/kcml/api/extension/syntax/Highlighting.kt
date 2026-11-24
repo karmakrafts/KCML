@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.target.OnlyInIDE
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 
 /**
@@ -26,6 +27,7 @@ import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
  * @param textAttributesKey external name of an IDE color-scheme key, such as `KOTLIN_KEYWORD`,
  * `KOTLIN_NUMBER` or `DEFAULT_KEYWORD`. Custom keys must be registered by an IDE integration.
  */
+@OnlyInIDE
 @ExperimentalKcmlApi
 public data class Highlighting( // @formatter:off
     public val range: TextRange,

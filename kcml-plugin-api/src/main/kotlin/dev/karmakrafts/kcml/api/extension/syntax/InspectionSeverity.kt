@@ -17,8 +17,10 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.target.OnlyInIDE
 
 /** Severity of a custom editor inspection finding. */
+@OnlyInIDE
 @ExperimentalKcmlApi
 public enum class InspectionSeverity {
     // @formatter:off

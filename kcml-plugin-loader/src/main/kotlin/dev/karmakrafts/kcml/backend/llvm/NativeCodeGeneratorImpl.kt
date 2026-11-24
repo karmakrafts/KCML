@@ -19,6 +19,8 @@ package dev.karmakrafts.kcml.backend.llvm
 import dev.karmakrafts.kcml.api.backend.llvm.LateNativeBackend
 import dev.karmakrafts.kcml.api.backend.llvm.NativeCodeGenerator
 import dev.karmakrafts.kcml.api.backend.llvm.NativeTypes
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.hooks.llvm.CodeGeneratorVisitorView
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMBuilderRef
@@ -29,6 +31,7 @@ import org.jetbrains.kotlin.ir.declarations.IrSimpleFunction
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.types.IrType
 
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 internal class NativeCodeGeneratorImpl( // @formatter:off
     private val tryMaterializeFunctionCallback: (IrSimpleFunction) -> LlvmCallable?,

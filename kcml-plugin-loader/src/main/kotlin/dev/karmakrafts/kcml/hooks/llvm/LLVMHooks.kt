@@ -19,6 +19,8 @@ package dev.karmakrafts.kcml.hooks.llvm
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.llvm.NativeCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.backend.llvm.LateNativeBackendImpl
 import dev.karmakrafts.kcml.backend.llvm.NativeCodeGeneratorImpl
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -30,6 +32,7 @@ import org.jetbrains.kotlin.backend.konan.driver.NativePhaseContext
 import org.jetbrains.kotlin.ir.IrElement
 import kotlin.io.path.Path
 
+@OnlyOn(NativeCompileTarget::class)
 @Suppress("UNUSED")
 @KCMLHookApi
 @OptIn(ExperimentalForeignApi::class, InternalKcmlApi::class)

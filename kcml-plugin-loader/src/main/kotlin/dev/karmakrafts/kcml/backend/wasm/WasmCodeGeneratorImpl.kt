@@ -18,11 +18,15 @@ package dev.karmakrafts.kcml.backend.wasm
 
 import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
+import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.wasm.BodyGeneratorView
 import org.jetbrains.kotlin.backend.wasm.ir2wasm.WasmFunctionCodegenContext
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.wasm.ir.WasmExpressionBuilder
 
+@OnlyOn(WasmCompileTarget::class)
 internal class WasmCodeGeneratorImpl( // @formatter:off
     override val backend: LateWasmBackend,
     private val functionContext: WasmFunctionCodegenContext? = null,
@@ -31,6 +35,7 @@ internal class WasmCodeGeneratorImpl( // @formatter:off
 ) : WasmCodeGenerator {
     // @formatter:on
     companion object {
+        @OptIn(KCMLHookApi::class)
         fun fromView( // @formatter:off
             backend: LateWasmBackend,
             view: BodyGeneratorView

@@ -17,6 +17,8 @@
 package dev.karmakrafts.kcml.backend.llvm
 
 import dev.karmakrafts.kcml.api.backend.llvm.NativeTypes
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import kotlinx.cinterop.ExperimentalForeignApi
 import llvm.LLVMContextRef
 import llvm.LLVMDoubleTypeInContext
@@ -29,6 +31,7 @@ import llvm.LLVMInt8TypeInContext
 import llvm.LLVMPointerTypeInContext
 import llvm.LLVMTypeRef
 
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 class NativeTypesImpl( // @formatter:off
     private val context: LLVMContextRef

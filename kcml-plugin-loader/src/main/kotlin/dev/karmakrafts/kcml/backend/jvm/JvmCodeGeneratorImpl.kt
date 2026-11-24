@@ -18,11 +18,14 @@ package dev.karmakrafts.kcml.backend.jvm
 
 import dev.karmakrafts.kcml.api.backend.jvm.JvmCodeGenerator
 import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.codegen.BlockInfo
 import org.jetbrains.kotlin.backend.jvm.codegen.ExpressionCodegen
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.expressions.IrExpression
 
+@OnlyOn(JvmCompileTarget::class)
 internal class JvmCodeGeneratorImpl(
     override val backend: LateJvmBackend, override val context: ExpressionCodegen, override val blockInfo: BlockInfo
 ) : JvmCodeGenerator {

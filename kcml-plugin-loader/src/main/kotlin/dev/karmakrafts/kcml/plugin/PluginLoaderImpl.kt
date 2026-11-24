@@ -32,6 +32,7 @@ import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.api.target.CompileTarget
 import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyInIDE
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.extension.SyntaxExtensionAdapter
@@ -269,19 +270,18 @@ object PluginLoaderImpl : PluginLoader {
         val classLoader = classLoaderFactory(urls.toTypedArray(), parentClassLoader)
         pluginClassLoader = classLoader
         val classNames = PluginClassScanner.scan(urls, preparationExecutor)
-        fun instantiate(className: String, loadClass: () -> Class<*>): CompilerPlugin? =
-            try {
-                val pluginClass = loadClass()
-                if (!CompilerPlugin::class.java.isAssignableFrom(pluginClass)) {
-                    logger.warn("Annotated class '$className' does not implement CompilerPlugin, skipping load")
-                    null
-                }
-                else if (Modifier.isAbstract(pluginClass.modifiers) || pluginClass.isInterface) null
-                else pluginClass.asSubclass(CompilerPlugin::class.java).getDeclaredConstructor().newInstance()
-            } catch (error: Throwable) {
-                logger.warn("Could not load plugin candidate '$className', skipping load", error)
+        fun instantiate(className: String, loadClass: () -> Class<*>): CompilerPlugin? = try {
+            val pluginClass = loadClass()
+            if (!CompilerPlugin::class.java.isAssignableFrom(pluginClass)) {
+                logger.warn("Annotated class '$className' does not implement CompilerPlugin, skipping load")
                 null
             }
+            else if (Modifier.isAbstract(pluginClass.modifiers) || pluginClass.isInterface) null
+            else pluginClass.asSubclass(CompilerPlugin::class.java).getDeclaredConstructor().newInstance()
+        } catch (error: Throwable) {
+            logger.warn("Could not load plugin candidate '$className', skipping load", error)
+            null
+        }
 
         if (preparationExecutor == null) return classNames.mapNotNull { name ->
             instantiate(name) { classLoader.loadClass(name) }
@@ -290,7 +290,10 @@ object PluginLoaderImpl : PluginLoader {
         try {
             for (name in classNames) {
                 // Only load/transform bytecode here; constructors and callbacks retain their loader state and order.
-                prepared += CompletableFuture.supplyAsync({ runCatching { classLoader.loadClass(name) } }, preparationExecutor)
+                prepared += CompletableFuture.supplyAsync(
+                    { runCatching { classLoader.loadClass(name) } },
+                    preparationExecutor
+                )
             }
             return classNames.mapIndexedNotNull { index, name ->
                 instantiate(name) { prepared[index].join().getOrThrow() }
@@ -492,6 +495,7 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
+    @OnlyInIDE
     @JvmOverloads
     fun loadForIde(
         config: CompilerConfiguration,
@@ -500,6 +504,7 @@ object PluginLoaderImpl : PluginLoader {
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
     ): IdeSyntaxSession = loadForIde(config, pluginPaths, options, classLoaderFactory, null)
 
+    @OnlyInIDE
     fun loadForIde(
         config: CompilerConfiguration,
         pluginPaths: List<URL>,
@@ -513,8 +518,7 @@ object PluginLoaderImpl : PluginLoader {
                 setupLogging(config)
                 loadAllPlugins(config, options) { loadCandidates(pluginPaths, classLoaderFactory, preparationExecutor) }
             }
-        }
-        catch (error: Throwable) {
+        } catch (error: Throwable) {
             state.pluginClassLoader?.close()
             throw error
         }

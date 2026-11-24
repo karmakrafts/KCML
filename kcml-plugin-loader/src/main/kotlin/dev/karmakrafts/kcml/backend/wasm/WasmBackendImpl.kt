@@ -20,12 +20,14 @@ import dev.karmakrafts.kcml.api.backend.wasm.WasmBackend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.backend.AbstractIrBackend
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
+@OnlyOn(WasmCompileTarget::class)
 internal class WasmBackendImpl( // @formatter:off
     pluginId: String,
     context: IrPluginContext,

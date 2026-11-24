@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
@@ -38,11 +39,13 @@ import org.jetbrains.kotlin.konan.util.ProgressCallback
 import java.util.*
 import kotlin.io.path.Path
 
+@OnlyOn(NativeCompileTarget::class)
 @KCMLHookApi
 object NativeTargetHooks {
-    private val builtinFamilies =
+    private val builtinFamilies: Set<Family> =
         setOf(Family.LINUX, Family.MINGW, Family.OSX, Family.IOS, Family.TVOS, Family.WATCHOS, Family.ANDROID)
-    private val builtinArchitectures = setOf(Architecture.X64, Architecture.X86, Architecture.ARM64, Architecture.ARM32)
+    private val builtinArchitectures: Set<Architecture> =
+        setOf(Architecture.X64, Architecture.X86, Architecture.ARM64, Architecture.ARM32)
 
     @JvmStatic
     fun onCreateConfiguration(configuration: CompilerConfiguration) {

@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.target.OnlyInIDE
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 import org.jetbrains.kotlin.com.intellij.psi.PsiNamedElement
 
@@ -30,6 +31,7 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiNamedElement
  * @param element optional PSI anchor belonging to the original parsed source, before lowering.
  * Synthetic candidates may omit it.
  */
+@OnlyInIDE
 @ExperimentalKcmlApi
 public data class Completion(
     public val lookupString: String,

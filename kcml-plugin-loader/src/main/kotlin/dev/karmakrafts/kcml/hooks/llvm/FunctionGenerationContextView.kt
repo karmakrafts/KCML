@@ -17,6 +17,8 @@
 package dev.karmakrafts.kcml.hooks.llvm
 
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.ActualType
@@ -24,6 +26,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.toLong
 import llvm.LLVMBuilderRef
 
+@OnlyOn(NativeCompileTarget::class)
 @OptIn(ExperimentalForeignApi::class)
 internal data class FunctionGenerationContextView( // @formatter:off
     val builderGetter: () -> LLVMBuilderRef

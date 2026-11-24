@@ -21,6 +21,8 @@ import dev.karmakrafts.kcml.api.backend.wasm.LateWasmBackend
 import dev.karmakrafts.kcml.api.backend.wasm.WasmCodeGenerator
 import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
 import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
@@ -41,6 +43,7 @@ import java.lang.ref.WeakReference
 import java.util.*
 import kotlin.io.path.Path
 
+@OnlyOn(WasmCompileTarget::class)
 @OptIn(InternalKcmlApi::class)
 @Suppress("UNUSED")
 @KCMLHookApi

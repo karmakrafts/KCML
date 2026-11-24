@@ -24,8 +24,10 @@ import org.jetbrains.kotlin.cli.common.arguments.CommonCompilerArguments
 @KCMLHookApi
 object CommonHooks {
     private val _compilerArguments: InheritableThreadLocal<CommonCompilerArguments> = InheritableThreadLocal()
+
     internal val compilerArgumentsOrNull: CommonCompilerArguments?
         get() = _compilerArguments.get()
+
     val compilerArguments: CommonCompilerArguments
         get() = requireNotNull(_compilerArguments.get()) {
             "Compiler arguments have not been initialized for KCML"

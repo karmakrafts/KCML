@@ -19,6 +19,8 @@ package dev.karmakrafts.kcml.hooks.js
 import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.extension.js.JsCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.backend.js.JsCodeGeneratorImpl
 import dev.karmakrafts.kcml.backend.js.LateJsBackendImpl
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
@@ -32,6 +34,7 @@ import org.jetbrains.kotlin.js.backend.ast.JsStatement
 import java.util.*
 import kotlin.io.path.Path
 
+@OnlyOn(JsCompileTarget::class)
 @OptIn(InternalKcmlApi::class)
 @Suppress("UNUSED")
 @KCMLHookApi

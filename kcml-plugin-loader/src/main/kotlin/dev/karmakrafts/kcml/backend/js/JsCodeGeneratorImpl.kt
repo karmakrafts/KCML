@@ -18,6 +18,8 @@ package dev.karmakrafts.kcml.backend.js
 
 import dev.karmakrafts.kcml.api.backend.js.JsCodeGenerator
 import dev.karmakrafts.kcml.api.backend.js.LateJsBackend
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.ir.IrStatement
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.IrElementToJsExpressionTransformer
 import org.jetbrains.kotlin.ir.backend.js.transformers.irToJs.IrElementToJsStatementTransformer
@@ -26,6 +28,7 @@ import org.jetbrains.kotlin.ir.expressions.IrExpression
 import org.jetbrains.kotlin.js.backend.ast.JsExpression
 import org.jetbrains.kotlin.js.backend.ast.JsStatement
 
+@OnlyOn(JsCompileTarget::class)
 internal class JsCodeGeneratorImpl(
     override val backend: LateJsBackend, override val context: JsGenerationContext
 ) : JsCodeGenerator {

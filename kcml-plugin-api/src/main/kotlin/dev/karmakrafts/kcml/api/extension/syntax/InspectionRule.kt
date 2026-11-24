@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.target.OnlyInIDE
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 
@@ -31,6 +32,7 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiElement
  * @param mode inspection handling mode, defaulting to forwarding all mapped lowered reports.
  * @param rangeInElement optional nonempty UTF-16 subrange within [element]'s text; `null` selects all of it.
  */
+@OnlyInIDE
 @ExperimentalKcmlApi
 public data class InspectionRule(
     public val element: PsiElement,
@@ -41,6 +43,7 @@ public data class InspectionRule(
     public val range: TextRange = element.captureInspectionRange(rangeInElement)
 }
 
+@OnlyInIDE
 internal fun PsiElement.captureInspectionRange(rangeInElement: TextRange?): TextRange {
     val elementRange = requireNotNull(textRange) { "Inspection element must have a source range" }
     require(textLength > 0 && !elementRange.isEmpty) { "Inspection element must not be empty" }

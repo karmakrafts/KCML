@@ -20,7 +20,6 @@ import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.target.proto.NativeTargetDescriptor
 import dev.karmakrafts.kcml.util.kcmlNativeTarget
-import kotlinx.serialization.decodeFromString
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.config.CompilerConfigurationKey
 import org.jetbrains.kotlin.konan.config.NativeConfigurationKeys
@@ -51,17 +50,17 @@ internal class NativeTargetConfiguration(
             val descriptorPath = configuration.kcmlNativeTarget ?: return null
             val payload = Path(descriptorPath).readText(Charsets.UTF_8)
             val descriptor = NativeTargetDescriptor.json.decodeFromString<NativeTargetDescriptor>(payload)
-            val name = descriptor.name.also { require(it.isNotBlank()) { "Native target name must not be blank" } }
+            val targetName = descriptor.name.also { require(it.isNotBlank()) { "Native target name must not be blank" } }
             // Set up target family
-            val (familyName, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix) = descriptor.family
-            require(familyName.isNotBlank())
+            val (name, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix) = descriptor.family
+            require(name.isNotBlank())
             val family = synchronized(Family::class.java) {
-                Family.entries.firstOrNull { it.name == familyName }?.also {
+                Family.entries.firstOrNull { it.name == name }?.also {
                     require(
                         it.exeSuffix == exeSuffix && it.dynamicPrefix == dynamicPrefix && it.dynamicSuffix == dynamicSuffix && it.staticPrefix == staticPrefix && it.staticSuffix == staticSuffix
-                    ) { "Conflicting definition of Native family '$familyName'" }
+                    ) { "Conflicting definition of Native family '$name'" }
                 } ?: KonanTargets.createFamily(
-                    familyName, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix
+                    name, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix
                 )
             }
             // Set up target architecture
@@ -75,9 +74,9 @@ internal class NativeTargetConfiguration(
                 } ?: KonanTargets.createArchitecture(architectureName, bitness)
             }
             // Set up concrete target instance
-            val target = KonanTarget.predefinedTargets[name]?.takeIf {
+            val target = KonanTarget.predefinedTargets[targetName]?.takeIf {
                 it.family == family && it.architecture == architecture
-            } ?: KonanTargets.create(name, family, architecture)
+            } ?: KonanTargets.create(targetName, family, architecture)
 
             val llvm = descriptor.llvm
             val settings = NativeArchitectureConfiguration().apply {
@@ -88,7 +87,7 @@ internal class NativeTargetConfiguration(
                 binaryFormat = llvm.binaryFormat?.let(BinaryFormat::valueOf)
                 supports64BitAtomics = llvm.supports64BitAtomics
                 supportsUnalignedAccess = llvm.supportsUnalignedAccess
-                properties.putAll(llvm.properties)
+                properties += llvm.properties
                 validate()
             }
 
@@ -97,6 +96,7 @@ internal class NativeTargetConfiguration(
             return nativeConfig
         }
 
+        @Suppress("KCML_TARGET_SPECIFIC_CODE")
         fun configure(target: NativeCompileTarget, configuration: CompilerConfiguration): NativeCompileTarget {
             val explicit = get(configuration)
             val settings = if (explicit == null) target.architecture
