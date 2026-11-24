@@ -27,6 +27,7 @@ import org.jetbrains.kotlin.idea.base.highlighting.KotlinBeforeResolveHighlighti
 import org.jetbrains.kotlin.psi.KtFile
 import java.util.*
 
+@Suppress("JetBrainsInternalApiUsage")
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxHighlighting {
     fun collect(file: KtFile, offsets: SyntaxOffsetMap): List<Highlighting> {

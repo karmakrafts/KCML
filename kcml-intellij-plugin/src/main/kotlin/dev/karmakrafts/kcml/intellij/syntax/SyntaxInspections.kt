@@ -49,6 +49,7 @@ internal object SyntaxInspections {
 
     fun collect(source: KtFile, lowered: KtFile, offsets: SyntaxOffsetMap, rules: List<InspectionRule>): Result {
         val profile = InspectionProjectProfileManager.getInstance(source.project).currentProfile
+
         val tools =
             profile.getInspectionTools(source).filterIsInstance<LocalInspectionToolWrapper>().filter { wrapper ->
                 ProgressManager.checkCanceled()
@@ -63,6 +64,7 @@ internal object SyntaxInspections {
                     )
                 }
             }
+
         if (tools.isEmpty()) return Result(emptyList(), emptySet())
         // Problem descriptors require physical PSI, but never anchor fixes in the editor's source tree.
         // Directory-based inspections must still see the source location, not a parentless scratch file.
@@ -75,11 +77,11 @@ internal object SyntaxInspections {
         }
         SyntaxAnalysisContext.attach(inspectionFile, source)
         // runInspectionOnFile uses batch mode and drops on-the-fly-only Kotlin findings.
-        @Suppress("JetBrainsInternalApiUsage")
-        val descriptors = InspectionEngine.inspectEx(
+        @Suppress("JetBrainsInternalApiUsage") val descriptors = InspectionEngine.inspectEx(
             tools, inspectionFile, inspectionFile.textRange, inspectionFile.textRange, true, false, true
         ) { _, _ -> true }
         val registrar = SeverityRegistrar.getSeverityRegistrar(source.project)
+
         val problems = buildList {
             for ([wrapper, findings] in descriptors) {
                 val key = HighlightDisplayKey.find(wrapper.shortName) ?: continue
@@ -102,6 +104,7 @@ internal object SyntaxInspections {
                 }
             }
         }
+
         return Result(problems, buildSet {
             for (tool in tools) {
                 add(tool.shortName)

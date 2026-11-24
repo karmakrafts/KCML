@@ -21,7 +21,9 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.ide.plugins.PluginManagerCore
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.extensions.PluginId
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiDocumentManager
@@ -30,6 +32,7 @@ import com.intellij.testFramework.PlatformTestUtil
 import com.intellij.testFramework.PsiTestUtil
 import com.intellij.util.ThreeState
 import dev.karmakrafts.kcml.intellij.testutil.AnnotationFixtureTestCase
+import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import java.io.File
 import java.nio.file.Path
@@ -89,6 +92,22 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         assertEquals(emptySet<String>(), PluginIds.fromMetadata(myFixture.file))
         waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
         assertSame(PluginIds.fromMetadata(myFixture.file), PluginIds.fromMetadata(myFixture.file))
+    }
+
+    fun testQueuedIndexingKeepsIndeterminateProgressUntilCompletion() {
+        addMetadata("example", "example")
+        configureAnnotation("@Plugin(\"<caret>\") class Example")
+        val discovery = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")!!
+        val indicator = discovery.indicator
+        runWriteAction {
+            assertEmpty(PluginIds.fromMetadata(myFixture.file))
+            discovery.close()
+            assertTrue(indicator.isRunning)
+            assertTrue(indicator.isIndeterminate)
+            assertEquals("Indexing KCML plugins: ${module.name}", indicator.text)
+        }
+        waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
+        PlatformTestUtil.waitWithEventsDispatching("Plugin indexing progress finishes", { !indicator.isRunning }, 10)
     }
 
     fun testAnnotationLookupOnEdtIsDeferredAndCached() {

@@ -26,6 +26,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.Service
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.ControlFlowException
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.module.Module
@@ -46,6 +47,7 @@ import com.intellij.psi.PsiManager
 import com.intellij.psi.PsiTreeChangeAdapter
 import com.intellij.psi.PsiTreeChangeEvent
 import com.intellij.util.concurrency.AppExecutorUtil
+import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinGlobalModuleStateModificationEvent
 import org.jetbrains.kotlin.analysis.api.platform.modification.KotlinModificationEvent
@@ -162,13 +164,18 @@ internal class SyntaxExtensionService( // @formatter:off
 
     private fun initializeRuntimes() {
         if (!started || project.isDisposed) return
+        val progress = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")
         // Read module configuration under a cancellable read action; loading runs separately
         ReadAction.nonBlocking<Unit> {
             for (module in ModuleManager.getInstance(project).modules) {
                 ProgressManager.checkCanceled()
                 loadRuntime(module, SyntaxConfiguration.fromModule(module))
             }
-        }.expireWith(this).coalesceBy(this).submit(AppExecutorUtil.getAppExecutorService())
+        }
+            .expireWith(this)
+            .coalesceBy(this)
+            .submit(AppExecutorUtil.getAppExecutorService())
+            .onProcessed { progress?.close() }
     }
 
     fun addListener(parentDisposable: Disposable, listener: () -> Unit) {
@@ -193,6 +200,7 @@ internal class SyntaxExtensionService( // @formatter:off
         }
         // Editor lookups never wait for discovery or runtime initialization
         start()
+        val progress = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins: ${module.name}")
         // Cached module settings can arrive after the initial scan without an import notification
         ReadAction.nonBlocking<Unit> {
             loadRuntime(module, SyntaxConfiguration.fromModule(module))
@@ -201,6 +209,7 @@ internal class SyntaxExtensionService( // @formatter:off
             .expireWhen { module.isDisposed }
             .coalesceBy(this, module)
             .submit(AppExecutorUtil.getAppExecutorService())
+            .onProcessed { progress?.close() }
         return null
     }
 
@@ -225,6 +234,11 @@ internal class SyntaxExtensionService( // @formatter:off
                 return request.result
             }
             incModificationCount()
+            if (configuration != null) {
+                val progress =
+                    project.service<KcmlInitializationProgress>().begin("Loading KCML plugins: ${module.name}")
+                request.result.whenComplete { _, _ -> progress?.close() }
+            }
             loaderExecutor.execute { load(module, request) }
         }
         // Retire superseded work without waiting for plugin callbacks or session disposal

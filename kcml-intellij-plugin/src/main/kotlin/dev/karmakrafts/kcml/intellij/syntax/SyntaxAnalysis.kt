@@ -19,6 +19,7 @@ package dev.karmakrafts.kcml.intellij.syntax
 import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.service
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.Key
@@ -28,6 +29,7 @@ import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.psi.util.PsiTreeUtil
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
+import dev.karmakrafts.kcml.api.extension.syntax.Inspection
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionSeverity
 import org.jetbrains.kotlin.analysis.api.components.KaDiagnosticCheckerFilter
@@ -70,13 +72,7 @@ internal object SyntaxAnalysis {
 
     fun result(file: KtFile): Result? {
         if (!file.isPhysical || analyzing.get() || DumbService.isDumb(file.project)) return null
-        val virtualFile = file.virtualFile ?: return null
-        val index = ProjectFileIndex.getInstance(file.project)
-        if (!index.isInSourceContent(virtualFile) || index.isInLibrarySource(virtualFile) || index.isInLibraryClasses(
-                virtualFile
-            )
-        ) return null
-        val module = index.getModuleForFile(virtualFile) ?: return null
+        val module = sourceModule(file) ?: return null
         val service = file.project.service<SyntaxExtensionService>()
         val stamp = PsiModificationTracker.getInstance(file.project).modificationCount
         // Reuse diagnostics only while both PSI and the plugin session are unchanged.
@@ -85,6 +81,25 @@ internal object SyntaxAnalysis {
         if (cached != null || ApplicationManager.getApplication().isDispatchThread) return cached
         val runtime = service.runtime(module) ?: return null
         if (!runtime.hasExtensions) return null
+        return computeResult(file, runtime, service, stamp)
+    }
+
+    private fun sourceModule(file: KtFile): Module? {
+        val virtualFile = file.virtualFile ?: return null
+        val index = ProjectFileIndex.getInstance(file.project)
+        if (!index.isInSourceContent(virtualFile) || index.isInLibrarySource(virtualFile) || index.isInLibraryClasses(
+                virtualFile
+            )
+        ) return null
+        return index.getModuleForFile(virtualFile)
+    }
+
+    private fun computeResult(
+        file: KtFile,
+        runtime: SyntaxRuntime,
+        service: SyntaxExtensionService,
+        stamp: Long
+    ): Result? {
         // Analysis of lowered PSI must not trigger syntax analysis recursively.
         analyzing.set(true)
         try {
@@ -96,9 +111,7 @@ internal object SyntaxAnalysis {
             val offsets = SyntaxOffsetMap(file.text, lowered.text)
             val diagnostics = collectSyntaxDiagnostics(lowered, offsets) + collectSemanticDiagnostics(lowered, offsets)
             val desugared = file.text != lowered.text
-            val colors = if (desugared) SyntaxHighlighting.normalize(
-                SyntaxHighlighting.collect(lowered, offsets) + highlighting, file.textLength
-            ) else highlighting
+            val colors = collectHighlighting(file, lowered, offsets, highlighting, desugared)
             (val problems, val toolIds) = if (desugared || inspectionRules.isNotEmpty()) {
                 SyntaxInspections.collect(file, lowered, offsets, inspectionRules)
             }
@@ -106,17 +119,14 @@ internal object SyntaxAnalysis {
             // Never replace diagnostics with results from a session invalidated during analysis.
             if (generation != service.modificationCount) return null
             val result = Result(
-                stamp, generation, diagnostics, colors, problems.filter { problem ->
-                desugared || inspectionRules.any { it.range.intersects(problem.range) }
-            } + inspections.map {
-                val severity = when (it.severity) {
-                    InspectionSeverity.ERROR -> HighlightSeverity.ERROR
-                    InspectionSeverity.WARNING -> HighlightSeverity.WARNING
-                    InspectionSeverity.WEAK_WARNING -> HighlightSeverity.WEAK_WARNING
-                    InspectionSeverity.INFORMATION -> HighlightSeverity.INFORMATION
-                }
-                SyntaxInspections.Problem(severity, it.message, it.range)
-            }, toolIds, inspectionRules, desugared
+                stamp,
+                generation,
+                diagnostics,
+                colors,
+                mergeInspections(problems, inspections, inspectionRules, desugared),
+                toolIds,
+                inspectionRules,
+                desugared
             )
             file.putUserData(key, result)
             return result
@@ -124,6 +134,30 @@ internal object SyntaxAnalysis {
         finally {
             analyzing.remove()
         }
+    }
+
+    private fun collectHighlighting(
+        file: KtFile, lowered: KtFile, offsets: SyntaxOffsetMap, highlighting: List<Highlighting>, desugared: Boolean
+    ): List<Highlighting> = if (desugared) SyntaxHighlighting.normalize(
+        SyntaxHighlighting.collect(lowered, offsets) + highlighting, file.textLength
+    )
+    else highlighting
+
+    private fun mergeInspections(
+        problems: List<SyntaxInspections.Problem>,
+        inspections: List<Inspection>,
+        inspectionRules: List<InspectionRule>,
+        desugared: Boolean
+    ): List<SyntaxInspections.Problem> = problems.filter { problem ->
+        desugared || inspectionRules.any { it.range.intersects(problem.range) }
+    } + inspections.map {
+        val severity = when (it.severity) {
+            InspectionSeverity.ERROR -> HighlightSeverity.ERROR
+            InspectionSeverity.WARNING -> HighlightSeverity.WARNING
+            InspectionSeverity.WEAK_WARNING -> HighlightSeverity.WEAK_WARNING
+            InspectionSeverity.INFORMATION -> HighlightSeverity.INFORMATION
+        }
+        SyntaxInspections.Problem(severity, it.message, it.range)
     }
 
     private fun collectSyntaxDiagnostics(file: KtFile, offsets: SyntaxOffsetMap): List<Diagnostic> = buildList {

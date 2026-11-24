@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.intellij.syntax
 
 import com.intellij.openapi.components.service
+import com.intellij.openapi.module.Module
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.platform.backend.documentation.DocumentationTarget
@@ -31,19 +32,31 @@ internal class SyntaxDocumentationTargetProvider : DocumentationTargetProvider {
         // Non-physical lowered files must fall through to Kotlin rather than re-enter this provider.
         if (!source.isPhysical || DumbService.isDumb(source.project)) return emptyList()
         if (offset !in 0 until source.textLength) return emptyList()
-        val virtualFile = source.virtualFile ?: return emptyList()
-        val index = ProjectFileIndex.getInstance(source.project)
-        if (!index.isInSourceContent(virtualFile)) return emptyList()
-        val module = index.getModuleForFile(virtualFile) ?: return emptyList()
+        val module = sourceModule(source) ?: return emptyList()
         val service = source.project.service<SyntaxExtensionService>()
         val runtime = service.runtime(module) ?: return emptyList()
         if (!runtime.hasExtensions) return emptyList()
         val generation = service.modificationCount
+        val targets = loweredTargets(source, offset, runtime)
+        // Discard targets if the plugin session changed while resolving documentation.
+        return if (generation == service.modificationCount) targets else emptyList()
+    }
+
+    private fun sourceModule(source: KtFile): Module? {
+        val virtualFile = source.virtualFile ?: return null
+        val index = ProjectFileIndex.getInstance(source.project)
+        if (!index.isInSourceContent(virtualFile)) return null
+        return index.getModuleForFile(virtualFile)
+    }
+
+    @Suppress("JetBrainsInternalApiUsage")
+    private fun loweredTargets(source: KtFile, offset: Int, runtime: SyntaxRuntime): List<DocumentationTarget> {
         val lowered = runtime.lowerIfOpen(source) ?: return emptyList()
         if (source.text == lowered.text) return emptyList()
         SyntaxAnalysisContext.attach(lowered, source)
+        // Resolve at the lowered offset while retaining the source module's analysis context.
         val offsets = SyntaxOffsetMap(source.text, lowered.text)
-        val targets = fileDocumentationTargets(lowered, offsets.toLowered(offset))
-        return if (generation == service.modificationCount) targets else emptyList()
+        // The public IDE provider requires an editor; this file-only helper also preserves PSI fallback.
+        return fileDocumentationTargets(lowered, offsets.toLowered(offset))
     }
 }

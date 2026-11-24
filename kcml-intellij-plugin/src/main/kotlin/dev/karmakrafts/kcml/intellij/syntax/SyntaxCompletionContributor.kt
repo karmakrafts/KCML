@@ -25,6 +25,7 @@ import com.intellij.openapi.components.service
 import com.intellij.openapi.project.DumbService
 import com.intellij.openapi.roots.ProjectFileIndex
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.extension.syntax.Completion
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.analysisContext
 
@@ -34,44 +35,61 @@ internal class SyntaxCompletionContributor : CompletionContributor() {
         if (parameters.completionType != CompletionType.BASIC && parameters.completionType != CompletionType.SMART) return
         val source = parameters.originalFile as? KtFile ?: return
         if (DumbService.isDumb(source.project)) return
-        val virtualFile = source.virtualFile ?: return
-        val index = ProjectFileIndex.getInstance(source.project)
-        if (!index.isInSourceContent(virtualFile)) return
-        val module = index.getModuleForFile(virtualFile) ?: return
-        val runtime = source.project.service<SyntaxExtensionService>().runtime(module) ?: return
+        val runtime = sourceRuntime(source) ?: return
         if (!runtime.hasExtensions) return
         val custom =
             runtime.completeIfOpen(source, parameters.offset, parameters.completionType == CompletionType.SMART)
         if (custom != null) {
-            for ((val lookupString, val insertText, val tailText, val typeText, val element) in custom) {
-                result.addElement(
-                    LookupElementBuilder.create(element ?: lookupString, lookupString)
-                        .withTailText(tailText)
-                        .withTypeText(typeText)
-                        .withInsertHandler { context, _ ->
-                            context.document.replaceString(context.startOffset, context.tailOffset, insertText)
-                            context.tailOffset = context.startOffset + insertText.length
-                            context.editor.caretModel.moveToOffset(context.tailOffset)
-                        })
-            }
+            addCustomCompletions(custom, result)
             result.stopHere()
             return
         }
+        val redirected = loweredParameters(parameters, source, runtime) ?: return
+        // Reuse Kotlin's contributors, sorters and insertion handlers with the source editor intact.
+        result.runRemainingContributors(redirected, result::passResult)
+        result.stopHere()
+    }
+
+    private fun sourceRuntime(source: KtFile): SyntaxRuntime? {
+        val virtualFile = source.virtualFile ?: return null
+        val index = ProjectFileIndex.getInstance(source.project)
+        if (!index.isInSourceContent(virtualFile)) return null
+        val module = index.getModuleForFile(virtualFile) ?: return null
+        return source.project.service<SyntaxExtensionService>().runtime(module)
+    }
+
+    private fun addCustomCompletions(completions: List<Completion>, result: CompletionResultSet) {
+        for ((val lookupString, val insertText, val tailText, val typeText, val element) in completions) {
+            result.addElement(
+                LookupElementBuilder.create(element ?: lookupString, lookupString)
+                    .withTailText(tailText)
+                    .withTypeText(typeText)
+                    .withInsertHandler { context, _ ->
+                        context.document.replaceString(context.startOffset, context.tailOffset, insertText)
+                        context.tailOffset = context.startOffset + insertText.length
+                        context.editor.caretModel.moveToOffset(context.tailOffset)
+                    })
+        }
+    }
+
+    private fun loweredParameters(
+        parameters: CompletionParameters, source: KtFile, runtime: SyntaxRuntime
+    ): CompletionParameters? {
         // Keep the completion dummy identifier so Kotlin can analyze incomplete expressions.
-        val copy = parameters.position.containingFile as? KtFile ?: return
-        val lowered = runtime.lowerIfOpen(copy) ?: return
-        if (lowered.text == copy.text) return
+        val copy = parameters.position.containingFile as? KtFile ?: return null
+        val lowered = runtime.lowerIfOpen(copy) ?: return null
+        if (lowered.text == copy.text) return null
         val offset = SyntaxOffsetMap(copy.text, lowered.text).toLowered(parameters.offset)
-        val position = lowered.findElementAt(offset) ?: return
-        val context = SyntaxAnalysisContext.sourceModule(source) ?: return
-        val original = runtime.lowerIfOpen(source) ?: return
+        val position = lowered.findElementAt(offset) ?: return null
+        val context = SyntaxAnalysisContext.sourceModule(source) ?: return null
+        val original = runtime.lowerIfOpen(source) ?: return null
         original.originalFile = original
         lowered.originalFile = original
         lowered.analysisContext = original
         SyntaxAnalysisContext.attach(listOf(original, lowered), context)
         // withPosition retains the source originalFile; Kotlin contributors need both lowered files.
         @Suppress("JetBrainsInternalApiUsage") //
-        val redirected = CompletionParameters(
+        return CompletionParameters(
             position,
             original,
             parameters.completionType,
@@ -83,8 +101,5 @@ internal class SyntaxCompletionContributor : CompletionContributor() {
             isTestingMode = parameters.isTestingMode
             isCompleteOnlyNotImported = parameters.isCompleteOnlyNotImported
         }
-        // Reuse Kotlin's contributors, sorters and insertion handlers with the source editor intact.
-        result.runRemainingContributors(redirected, result::passResult)
-        result.stopHere()
     }
 }

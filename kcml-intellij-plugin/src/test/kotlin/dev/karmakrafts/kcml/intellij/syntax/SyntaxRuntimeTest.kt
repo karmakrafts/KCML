@@ -68,6 +68,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
+import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import dev.karmakrafts.kcml.intellij.util.TypeNames
 import dev.karmakrafts.kcml.internal.org.objectweb.asm.ClassReader
 import dev.karmakrafts.kcml.internal.org.objectweb.asm.ClassVisitor
@@ -586,6 +587,38 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         service.refresh()
         assertNotSame(refreshed, service.runtime(module, configuration))
         assertNull(service.runtime(module, null))
+    }
+
+    fun testPluginLoadKeepsIndeterminateProgressUntilCompletion() {
+        val service = syntaxService
+        val discovery = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")!!
+        val indicator = discovery.indicator
+        withBlockedPlugin("load") { started, release ->
+            val pending = service.loadRuntime(module, configuration())
+            assertTrue(started.await(10, TimeUnit.SECONDS))
+            discovery.close()
+            assertTrue(indicator.isRunning)
+            assertTrue(indicator.isIndeterminate)
+            assertEquals("Loading KCML plugins: ${module.name}", indicator.text)
+            release.countDown()
+            assertNotNull(pending.get(10, TimeUnit.SECONDS))
+            PlatformTestUtil.waitWithEventsDispatching("Plugin loading progress finishes", { !indicator.isRunning }, 10)
+        }
+    }
+
+    fun testInvalidatedPluginLoadClosesProgress() {
+        val service = syntaxService
+        val discovery = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")!!
+        val indicator = discovery.indicator
+        withBlockedPlugin("load") { started, _ ->
+            val pending = service.loadRuntime(module, configuration())
+            assertTrue(started.await(10, TimeUnit.SECONDS))
+            discovery.close()
+            assertTrue(indicator.isRunning)
+            service.refresh()
+            assertNull(pending.get(10, TimeUnit.SECONDS))
+            assertFalse(indicator.isRunning)
+        }
     }
 
     fun testEdtRuntimeLookupDoesNotLoadPlugins() {

@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.components.service
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleUtilCore
 import com.intellij.openapi.project.DumbService
@@ -31,6 +32,7 @@ import com.intellij.psi.util.CachedValueProvider
 import com.intellij.psi.util.CachedValuesManager
 import com.intellij.psi.util.PsiModificationTracker
 import com.intellij.util.concurrency.AppExecutorUtil
+import dev.karmakrafts.kcml.intellij.util.KcmlInitializationProgress
 import dev.karmakrafts.kcml.intellij.util.PluginIdIndex
 import org.jetbrains.jps.model.java.JavaResourceRootType
 import java.util.concurrent.atomic.AtomicBoolean
@@ -48,7 +50,8 @@ internal object PluginIds {
         fun compute(module: Module, scan: (Module) -> PluginIdIndex.Ids): PluginIdIndex.Ids {
             val cached = ids
             if (cached != null) return cached
-            val computed = scan(module)
+            val computed = module.project.service<KcmlInitializationProgress>()
+                .begin("Indexing KCML plugins: ${module.name}").use { scan(module) }
             ids = computed
             return computed
         }
@@ -86,11 +89,16 @@ internal object PluginIds {
         (val production, val all) = index.ids
             ?: if (ApplicationManager.getApplication().isDispatchThread || DumbService.isDumb(project)) {
                 if (index.scheduled.compareAndSet(false, true)) {
+                    val progress = project.service<KcmlInitializationProgress>()
+                        .begin("Indexing KCML plugins: ${module.name}")
                     ReadAction.nonBlocking<PluginIdIndex.Ids> { index.compute(module, scan) }
                         .inSmartMode(project)
                         .expireWith(module)
                         .submit(AppExecutorUtil.getAppExecutorService())
-                        .onProcessed { index.scheduled.set(false) }
+                        .onProcessed {
+                            progress?.close()
+                            index.scheduled.set(false)
+                        }
                 }
                 return emptySet()
             }
