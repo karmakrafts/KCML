@@ -25,6 +25,9 @@ import org.objectweb.asm.Type
 import java.io.InputStream
 import java.net.URL
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.Executor
 import java.util.jar.JarFile
 import kotlin.io.path.extension
 import kotlin.io.path.inputStream
@@ -35,35 +38,68 @@ import kotlin.io.path.walk
 internal object PluginClassScanner {
     private val annotationDescriptor: Type = Type.getType(Plugin::class.java)
 
-    fun scan(classpaths: List<URL>): List<String> {
+    /**
+     * Scans the given classpath entries for concrete `@Plugin` classes.
+     * If [executor] is provided, entries are scanned concurrently and merged in classpath order;
+     * all tasks have finished (and closed their archives) by the time this function returns or throws.
+     */
+    fun scan(classpaths: List<URL>, executor: Executor? = null): List<String> {
         val candidates = LinkedHashSet<String>()
+        if (executor == null || classpaths.size < 2) {
+            for (classpath in classpaths) scanEntry(classpath, candidates)
+            return candidates.toList()
+        }
+        val futures = ArrayList<CompletableFuture<List<String>>>(classpaths.size)
+        var submitFailure: Throwable? = null
         for (classpath in classpaths) {
-            val path = Path.of(classpath.toURI())
-            if (path.isDirectory()) {
-                path.walk().filter { filePath ->
-                    filePath.isRegularFile() && filePath.extension == "class"
-                }.forEach { filePath ->
-                    filePath.inputStream().use { stream ->
-                        scanClass(stream, candidates)
-                    }
+            try {
+                futures += CompletableFuture.supplyAsync({
+                    ArrayList<String>().also { scanEntry(classpath, it) }
+                }, executor)
+            }
+            catch (error: Throwable) {
+                submitFailure = error
+                break
+            }
+        }
+        var failure: Throwable? = null
+        for (future in futures) {
+            try {
+                candidates += future.join()
+            }
+            catch (error: Throwable) {
+                if (failure == null) failure = if (error is CompletionException) error.cause ?: error else error
+            }
+        }
+        (failure ?: submitFailure)?.let { throw it }
+        return candidates.toList()
+    }
+
+    private fun scanEntry(classpath: URL, candidates: MutableCollection<String>) {
+        val path = Path.of(classpath.toURI())
+        if (path.isDirectory()) {
+            path.walk().filter { filePath ->
+                filePath.isRegularFile() && filePath.extension == "class"
+            }.forEach { filePath ->
+                filePath.inputStream().use { stream ->
+                    scanClass(stream, candidates)
                 }
             }
-            else if (path.isRegularFile()) {
-                JarFile(path.toFile()).use { archive ->
-                    val entries = archive.entries()
-                    while (entries.hasMoreElements()) {
-                        val entry = entries.nextElement()
-                        if (!entry.isDirectory && entry.name.endsWith(".class")) {
-                            archive.getInputStream(entry).use { scanClass(it, candidates) }
-                        }
+        }
+        else if (path.isRegularFile()) {
+            JarFile(path.toFile()).use { archive ->
+                val entries = archive.entries()
+                while (entries.hasMoreElements()) {
+                    val entry = entries.nextElement()
+                    if (!entry.isDirectory && entry.name.endsWith(".class")) {
+                        archive.getInputStream(entry).use { scanClass(it, candidates) }
                     }
                 }
             }
         }
-        return candidates.toList()
     }
 
-    private fun scanClass(bytes: InputStream, candidates: MutableSet<String>) {
+    private fun scanClass(bytes: InputStream, candidates: MutableCollection<String>) {
         var className: String? = null
         var isConcrete = false
         var hasPluginAnnotation = false

@@ -95,49 +95,59 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
     }
 
     fun testPartiallyLoweredFileNavigatesToPhysicalDeclarationName() {
-        configureSyntax("""
+        configureSyntax(
+            """
             fn generated() = magic
             fun usage() = gen<caret>erated()
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertSourceTarget(myFixture.file, "generated", navigationTargets()?.singleOrNull())
     }
 
     fun testFullyLoweredFileResolvesReferencesMissingFromSourcePsi() {
-        configureSyntax("""
+        configureSyntax(
+            """
             fn generated() = magic
             fn usage() = gen<caret>erated()
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertSourceTarget(myFixture.file, "generated", navigationTargets()?.singleOrNull())
     }
 
     fun testHoverDocumentationInPartiallyLoweredFile() {
-        configureSyntax("""
+        configureSyntax(
+            """
             /** Documentation from lowered declaration. */
             fn generated() = magic
             fun usage() = gen<caret>erated()
-        """.trimIndent())
+        """.trimIndent()
+        )
         val html = documentationHtml()
         assertTrue(html, html.contains("generated"))
         assertTrue(html, html.contains("Documentation from lowered declaration."))
     }
 
     fun testHoverDocumentationOnLoweredDeclaration() {
-        configureSyntax("""
+        configureSyntax(
+            """
             /** Documentation on declaration. */
             fn gen<caret>erated() = magic
             fun unchanged() = 0
-        """.trimIndent())
+        """.trimIndent()
+        )
         val html = documentationHtml()
         assertTrue(html, html.contains("generated"))
         assertTrue(html, html.contains("Documentation on declaration."))
     }
 
     fun testHoverDocumentationOnUnmodifiedLocalWithLoweredInitializer() {
-        configureSyntax("""
+        configureSyntax(
+            """
             fun usage() {
                 val ans<caret>wer = magic
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val html = documentationHtml()
         assertTrue(html, html.contains("answer"))
         assertTrue(html, html.contains("Int"))
@@ -145,12 +155,14 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
     }
 
     fun testHoverDocumentationInsideFullyLoweredFunction() {
-        configureSyntax("""
+        configureSyntax(
+            """
             fn usage(value: Int): Int {
                 val local = magic
                 return lo<caret>cal + value
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val html = documentationHtml()
         assertTrue(html, html.contains("local"))
         assertTrue(html, html.contains("Int"))
@@ -158,13 +170,15 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
 
     fun testHoverDocumentationForCrossFileLoweredMember() {
         configureSyntax("package usage\nfn usage() = library.Widget().gen<caret>erated()")
-        addSource("Library.kt", """
+        addSource(
+            "Library.kt", """
             package library
             class Widget {
                 /** Cross-file documentation. */
                 fn generated() = magic
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         val html = documentationHtml()
         assertTrue(html, html.contains("generated"))
         assertTrue(html, html.contains("Cross-file documentation."))
@@ -219,12 +233,14 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
     }
 
     fun testLocalDeclarationInsideLoweredFunction() {
-        configureSyntax("""
+        configureSyntax(
+            """
             fn usage(value: Int): Int {
                 val local = value
                 return lo<caret>cal
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertSourceTarget(myFixture.file, "local", navigationTargets()?.singleOrNull())
     }
 
@@ -235,12 +251,14 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
 
     fun testCrossFileGeneratedMemberMapsToItsPhysicalSource() {
         configureSyntax("package usage\nfn usage() = library.Widget().gen<caret>erated()")
-        val library = addSource("Library.kt", """
+        val library = addSource(
+            "Library.kt", """
             package library
             class Widget {
                 fn generated() = magic
             }
-        """.trimIndent())
+        """.trimIndent()
+        )
         assertSourceTarget(library, "generated", navigationTargets()?.singleOrNull())
     }
 
@@ -365,7 +383,8 @@ class SyntaxNavigationTest : JavaCodeInsightFixtureTestCase() {
                 commit()
             }
         }
-        project.service<SyntaxExtensionService>().loadRuntime(configured, SyntaxConfiguration.fromModule(configured))
+        project.service<SyntaxExtensionService>()
+            .loadRuntime(configured, SyntaxConfiguration.fromModule(configured))
             .get(15, TimeUnit.SECONDS)
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
     }

@@ -101,12 +101,7 @@ class ClassIndexTest : LightJavaCodeInsightFixtureTestCase() {
     private fun bytecode(methodName: String): ByteArray {
         val writer = ClassWriter(0)
         writer.visit(
-            Opcodes.V21,
-            Opcodes.ACC_PUBLIC,
-            "cache/Outer\$Target",
-            null,
-            "cache/Parent",
-            arrayOf("cache/Interface")
+            Opcodes.V21, Opcodes.ACC_PUBLIC, "cache/Outer\$Target", null, "cache/Parent", arrayOf("cache/Interface")
         )
         writer.visitMethod(Opcodes.ACC_PUBLIC, "<init>", "()V", null, null).visitEnd()
         writer.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null).visitEnd()

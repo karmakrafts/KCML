@@ -21,7 +21,11 @@ import com.intellij.openapi.editor.Editor
 import com.intellij.psi.PsiElement
 
 internal class SyntaxGotoDeclarationHandler : GotoDeclarationHandler {
-    override fun getGotoDeclarationTargets(sourceElement: PsiElement?, offset: Int, editor: Editor): Array<PsiElement>? {
+    override fun getGotoDeclarationTargets(
+        sourceElement: PsiElement?,
+        offset: Int,
+        editor: Editor
+    ): Array<PsiElement>? {
         val file = sourceElement?.containingFile ?: return null
         // The registration is shared; do not load Kotlin implementation classes for other languages.
         if (file.language.id != "kotlin" || !file.isPhysical) return null

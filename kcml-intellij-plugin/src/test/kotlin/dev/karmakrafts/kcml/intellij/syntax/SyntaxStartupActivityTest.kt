@@ -96,6 +96,7 @@ class SyntaxStartupActivityTest : LightJavaCodeInsightFixtureTestCase() {
                 }
             }
         }
+
         fun configure(target: String?) {
             runWriteAction {
                 facet.configuration.settings.apply {
@@ -111,6 +112,7 @@ class SyntaxStartupActivityTest : LightJavaCodeInsightFixtureTestCase() {
                 manager.facetConfigurationChanged(facet)
             }
         }
+
         val service = project.service<SyntaxExtensionService>()
         fun awaitExtensions(target: String) {
             PlatformTestUtil.waitWithEventsDispatching("Configured syntax extensions load without an open editor", {

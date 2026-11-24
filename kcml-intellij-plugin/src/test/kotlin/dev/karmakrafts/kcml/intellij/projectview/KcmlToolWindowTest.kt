@@ -17,6 +17,7 @@
 package dev.karmakrafts.kcml.intellij.projectview
 
 import com.intellij.facet.FacetManager
+import com.intellij.icons.AllIcons
 import com.intellij.ide.projectView.TreeStructureProvider
 import com.intellij.ide.projectView.ViewSettings
 import com.intellij.ide.util.treeView.AbstractTreeNode
@@ -49,6 +50,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import javax.swing.JLabel
 import javax.swing.JScrollPane
+import javax.swing.UIManager
 import javax.swing.tree.TreePath
 
 class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
@@ -76,8 +78,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         assertEquals("bottom", registration.anchor)
         assertEquals("/icons/dev/karmakrafts/kcml/intellij/kcml-tool-window.svg", registration.icon)
         assertEquals(
-            "dev.karmakrafts.kcml.intellij.projectview.KcmlToolWindowFactory",
-            registration.factoryClass
+            "dev.karmakrafts.kcml.intellij.projectview.KcmlToolWindowFactory", registration.factoryClass
         )
     }
 
@@ -93,7 +94,9 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         val root = structure.rootElement
         val categories = structure.getChildElements(root).map { it as AbstractTreeNode<*> }
         categories.forEach { it.update() }
-        assertEquals(listOf("Plugins", "Project classpaths", "Syntax extensions"), categories.map { it.presentation.presentableText })
+        assertEquals(
+            listOf("Plugins", "Project classpaths", "Syntax extensions"),
+            categories.map { it.presentation.presentableText })
         categories.forEach {
             assertEmpty(structure.getChildElements(it))
             assertSame(root, structure.getParentElement(it))
@@ -105,7 +108,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
 
     fun testToolWindowContentRefreshesAfterImportAndClasspathCreation() {
         val manager = ToolWindowManager.getInstance(project)
-        val toolWindow = manager.registerToolWindow(RegisterToolWindowTask.notClosable("KCML test", ToolWindowAnchor.BOTTOM))
+        val toolWindow =
+            manager.registerToolWindow(RegisterToolWindowTask.notClosable("KCML test", ToolWindowAnchor.BOTTOM))
         val directory = Files.createTempDirectory(Path.of("build").toAbsolutePath(), "kcml-tool-window-")
         try {
             KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
@@ -123,15 +127,26 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             val kotlinFacet = configure(listOf(missing), "exampleJvm")
             PlatformTestUtil.waitWithEventsDispatching("Imported classpath tree", {
                 categoryNode<KcmlPluginsNode>(tree)?.let {
-                    tree.model.getChildCount(it) == 1 &&
-                        TreeUtil.getUserObject(tree.model.getChild(it, 0)) is KcmlPluginModuleNode
+                    tree.model.getChildCount(it) == 1 && TreeUtil.getUserObject(
+                        tree.model.getChild(
+                            it,
+                            0
+                        )
+                    ) is KcmlPluginModuleNode
                 } == true
             }, 5)
             val moduleNode = tree.model.getChild(categoryNode<KcmlPluginsNode>(tree), 0)
-            assertEquals("exampleJvm", (TreeUtil.getUserObject(moduleNode) as KcmlPluginModuleNode).presentation.locationString)
+            assertEquals(
+                "exampleJvm",
+                (TreeUtil.getUserObject(moduleNode) as KcmlPluginModuleNode).presentation.locationString
+            )
             PlatformTestUtil.waitWithEventsDispatching("Classpath node", {
-                tree.model.getChildCount(moduleNode) == 1 &&
-                    TreeUtil.getUserObject(tree.model.getChild(moduleNode, 0)) is KcmlPluginPathNode
+                tree.model.getChildCount(moduleNode) == 1 && TreeUtil.getUserObject(
+                    tree.model.getChild(
+                        moduleNode,
+                        0
+                    )
+                ) is KcmlPluginPathNode
             }, 5)
             fun pathNode(): KcmlPluginPathNode? {
                 val category = categoryNode<KcmlPluginsNode>(tree) ?: return null
@@ -149,8 +164,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             kotlinFacet.configuration.settings.apply {
                 compilerArguments = K2JVMCompilerArguments().apply {
                     pluginOptions = arrayOf(
-                        "plugin:kcml.bootstrap:pluginClasspaths=$missing",
-                        "plugin:kcml.bootstrap:compileTarget=common"
+                        "plugin:kcml.bootstrap:pluginClasspaths=$missing", "plugin:kcml.bootstrap:compileTarget=common"
                     )
                 }
                 updateMergedArguments()
@@ -158,9 +172,12 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             runWriteAction { FacetManager.getInstance(module).facetConfigurationChanged(kotlinFacet) }
             PlatformTestUtil.waitWithEventsDispatching("Updated compilation target", {
                 categoryNode<KcmlPluginsNode>(tree)?.let {
-                    tree.model.getChildCount(it) == 1 &&
-                        (TreeUtil.getUserObject(tree.model.getChild(it, 0)) as? KcmlPluginModuleNode)
-                            ?.presentation?.locationString == "common"
+                    tree.model.getChildCount(it) == 1 && (TreeUtil.getUserObject(
+                        tree.model.getChild(
+                            it,
+                            0
+                        )
+                    ) as? KcmlPluginModuleNode)?.presentation?.locationString == "common"
                 } == true
             }, 5)
             kotlinFacet.configuration.settings.apply {
@@ -183,11 +200,15 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
 
     fun testSyntaxPluginArtifactsAreAllowedVfsRoots() {
         val allowedRoots = System.getProperty("vfs.additional-allowed-roots")
-            .split(File.pathSeparator).filter { it.isNotBlank() }.map { File(it).canonicalFile.toPath() }
+            .split(File.pathSeparator)
+            .filter { it.isNotBlank() }
+            .map { File(it).canonicalFile.toPath() }
         val artifacts = System.getProperty("kcml.test.examplePluginClasspath").split(';')
         artifacts.forEach { artifact ->
             val path = Path.of(artifact).toRealPath()
-            assertTrue("Syntax plugin artifact is outside allowed VFS roots: $path", allowedRoots.any { path.startsWith(it) })
+            assertTrue(
+                "Syntax plugin artifact is outside allowed VFS roots: $path",
+                allowedRoots.any { path.startsWith(it) })
         }
     }
 
@@ -197,7 +218,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         val service = project.service<SyntaxExtensionService>()
         service.start()
         val manager = ToolWindowManager.getInstance(project)
-        val toolWindow = manager.registerToolWindow(RegisterToolWindowTask.notClosable("KCML syntax test", ToolWindowAnchor.BOTTOM))
+        val toolWindow =
+            manager.registerToolWindow(RegisterToolWindowTask.notClosable("KCML syntax test", ToolWindowAnchor.BOTTOM))
         try {
             KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
             val content = toolWindow.contentManager.contents.single()
@@ -214,11 +236,13 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 assertEquals(module.name, node.presentation.presentableText)
                 assertEquals("exampleJvm", node.presentation.locationString)
                 return (0 until tree.model.getChildCount(moduleNode)).map {
-                    val extension = TreeUtil.getUserObject(tree.model.getChild(moduleNode, it))
-                        as? KcmlSyntaxExtensionNode ?: return emptyList()
+                    val extension =
+                        TreeUtil.getUserObject(tree.model.getChild(moduleNode, it)) as? KcmlSyntaxExtensionNode
+                            ?: return emptyList()
                     extension.presentation.presentableText!!
                 }
             }
+
             fun awaitEmptyCategory() {
                 PlatformTestUtil.waitWithEventsDispatching("Unloaded syntax extensions are removed", {
                     categoryNode<KcmlSyntaxExtensionsNode>(tree)?.let { tree.model.getChildCount(it) == 0 } == true
@@ -233,8 +257,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             assertSame(first, service.runtime(module))
             service.refresh()
             PlatformTestUtil.waitWithEventsDispatching("Automatically reloaded syntax extensions", {
-                service.runtime(module)?.let { it !== first } == true &&
-                    loadedIds() == listOf("example:syntax_example")
+                service.runtime(module)?.let { it !== first } == true && loadedIds() == listOf("example:syntax_example")
             }, 15)
             assertNotSame(first, service.runtime(module))
             PlatformTestUtil.waitWithEventsDispatching("Refreshed syntax runtime is closed", {
@@ -279,7 +302,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         try {
             val kotlinFacet = configure(listOf(exampleJar, classes, missing, exampleJar), "exampleJvm")
             val structure = KcmlPluginTreeStructure(project)
-            val category = structure.getChildElements(structure.rootElement).filterIsInstance<KcmlPluginsNode>().single()
+            val category =
+                structure.getChildElements(structure.rootElement).filterIsInstance<KcmlPluginsNode>().single()
             val moduleNode = structure.getChildElements(category).single() as KcmlPluginModuleNode
             assertSame(category, structure.getParentElement(moduleNode))
             moduleNode.update()
@@ -298,8 +322,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             kotlinFacet.configuration.settings.apply {
                 compilerArguments = K2JVMCompilerArguments().apply {
                     pluginOptions = arrayOf(
-                        "plugin:kcml.bootstrap:pluginClasspaths=$classes",
-                        "plugin:kcml.bootstrap:compileTarget=common"
+                        "plugin:kcml.bootstrap:pluginClasspaths=$classes", "plugin:kcml.bootstrap:compileTarget=common"
                     )
                 }
                 updateMergedArguments()
@@ -362,19 +385,30 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
         val toolWindow = ToolWindowManager.getInstance(project).registerToolWindow(
             RegisterToolWindowTask.notClosable("KCML layout test", ToolWindowAnchor.BOTTOM)
         )
+        val collapsedIcon = UIManager.get("Tree.collapsedIcon")
+        val expandedIcon = UIManager.get("Tree.expandedIcon")
         try {
+            // IntelliJ paints tree controls without a component; Metal's Ocean icons require one.
+            UIManager.put("Tree.collapsedIcon", AllIcons.General.ArrowRight)
+            UIManager.put("Tree.expandedIcon", AllIcons.General.ArrowDown)
             val metadata = Files.createDirectories(directory.resolve("META-INF"))
-            Files.writeString(metadata.resolve("wide.svg"), """
+            Files.writeString(
+                metadata.resolve("wide.svg"), """
                 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="128"><rect width="256" height="128" fill="red"/></svg>
-            """.trimIndent())
-            Files.writeString(metadata.resolve("tall.svg"), """
+            """.trimIndent()
+            )
+            Files.writeString(
+                metadata.resolve("tall.svg"), """
                 <svg xmlns="http://www.w3.org/2000/svg" width="64" height="256"><rect width="64" height="256" fill="blue"/></svg>
-            """.trimIndent())
+            """.trimIndent()
+            )
             for (id in listOf("wide", "tall", "fallback")) {
                 val authors = if (id == "fallback") "[]" else """[{"name":"Karma Krafts"},{"name":"Contributor"}]"""
-                Files.writeString(metadata.resolve("$id.json"), """
+                Files.writeString(
+                    metadata.resolve("$id.json"), """
                     {"id":"$id","name":"Plugin $id","authors":$authors,"version":"1.2.3","icon":{"light":"$id.svg"}}
-                """.trimIndent())
+                """.trimIndent()
+                )
             }
             configure(listOf(directory), "common")
             KcmlToolWindowFactory().createToolWindowContent(project, toolWindow)
@@ -386,7 +420,15 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 moduleNode = category?.takeIf { tree.model.getChildCount(it) == 1 }?.let { tree.model.getChild(it, 0) }
                 moduleNode?.let { tree.model.getChildCount(it) == 3 } == true
             }, 5)
-            tree.expandPath(TreePath(arrayOf(tree.model.root, categoryNode<KcmlConfiguredPluginsNode>(tree), moduleNode)))
+            tree.expandPath(
+                TreePath(
+                    arrayOf(
+                        tree.model.root,
+                        categoryNode<KcmlConfiguredPluginsNode>(tree),
+                        moduleNode
+                    )
+                )
+            )
             PlatformTestUtil.waitWithEventsDispatching("Visible plugin rows", { tree.rowCount >= 7 }, 5)
             fun layout(component: Component) {
                 if (component is Container) {
@@ -394,6 +436,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                     component.components.forEach(::layout)
                 }
             }
+
             fun labels(component: Component): List<JLabel> = when (component) {
                 is JLabel -> listOf(component)
                 is Container -> component.components.flatMap(::labels)
@@ -405,15 +448,37 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 )
                 val preferredSize = cell.preferredSize
                 val textLabels = labels(cell).filter { it.isVisible && it.icon == null }
-                assertTrue("Cell must fit all text lines", preferredSize.height >= textLabels.sumOf { it.preferredSize.height })
-                assertTrue("Cell must fit the longest text line", preferredSize.width >= textLabels.maxOf { it.preferredSize.width })
-                val path = TreePath(arrayOf(tree.model.root, categoryNode<KcmlConfiguredPluginsNode>(tree), moduleNode,
-                    tree.model.getChild(moduleNode, index)))
+                assertTrue(
+                    "Cell must fit all text lines",
+                    preferredSize.height >= textLabels.sumOf { it.preferredSize.height })
+                assertTrue(
+                    "Cell must fit the longest text line",
+                    preferredSize.width >= textLabels.maxOf { it.preferredSize.width })
+                val path = TreePath(
+                    arrayOf(
+                        tree.model.root,
+                        categoryNode<KcmlConfiguredPluginsNode>(tree),
+                        moduleNode,
+                        tree.model.getChild(moduleNode, index)
+                    )
+                )
                 assertEquals(preferredSize.height, tree.getPathBounds(path)!!.height)
             }
             tree.setSize(800, 600)
             tree.addNotify()
             try {
+                val plugin = (0 until tree.model.getChildCount(moduleNode)).map { tree.model.getChild(moduleNode, it) }
+                    .single { (TreeUtil.getUserObject(it) as? KcmlPluginNode)?.value?.id == "wide" }
+                val path = TreePath(
+                    arrayOf(
+                        tree.model.root,
+                        categoryNode<KcmlConfiguredPluginsNode>(tree),
+                        moduleNode,
+                        plugin
+                    )
+                )
+                val row = tree.getRowForPath(path)
+                val bounds = tree.getPathBounds(path)!!
                 val image = BufferedImage(tree.width, tree.height, BufferedImage.TYPE_INT_ARGB)
                 val graphics = image.createGraphics()
                 try {
@@ -422,12 +487,13 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 finally {
                     graphics.dispose()
                 }
-                val cell = tree.cellRenderer.getTreeCellRendererComponent(
-                    tree, tree.model.getChild(moduleNode, 2), false, false, true, 0, false
-                )
+                val cell = tree.cellRenderer.getTreeCellRendererComponent(tree, plugin, false, false, true, row, false)
+                // Painting resets the shared renderer's bounds; inspect it at the actual row size.
+                cell.setSize(bounds.width, bounds.height)
+                layout(cell)
                 val authors = labels(cell).single { it.text == "Karma Krafts, Contributor" }
                 assertEquals(authors.preferredSize.height, authors.height)
-                assertTrue(authors.width >= authors.preferredSize.width)
+                assertTrue("Author text must fit within the tree row", authors.width >= authors.preferredSize.width)
             }
             finally {
                 tree.removeNotify()
@@ -449,7 +515,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                     assertEquals(JBUI.scale(40), icon.icon.iconHeight)
                     val iconBounds = javax.swing.SwingUtilities.convertRectangle(icon.parent, icon.bounds, cell)
                     val nameBounds = javax.swing.SwingUtilities.convertRectangle(name.parent, name.bounds, cell)
-                    val versionBounds = javax.swing.SwingUtilities.convertRectangle(version.parent, version.bounds, cell)
+                    val versionBounds =
+                        javax.swing.SwingUtilities.convertRectangle(version.parent, version.bounds, cell)
                     assertTrue(nameBounds.x >= iconBounds.x + iconBounds.width)
                     assertEquals(nameBounds.x, versionBounds.x)
                     assertTrue(versionBounds.y >= nameBounds.y + nameBounds.height)
@@ -459,7 +526,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                     if (authors.isVisible) {
                         assertEquals("Karma Krafts, Contributor", authors.text)
                         assertEquals(version.foreground, authors.foreground)
-                        val authorBounds = javax.swing.SwingUtilities.convertRectangle(authors.parent, authors.bounds, cell)
+                        val authorBounds =
+                            javax.swing.SwingUtilities.convertRectangle(authors.parent, authors.bounds, cell)
                         assertEquals(authors.preferredSize.height, authorBounds.height)
                         assertTrue(authorBounds.width >= authors.preferredSize.width)
                         assertEquals(nameBounds.x, authorBounds.x)
@@ -491,6 +559,8 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
             }
         }
         finally {
+            UIManager.put("Tree.collapsedIcon", collapsedIcon)
+            UIManager.put("Tree.expandedIcon", expandedIcon)
             ToolWindowManager.getInstance(project).unregisterToolWindow(toolWindow.id)
             directory.toFile().deleteRecursively()
         }

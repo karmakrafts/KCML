@@ -67,7 +67,9 @@ import org.jetbrains.kotlin.config.messageCollector
 import java.lang.reflect.Modifier
 import java.net.URL
 import java.net.URLClassLoader
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executor
 import kotlin.io.path.Path
 import kotlin.io.path.absolute
 
@@ -259,25 +261,44 @@ object PluginLoaderImpl : PluginLoader {
 
     private fun loadCandidates(
         urls: List<URL>,
-        classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
+        classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader,
+        preparationExecutor: Executor? = null
     ): List<CompilerPlugin> {
         logger.info("Loading plugins")
         val parentClassLoader = this::class.java.classLoader
         val classLoader = classLoaderFactory(urls.toTypedArray(), parentClassLoader)
         pluginClassLoader = classLoader
-        return PluginClassScanner.scan(urls).mapNotNull { className ->
+        val classNames = PluginClassScanner.scan(urls, preparationExecutor)
+        fun instantiate(className: String, loadClass: () -> Class<*>): CompilerPlugin? =
             try {
-                val pluginClass = classLoader.loadClass(className)
+                val pluginClass = loadClass()
                 if (!CompilerPlugin::class.java.isAssignableFrom(pluginClass)) {
                     logger.warn("Annotated class '$className' does not implement CompilerPlugin, skipping load")
-                    return@mapNotNull null
+                    null
                 }
-                if (Modifier.isAbstract(pluginClass.modifiers) || pluginClass.isInterface) return@mapNotNull null
-                pluginClass.asSubclass(CompilerPlugin::class.java).getDeclaredConstructor().newInstance()
+                else if (Modifier.isAbstract(pluginClass.modifiers) || pluginClass.isInterface) null
+                else pluginClass.asSubclass(CompilerPlugin::class.java).getDeclaredConstructor().newInstance()
             } catch (error: Throwable) {
                 logger.warn("Could not load plugin candidate '$className', skipping load", error)
                 null
             }
+
+        if (preparationExecutor == null) return classNames.mapNotNull { name ->
+            instantiate(name) { classLoader.loadClass(name) }
+        }
+        val prepared = ArrayList<CompletableFuture<Result<Class<*>>>>()
+        try {
+            for (name in classNames) {
+                // Only load/transform bytecode here; constructors and callbacks retain their loader state and order.
+                prepared += CompletableFuture.supplyAsync({ runCatching { classLoader.loadClass(name) } }, preparationExecutor)
+            }
+            return classNames.mapIndexedNotNull { index, name ->
+                instantiate(name) { prepared[index].join().getOrThrow() }
+            }
+        }
+        finally {
+            // A rejected submission must not leave workers using a classloader that the caller is about to close.
+            prepared.forEach { it.join() }
         }
     }
 
@@ -477,12 +498,20 @@ object PluginLoaderImpl : PluginLoader {
         pluginPaths: List<URL>,
         options: List<String> = emptyList(),
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
+    ): IdeSyntaxSession = loadForIde(config, pluginPaths, options, classLoaderFactory, null)
+
+    fun loadForIde(
+        config: CompilerConfiguration,
+        pluginPaths: List<URL>,
+        options: List<String>,
+        classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader,
+        preparationExecutor: Executor?
     ): IdeSyntaxSession {
         val state = CompilationState()
         try {
             withState(state) {
                 setupLogging(config)
-                loadAllPlugins(config, options) { loadCandidates(pluginPaths, classLoaderFactory) }
+                loadAllPlugins(config, options) { loadCandidates(pluginPaths, classLoaderFactory, preparationExecutor) }
             }
         }
         catch (error: Throwable) {

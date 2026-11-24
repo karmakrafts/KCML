@@ -41,8 +41,7 @@ class SyntaxCachedStartupTest : HeavyPlatformTestCase() {
         val projectDir = createTempDirectory().toPath().resolve("cached")
         val manager = ProjectManagerEx.getInstanceEx()
         // The replacement DSL is inline JVM 25 bytecode; this project targets JVM 21.
-        @Suppress("DEPRECATION")
-        val created = manager.newProject(
+        @Suppress("DEPRECATION") val created = manager.newProject(
             projectDir, OpenProjectTask.build().copy(
                 isNewProject = true, runConfigurators = false, useDefaultProjectAsTemplate = false
             )

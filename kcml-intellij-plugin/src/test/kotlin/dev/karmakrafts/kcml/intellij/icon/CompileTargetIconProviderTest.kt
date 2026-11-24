@@ -185,10 +185,11 @@ class CompileTargetIconProviderTest : AnnotationFixtureTestCase() {
     }
 
     fun testIconContributorRunsBeforeKotlinCompletion() {
-        val contributors = CompletionContributor.EP.extensionList
-            .filter { it.language == KotlinLanguage.INSTANCE.id }.map { it.instance }
+        val contributors = CompletionContributor.EP.extensionList.filter { it.language == KotlinLanguage.INSTANCE.id }
+            .map { it.instance }
         val iconContributor = contributors.indexOfFirst { it is CompileTargetCompletionContributor }
-        val kotlinContributor = contributors.indexOfFirst { it.javaClass.simpleName == "KotlinFirCompletionContributor" }
+        val kotlinContributor =
+            contributors.indexOfFirst { it.javaClass.simpleName == "KotlinFirCompletionContributor" }
         assertTrue("Compile target completion contributor must be registered", iconContributor >= 0)
         assertTrue("Kotlin completion contributor must be registered", kotlinContributor >= 0)
         assertTrue(

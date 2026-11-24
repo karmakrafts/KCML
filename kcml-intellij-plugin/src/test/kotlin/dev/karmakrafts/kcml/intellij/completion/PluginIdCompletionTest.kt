@@ -76,8 +76,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
             "Installed plugin roots must be permitted independently of individual classpath entries",
             System.getProperty("vfs.additional-allowed-roots").split(File.pathSeparator).any {
                 plugin.pluginPath.toAbsolutePath().normalize().startsWith(Path.of(it).toAbsolutePath().normalize())
-            }
-        )
+            })
         val schema = VirtualFileManager.getInstance().findFileByUrl(
             "jar://${jar.toString().replace('\\', '/')}!/schemas/swift-format.schema.json"
         )
@@ -94,7 +93,7 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         assertSame(PluginIds.fromMetadata(myFixture.file), PluginIds.fromMetadata(myFixture.file))
     }
 
-    fun testQueuedIndexingKeepsIndeterminateProgressUntilCompletion() {
+    fun testQueuedIndexingDoesNotKeepCompletedProgressAlive() {
         addMetadata("example", "example")
         configureAnnotation("@Plugin(\"<caret>\") class Example")
         val discovery = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")!!
@@ -102,12 +101,10 @@ class PluginIdCompletionTest : AnnotationFixtureTestCase() {
         runWriteAction {
             assertEmpty(PluginIds.fromMetadata(myFixture.file))
             discovery.close()
-            assertTrue(indicator.isRunning)
-            assertTrue(indicator.isIndeterminate)
-            assertEquals("Indexing KCML plugins: ${module.name}", indicator.text)
+            assertFalse("Waiting for a read action is not active indexing", indicator.isRunning)
         }
         waitForIds(setOf("example")) { PluginIds.fromMetadata(myFixture.file) }
-        PlatformTestUtil.waitWithEventsDispatching("Plugin indexing progress finishes", { !indicator.isRunning }, 10)
+        assertFalse(indicator.isRunning)
     }
 
     fun testAnnotationLookupOnEdtIsDeferredAndCached() {

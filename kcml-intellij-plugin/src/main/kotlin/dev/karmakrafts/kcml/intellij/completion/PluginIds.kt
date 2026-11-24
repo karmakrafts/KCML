@@ -89,16 +89,11 @@ internal object PluginIds {
         (val production, val all) = index.ids
             ?: if (ApplicationManager.getApplication().isDispatchThread || DumbService.isDumb(project)) {
                 if (index.scheduled.compareAndSet(false, true)) {
-                    val progress = project.service<KcmlInitializationProgress>()
-                        .begin("Indexing KCML plugins: ${module.name}")
                     ReadAction.nonBlocking<PluginIdIndex.Ids> { index.compute(module, scan) }
                         .inSmartMode(project)
                         .expireWith(module)
                         .submit(AppExecutorUtil.getAppExecutorService())
-                        .onProcessed {
-                            progress?.close()
-                            index.scheduled.set(false)
-                        }
+                        .onProcessed { index.scheduled.set(false) }
                 }
                 return emptySet()
             }

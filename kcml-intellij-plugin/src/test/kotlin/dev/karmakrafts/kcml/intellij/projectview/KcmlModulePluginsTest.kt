@@ -48,8 +48,9 @@ class KcmlModulePluginsTest : JavaCodeInsightFixtureTestCase() {
                     created += child
                     ExternalSystemModulePropertyManager.getInstance(child).apply {
                         setExternalId(ProjectSystemId("GRADLE"))
-                        setLinkedProjectPath(if (name.startsWith("other"))
-                            directory.resolve("other").toString() else ownerPath)
+                        setLinkedProjectPath(
+                            if (name.startsWith("other")) directory.resolve("other").toString() else ownerPath
+                        )
                         setExternalModuleType("sourceSet")
                     }
                 }

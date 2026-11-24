@@ -95,10 +95,7 @@ internal object SyntaxAnalysis {
     }
 
     private fun computeResult(
-        file: KtFile,
-        runtime: SyntaxRuntime,
-        service: SyntaxExtensionService,
-        stamp: Long
+        file: KtFile, runtime: SyntaxRuntime, service: SyntaxExtensionService, stamp: Long
     ): Result? {
         // Analysis of lowered PSI must not trigger syntax analysis recursively.
         analyzing.set(true)

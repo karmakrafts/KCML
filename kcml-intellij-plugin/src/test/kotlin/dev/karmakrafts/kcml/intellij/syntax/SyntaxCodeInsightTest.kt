@@ -26,32 +26,31 @@ import com.intellij.lang.annotation.HighlightSeverity
 import com.intellij.openapi.application.runReadActionBlocking
 import com.intellij.openapi.application.runWriteAction
 import com.intellij.openapi.components.service
+import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.module.Module
 import com.intellij.openapi.module.ModuleManager
-import com.intellij.openapi.fileEditor.FileDocumentManager
-import com.intellij.openapi.util.registry.Registry
+import com.intellij.openapi.roots.ProjectFileIndex
 import com.intellij.openapi.util.Disposer
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.roots.ProjectFileIndex
+import com.intellij.openapi.util.registry.Registry
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
-import com.intellij.testFramework.PsiTestUtil
+import com.intellij.psi.PsiDocumentManager
 import com.intellij.testFramework.PlatformTestUtil
+import com.intellij.testFramework.PsiTestUtil
 import com.intellij.testFramework.fixtures.JavaCodeInsightFixtureTestCase
 import com.intellij.util.concurrency.AppExecutorUtil
-import com.intellij.psi.PsiDocumentManager
 import org.jetbrains.kotlin.analysis.api.KaExperimentalApi
 import org.jetbrains.kotlin.analysis.api.KaPlatformInterface
 import org.jetbrains.kotlin.analysis.api.KaSpiExtensionPoint
-import org.jetbrains.kotlin.analysis.api.projectStructure.kaModule
 import org.jetbrains.kotlin.analysis.api.session.analyze
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
+import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.idea.facet.KotlinFacet
 import org.jetbrains.kotlin.idea.facet.KotlinFacetType
-import org.jetbrains.kotlin.idea.KotlinLanguage
-import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
+import org.jetbrains.kotlin.psi.KtFile
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
@@ -62,11 +61,13 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
     private lateinit var configured: Module
 
     fun testOrdinaryKotlinCompletionIsUnchanged() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             fun generatedFirst() = 1
             fun generatedSecond() = 2
             fun usage() = generated<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         val variants = myFixture.complete(CompletionType.BASIC).orEmpty()
         assertContainsElements(variants.map { it.lookupString }, "generatedFirst", "generatedSecond")
     }
@@ -92,21 +93,31 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
     }
 
     fun testBasicCompletionResolvesDesugaredDeclarationsAndInsertsIntoSource() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             fn generatedFirst() = magic
             fn generatedSecond() = magic
             fun usage() = generated<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         configureSyntax()
         val contributors = CompletionContributor.forLanguage(KotlinLanguage.INSTANCE, myFixture.editor)
-        assertTrue(contributors.map { it.javaClass.name }.toString(), contributors.indexOfFirst { it is SyntaxCompletionContributor } <
-            contributors.indexOfFirst { it.javaClass.name.endsWith("KotlinFirCompletionContributor") })
+        assertTrue(
+            contributors.map { it.javaClass.name }.toString(),
+            contributors.indexOfFirst { it is SyntaxCompletionContributor } < contributors.indexOfFirst {
+                it.javaClass.name.endsWith("KotlinFirCompletionContributor")
+            })
         val runtime = project.service<SyntaxExtensionService>().runtime(configured)
         assertNotNull("Syntax runtime must be available before invoking completion", runtime)
-        assertEquals("fun generatedFirst() = 42\nfun generatedSecond() = 42\nfun usage() = generated",
-            runtime!!.lower(myFixture.file as KtFile).text)
+        assertEquals(
+            "fun generatedFirst() = 42\nfun generatedSecond() = 42\nfun usage() = generated",
+            runtime!!.lower(myFixture.file as KtFile).text
+        )
         val source = myFixture.file as KtFile
-        assertTrue("Completion file must be in module source roots", ProjectFileIndex.getInstance(project).isInSourceContent(source.virtualFile))
+        assertTrue(
+            "Completion file must be in module source roots",
+            ProjectFileIndex.getInstance(project).isInSourceContent(source.virtualFile)
+        )
         assertSame(configured, ProjectFileIndex.getInstance(project).getModuleForFile(source.virtualFile))
         val names = AppExecutorUtil.getAppExecutorService().submit<List<String>> {
             runReadActionBlocking {
@@ -114,7 +125,9 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
                     val module = SyntaxAnalysisContext.sourceModule(source)!!
                     val extensions = SyntaxResolveExtensionProvider().provideExtensionsFor(module)
                     assertFalse("No resolve extension for $module", extensions.isEmpty())
-                    extensions.flatMap { it.getKtFiles() }.flatMap { it.getTopLevelCallableNames() }.map { it.asString() }
+                    extensions.flatMap { it.getKtFiles() }
+                        .flatMap { it.getTopLevelCallableNames() }
+                        .map { it.asString() }
                 }
             }
         }.get(30, TimeUnit.SECONDS)
@@ -123,21 +136,25 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
         assertContainsElements(variants.map { it.lookupString }, "generatedFirst", "generatedSecond")
         myFixture.lookup.currentItem = variants.single { it.lookupString == "generatedFirst" }
         myFixture.finishLookup(Lookup.NORMAL_SELECT_CHAR)
-        myFixture.checkResult("""
+        myFixture.checkResult(
+            """
             fn generatedFirst() = magic
             fn generatedSecond() = magic
             fun usage() = generatedFirst()<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         val rejected = ProblemHighlightFilter.EP_NAME.extensionList.filterNot { it.shouldHighlight(myFixture.file) }
         assertTrue("Syntax files must remain highlightable: ${rejected.map { it.javaClass.name }}", rejected.isEmpty())
         assertEmpty(myFixture.doHighlighting().filter { it.severity == HighlightSeverity.ERROR })
     }
 
     fun testCompletionAndInspectionsResolveDesugaredDeclarationsInOtherFiles() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             fn generatedFirst() = magic
             fn generatedSecond() = magic
-        """.trimIndent())
+        """.trimIndent()
+        )
         configureSyntax()
         val root = myFixture.file.virtualFile.parent
         val usage = runWriteAction {
@@ -155,14 +172,16 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
 
     fun testSmartCompletionUsesDesugaredExpectedTypes() {
         Registry.get("kotlin.k2.smart.completion.enabled").setValue(true, testRootDisposable)
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             class Desired
             class Other
             fn generatedFirst() = Desired()
             fn generatedSecond() = Desired()
             fn generatedOther() = Other()
             fun usage(): Desired = generated<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         configureSyntax()
         val names = myFixture.complete(CompletionType.SMART).orEmpty().map { it.lookupString }
         assertContainsElements(names, "generatedFirst", "generatedSecond")
@@ -170,13 +189,15 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
     }
 
     fun testMemberCompletionUsesDesugaredClassMembers() {
-        myFixture.configureByText("Completion.kt", """
+        myFixture.configureByText(
+            "Completion.kt", """
             class Widget {
                 fn generatedFirst() = magic
                 fn generatedSecond() = magic
             }
             fun usage(widget: Widget) = widget.generated<caret>
-        """.trimIndent())
+        """.trimIndent()
+        )
         configureSyntax()
         val variants = myFixture.complete(CompletionType.BASIC).orEmpty()
         assertContainsElements(variants.map { it.lookupString }, "generatedFirst", "generatedSecond")
@@ -194,7 +215,11 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
         }
         myFixture.configureFromExistingVirtualFile(usage)
         myFixture.editor.caretModel.moveToOffset(myFixture.file.textLength)
-        assertContainsElements(myFixture.completeBasic().orEmpty().map { it.lookupString }, "generatedFirst", "generatedSecond")
+        assertContainsElements(
+            myFixture.completeBasic().orEmpty().map { it.lookupString },
+            "generatedFirst",
+            "generatedSecond"
+        )
         LookupManager.hideActiveLookup(project)
         runWriteAction {
             FileDocumentManager.getInstance().getDocument(library)!!.setText(
@@ -257,7 +282,8 @@ class SyntaxCodeInsightTest : JavaCodeInsightFixtureTestCase() {
                 commit()
             }
         }
-        project.service<SyntaxExtensionService>().loadRuntime(configured, SyntaxConfiguration.fromModule(configured))
+        project.service<SyntaxExtensionService>()
+            .loadRuntime(configured, SyntaxConfiguration.fromModule(configured))
             .get(15, TimeUnit.SECONDS)
         PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue()
     }

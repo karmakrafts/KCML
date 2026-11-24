@@ -139,8 +139,10 @@ class SyntaxModuleScopeTest : JavaCodeInsightFixtureTestCase() {
         myFixture.configureFromExistingVirtualFile(unresolved.virtualFile)
         val hostHighlights = myFixture.doHighlighting()
         assertTrue("Raw Kotlin unresolved references must remain visible: $hostHighlights", hostHighlights.any {
-            it.severity == HighlightSeverity.ERROR && it.description?.contains("UNRESOLVED_REFERENCE") == true &&
-                unresolved.text.substring(it.startOffset, it.endOffset) == "magic"
+            it.severity == HighlightSeverity.ERROR && it.description?.contains("UNRESOLVED_REFERENCE") == true && unresolved.text.substring(
+                it.startOffset,
+                it.endOffset
+            ) == "magic"
         })
         myFixture.configureFromExistingVirtualFile(enabled.virtualFile)
         val highlights = myFixture.doHighlighting()
@@ -149,7 +151,8 @@ class SyntaxModuleScopeTest : JavaCodeInsightFixtureTestCase() {
 
     private fun loadConfiguredRuntime() {
         val service = project.service<SyntaxExtensionService>()
-        val runtime = service.loadRuntime(configured, SyntaxConfiguration.fromModule(configured)).get(15, TimeUnit.SECONDS)
+        val runtime =
+            service.loadRuntime(configured, SyntaxConfiguration.fromModule(configured)).get(15, TimeUnit.SECONDS)
         assertNotNull(runtime)
         assertEquals(listOf("example:syntax_example"), runtime!!.extensionIds)
     }

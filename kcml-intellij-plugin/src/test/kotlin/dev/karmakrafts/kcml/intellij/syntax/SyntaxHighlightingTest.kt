@@ -30,7 +30,10 @@ class SyntaxHighlightingTest {
     fun nonOverlappingRangesAreSortedAndInvalidRangesAreIgnored() {
         val first = highlight(0, 2, "first")
         val second = highlight(4, 6, "second")
-        assertEquals(listOf(first, second), SyntaxHighlighting.normalize(listOf(second, highlight(6, 9, "invalid"), first), 6))
+        assertEquals(
+            listOf(first, second),
+            SyntaxHighlighting.normalize(listOf(second, highlight(6, 9, "invalid"), first), 6)
+        )
         assertEquals(emptyList(), SyntaxHighlighting.normalize(listOf(first), 0))
         assertEquals(emptyList(), SyntaxHighlighting.normalize(emptyList(), 6))
     }
@@ -47,19 +50,25 @@ class SyntaxHighlightingTest {
     fun laterRangesCanReplaceMultipleEarlierRanges() {
         assertEquals(
             listOf(highlight(0, 1, "first"), highlight(1, 7, "last"), highlight(7, 8, "third")),
-            SyntaxHighlighting.normalize(listOf(
-                highlight(0, 2, "first"), highlight(3, 5, "second"), highlight(6, 8, "third"), highlight(1, 7, "last")
-            ), 8)
+            SyntaxHighlighting.normalize(
+                listOf(
+                    highlight(0, 2, "first"),
+                    highlight(3, 5, "second"),
+                    highlight(6, 8, "third"),
+                    highlight(1, 7, "last")
+                ), 8
+            )
         )
     }
 
     @Test
     fun identicalRangesUseTheLastColorAndAdjacentRangesDoNotOverlap() {
         assertEquals(
-            listOf(highlight(0, 2, "last"), highlight(2, 4, "adjacent")),
-            SyntaxHighlighting.normalize(listOf(
-                highlight(0, 2, "first"), highlight(2, 4, "adjacent"), highlight(0, 2, "last")
-            ), 4)
+            listOf(highlight(0, 2, "last"), highlight(2, 4, "adjacent")), SyntaxHighlighting.normalize(
+                listOf(
+                    highlight(0, 2, "first"), highlight(2, 4, "adjacent"), highlight(0, 2, "last")
+                ), 4
+            )
         )
     }
 }

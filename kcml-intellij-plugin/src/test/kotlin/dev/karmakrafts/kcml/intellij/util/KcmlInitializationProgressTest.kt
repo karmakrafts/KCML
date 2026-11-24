@@ -72,8 +72,7 @@ class KcmlInitializationProgressTest : BasePlatformTestCase() {
         val activity = progress.begin("Loading KCML plugins")!!
         try {
             activity.use { error("Plugin initialization failed") }
-        }
-        catch (_: IllegalStateException) {
+        } catch (_: IllegalStateException) {
         }
         assertFalse(activity.indicator.isRunning)
     }

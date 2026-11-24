@@ -100,6 +100,8 @@ internal class SyntaxExtensionService( // @formatter:off
 
     private val loaderExecutor: ExecutorService =
         AppExecutorUtil.createBoundedApplicationPoolExecutor("KCML syntax loading", 4)
+    private val preparationExecutor: ExecutorService =
+        AppExecutorUtil.createBoundedApplicationPoolExecutor("KCML plugin preparation", 4)
     private val listeners: CopyOnWriteArrayList<() -> Unit> = CopyOnWriteArrayList()
     private val restartScheduled: AtomicBoolean = AtomicBoolean()
 
@@ -164,18 +166,15 @@ internal class SyntaxExtensionService( // @formatter:off
 
     private fun initializeRuntimes() {
         if (!started || project.isDisposed) return
-        val progress = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins")
         // Read module configuration under a cancellable read action; loading runs separately
         ReadAction.nonBlocking<Unit> {
-            for (module in ModuleManager.getInstance(project).modules) {
-                ProgressManager.checkCanceled()
-                loadRuntime(module, SyntaxConfiguration.fromModule(module))
+            project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins").use {
+                for (module in ModuleManager.getInstance(project).modules) {
+                    ProgressManager.checkCanceled()
+                    loadRuntime(module, SyntaxConfiguration.fromModule(module))
+                }
             }
-        }
-            .expireWith(this)
-            .coalesceBy(this)
-            .submit(AppExecutorUtil.getAppExecutorService())
-            .onProcessed { progress?.close() }
+        }.expireWith(this).coalesceBy(this).submit(AppExecutorUtil.getAppExecutorService())
     }
 
     fun addListener(parentDisposable: Disposable, listener: () -> Unit) {
@@ -200,7 +199,6 @@ internal class SyntaxExtensionService( // @formatter:off
         }
         // Editor lookups never wait for discovery or runtime initialization
         start()
-        val progress = project.service<KcmlInitializationProgress>().begin("Discovering KCML plugins: ${module.name}")
         // Cached module settings can arrive after the initial scan without an import notification
         ReadAction.nonBlocking<Unit> {
             loadRuntime(module, SyntaxConfiguration.fromModule(module))
@@ -209,7 +207,6 @@ internal class SyntaxExtensionService( // @formatter:off
             .expireWhen { module.isDisposed }
             .coalesceBy(this, module)
             .submit(AppExecutorUtil.getAppExecutorService())
-            .onProcessed { progress?.close() }
         return null
     }
 
@@ -276,8 +273,8 @@ internal class SyntaxExtensionService( // @formatter:off
                 val runtime = entry?.runtime
                 // Transfer ownership to sessions before notifying consumers
                 entry = null
-                changed()
                 request.result.complete(runtime)
+                changed()
             }
         } catch (exception: Exception) {
             request.result.completeExceptionally(exception)
@@ -311,7 +308,8 @@ internal class SyntaxExtensionService( // @formatter:off
         val runtime = SyntaxRuntime(
             configuration.compilerConfiguration(),
             configuration.paths.map { path -> path.toUri().toURL() },
-            configuration.options
+            configuration.options,
+            preparationExecutor
         )
         try {
             val localFiles = LocalFileSystem.getInstance()
@@ -423,5 +421,6 @@ internal class SyntaxExtensionService( // @formatter:off
         }
         clearSessions()
         loaderExecutor.shutdown()
+        preparationExecutor.shutdown()
     }
 }

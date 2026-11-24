@@ -20,7 +20,6 @@ import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.util.ProgressIndicatorBase
 import com.intellij.testFramework.LightPlatformTestCase
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.nio.file.Files
 import java.nio.file.Path
@@ -32,7 +31,8 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
 
     override fun setUp() {
         super.setUp()
-        directory = Files.createTempDirectory(Files.createDirectories(Path.of("build").toAbsolutePath()), "kcml-metadata-")
+        directory =
+            Files.createTempDirectory(Files.createDirectories(Path.of("build").toAbsolutePath()), "kcml-metadata-")
     }
 
     override fun tearDown() {
@@ -46,14 +46,11 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
 
     fun testDirectoryAndJarMetadataAndThemeResources() {
         val entries = linkedMapOf(
-            "META-INF/zeta.json" to """{"id":"zeta","name":"Zeta","version":"2.0"}""",
-            "META-INF/alpha.json" to """{
+            "META-INF/zeta.json" to """{"id":"zeta","name":"Zeta","version":"2.0"}""", "META-INF/alpha.json" to """{
                 "id":"alpha","name":"Alpha Plugin","version":"1.0",
                 "authors":[{"name":"Karma Krafts","url":"https://karmakrafts.dev"},{"name":"Contributor"}],
                 "icon":{"light":"icons/light #1.svg","dark":"icons/dark.svg"}
-            }""",
-            "META-INF/icons/light #1.svg" to "light icon",
-            "META-INF/icons/dark.svg" to "dark icon"
+            }""", "META-INF/icons/light #1.svg" to "light icon", "META-INF/icons/dark.svg" to "dark icon"
         )
         for (jar in listOf(false, true)) {
             val plugins = KcmlPluginMetadata.fromClasspath(listOf(artifact(entries, jar)))
@@ -61,10 +58,12 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             val alpha = plugins.first()
             assertEquals("Alpha Plugin", alpha.name)
             assertEquals("1.0", alpha.version)
-            assertEquals(listOf(
-                KcmlPluginMetadata.Author("Karma Krafts", "https://karmakrafts.dev"),
-                KcmlPluginMetadata.Author("Contributor")
-            ), alpha.authors)
+            assertEquals(
+                listOf(
+                    KcmlPluginMetadata.Author("Karma Krafts", "https://karmakrafts.dev"),
+                    KcmlPluginMetadata.Author("Contributor")
+                ), alpha.authors
+            )
             assertEmpty(plugins.last().authors)
             assertEquals(entries.getValue("META-INF/alpha.json"), alpha.configUrl.readText())
             assertEquals("light icon", alpha.lightIcon!!.readText())
@@ -122,10 +121,15 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             "description":"Unknown metadata","dependencies":[],
             "icon":{"light":"icon.svg","future":"ignored"}
         }"""
-        val plugin = KcmlPluginMetadata.fromClasspath(listOf(artifact(mapOf(
-            "META-INF/example.json" to config,
-            "META-INF/icon.svg" to "icon"
-        ), false))).single()
+        val plugin = KcmlPluginMetadata.fromClasspath(
+            listOf(
+                artifact(
+                    mapOf(
+                        "META-INF/example.json" to config, "META-INF/icon.svg" to "icon"
+                    ), false
+                )
+            )
+        ).single()
         val encoded = Json.encodeToString(plugin)
         assertEquals(
             Json.parseToJsonElement("""{"id":"example","name":"Example","version":"1.2.3","icon":{"light":"icon.svg"}}"""),
@@ -158,7 +162,9 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             "META-INF/valid.json" to """{"id":"valid"}"""
         )
         for (jar in listOf(false, true)) {
-            assertEquals(listOf("valid"), KcmlPluginMetadata.fromClasspath(listOf(artifact(entries, jar))).map { it.id })
+            assertEquals(
+                listOf("valid"),
+                KcmlPluginMetadata.fromClasspath(listOf(artifact(entries, jar))).map { it.id })
         }
     }
 
@@ -185,10 +191,12 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
 
     fun testFirstClasspathOccurrenceWinsAcrossDirectoriesAndJars() {
         val first = artifact(mapOf("META-INF/example.json" to """{"id":"example","name":"First"}"""), false)
-        val second = artifact(mapOf(
-            "META-INF/example.json" to """{"id":"example","name":"Second"}""",
-            "META-INF/other.json" to """{"id":"other"}"""
-        ), true)
+        val second = artifact(
+            mapOf(
+                "META-INF/example.json" to """{"id":"example","name":"Second"}""",
+                "META-INF/other.json" to """{"id":"other"}"""
+            ), true
+        )
         val plugins = KcmlPluginMetadata.fromClasspath(listOf(first, second, first))
         assertEquals(listOf("example", "other"), plugins.map { it.id })
         assertEquals("First", plugins.first().name)
@@ -207,8 +215,15 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
 
     fun testInvalidAndMissingIconsDoNotDropMetadata() {
         val icons = listOf(
-            "../outside.svg", "/absolute.svg", "https://example.com/icon.svg", "file:outside.svg",
-            "icons/../../outside.svg", "icons\\outside.svg", "missing.svg", "icons", ""
+            "../outside.svg",
+            "/absolute.svg",
+            "https://example.com/icon.svg",
+            "file:outside.svg",
+            "icons/../../outside.svg",
+            "icons\\outside.svg",
+            "missing.svg",
+            "icons",
+            ""
         )
         val entries = linkedMapOf("META-INF/icons/placeholder" to "directory marker", "outside.svg" to "outside")
         icons.forEachIndexed { index, icon ->
@@ -227,7 +242,8 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
     }
 
     fun testDirectorySymlinksCannotEscapeArtifact() {
-        val root = artifact(mapOf("META-INF/example.json" to """{"id":"example","icon":{"light":"linked.svg"}}"""), false)
+        val root =
+            artifact(mapOf("META-INF/example.json" to """{"id":"example","icon":{"light":"linked.svg"}}"""), false)
         val outside = Files.writeString(directory.resolve("outside.svg"), "outside icon")
         Files.createSymbolicLink(root.resolve("META-INF/linked.svg"), outside)
         val outsideMetadata = Files.writeString(directory.resolve("outside.json"), """{"id":"outside"}""")
@@ -245,8 +261,7 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
                 KcmlPluginMetadata.fromClasspath(listOf(directory))
             }, indicator)
             fail("Expected cancellation to propagate")
-        }
-        catch (_: ProcessCanceledException) {
+        } catch (_: ProcessCanceledException) {
         }
     }
 

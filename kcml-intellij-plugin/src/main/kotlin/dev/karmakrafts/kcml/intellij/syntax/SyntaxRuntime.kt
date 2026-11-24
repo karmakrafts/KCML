@@ -54,6 +54,7 @@ import org.jetbrains.kotlin.psi.KtLambdaExpression
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.net.URL
+import java.util.concurrent.Executor
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
@@ -62,7 +63,8 @@ import kotlin.concurrent.withLock
 internal class SyntaxRuntime( // @formatter:off
     configuration: CompilerConfiguration,
     paths: List<URL>,
-    options: List<String>
+    options: List<String>,
+    preparationExecutor: Executor? = null
 ) : AutoCloseable { // @formatter:on
     @OptIn(KtImplementationDetail::class)
     private companion object {
@@ -100,7 +102,7 @@ internal class SyntaxRuntime( // @formatter:off
     private var closed: Boolean = false
 
     private val session: IdeSyntaxSession = PluginLoaderImpl.loadForIde(
-        configuration, paths, options, ::SyntaxPluginClassLoader
+        configuration, paths, options, ::SyntaxPluginClassLoader, preparationExecutor
     )
 
     private val loadedExtensionIds: List<String> = session.extensionIds.toList()

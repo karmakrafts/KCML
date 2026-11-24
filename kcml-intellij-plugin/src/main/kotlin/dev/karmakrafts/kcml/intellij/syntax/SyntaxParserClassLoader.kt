@@ -29,6 +29,10 @@ import dev.karmakrafts.kcml.internal.org.objectweb.asm.Type
 // Only private parser copies are instrumented; the IDE's Kotlin classes are never modified.
 internal class SyntaxParserClassLoader(parent: ClassLoader) : ClassLoader(parent) {
     companion object {
+        init {
+            registerAsParallelCapable()
+        }
+
         private val parsingName: String = TypeNames.KOTLIN_PARSING.replace('.', '/')
         private val grammarRuleName: String = TypeNames.SYNTAX_GRAMMAR_RULE.replace('.', '/')
         private val hooksName: String = TypeNames.SYNTAX_HOOKS.replace('.', '/')

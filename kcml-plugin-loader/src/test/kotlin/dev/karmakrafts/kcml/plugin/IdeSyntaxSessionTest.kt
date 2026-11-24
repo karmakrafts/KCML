@@ -230,6 +230,7 @@ class IdeSyntaxSessionTest {
         val jars = List(workerCount) { Files.createTempFile("kcml-ide-syntax-concurrent", ".jar") }
         val closedFlags = List(workerCount) { AtomicBoolean(false) }
         val executor = Executors.newFixedThreadPool(workerCount)
+        val preparationExecutor = Executors.newFixedThreadPool(2)
         val sessions = ArrayList<IdeSyntaxSession>()
         try {
             for (jar in jars) {
@@ -252,14 +253,16 @@ class IdeSyntaxSessionTest {
                     val config = CompilerConfiguration().apply { kcmlCompileTarget = "jvm" }
                     ready.countDown()
                     check(start.await(10, TimeUnit.SECONDS)) { "Start signal timed out" }
-                    val session = PluginLoaderImpl.loadForIde(config, listOf(jar.toUri().toURL())) { urls, parent ->
-                        object : URLClassLoader(urls, parent) {
-                            override fun close() {
-                                closedFlags[index].set(true)
-                                super.close()
+                    val session = PluginLoaderImpl.loadForIde(
+                        config, listOf(jar.toUri().toURL()), emptyList(), { urls, parent ->
+                            object : URLClassLoader(urls, parent) {
+                                override fun close() {
+                                    closedFlags[index].set(true)
+                                    super.close()
+                                }
                             }
-                        }
-                    }
+                        }, preparationExecutor
+                    )
                     try {
                         check(session.hasExtensions)
                         check(expectedExtensionIds == session.extensionIds) { "Unexpected IDs ${session.extensionIds}" }
@@ -303,6 +306,7 @@ class IdeSyntaxSessionTest {
         finally {
             sessions.forEach { runCatching { it.close() } }
             executor.shutdownNow()
+            preparationExecutor.shutdownNow()
             jars.forEach(Files::deleteIfExists)
         }
     }

@@ -49,7 +49,8 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
             tools.isEnabled = false
         }
         val inspection = Class.forName(
-            "org.jetbrains.kotlin.idea.codeInsight.inspections.RedundantSemicolonInspection", true,
+            "org.jetbrains.kotlin.idea.codeInsight.inspections.RedundantSemicolonInspection",
+            true,
             KotlinLanguage.INSTANCE.javaClass.classLoader
         ).getDeclaredConstructor().newInstance() as LocalInspectionTool
         myFixture.enableInspections(inspection)
@@ -74,7 +75,8 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
     fun testAllLoweredSubnodeReportsReachTheWholeSourceToken() {
         val source = "fun example() {\n    §\n}"
         val token = tokenRange(source)
-        val result = collect(source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(rule(source, token)))
+        val result =
+            collect(source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(rule(source, token)))
         assertEquals(setOf(inspectionId), result.toolIds)
         assertEquals(2, result.problems.size)
         assertEquals(listOf(token, token), result.problems.map { it.range })
@@ -84,9 +86,11 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
 
     fun testSuppressRuleKeepsUnrelatedInspections() {
         val source = "fun example() {\n    §\n    val outside = 3;\n}"
-        val result = collect(source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(
-            rule(source, tokenRange(source), InspectionMode.SUPPRESS)
-        ))
+        val result = collect(
+            source, source.replace("§", "val first = 1;\n    val second = 2;"), listOf(
+                rule(source, tokenRange(source), InspectionMode.SUPPRESS)
+            )
+        )
         assertEquals(1, result.problems.size)
         assertEquals(TextRange(source.lastIndexOf(';'), source.lastIndexOf(';') + 1), result.problems.single().range)
     }
@@ -128,13 +132,14 @@ class SyntaxInspectionsTest : LightJavaCodeInsightFixtureTestCase() {
 
     private fun tokenRange(source: String): TextRange = source.indexOf('§').let { TextRange(it, it + 1) }
 
-    private fun rule(source: String, range: TextRange, mode: InspectionMode = InspectionMode.DESUGARED): InspectionRule =
-        InspectionRule(KtPsiFactory(project).createFile("Inspections.kt", source), mode, range)
+    private fun rule(
+        source: String,
+        range: TextRange,
+        mode: InspectionMode = InspectionMode.DESUGARED
+    ): InspectionRule = InspectionRule(KtPsiFactory(project).createFile("Inspections.kt", source), mode, range)
 
     private fun collect(
-        sourceText: String,
-        loweredText: String,
-        rules: List<InspectionRule> = emptyList()
+        sourceText: String, loweredText: String, rules: List<InspectionRule> = emptyList()
     ): SyntaxInspections.Result {
         val source = myFixture.configureByText("Inspections.kt", sourceText) as KtFile
         return runReadActionBlocking {
