@@ -142,8 +142,8 @@ internal data class KcmlPluginMetadata( // @formatter:off
                     val file = candidate.toRealPath()
                     if (!file.startsWith(root) || !Files.isRegularFile(file)) return@mapNotNull null
                     Files.newBufferedReader(file).use { reader ->
-                        read(candidate.fileName.toString(), reader, candidate.toUri().toURL()) { relative ->
-                            val icon = directory.resolve(relative).toRealPath()
+                        read(candidate.fileName.toString(), reader, candidate.toUri().toURL()) { resource ->
+                            val icon = root.resolve(resource).toRealPath()
                             if (icon.startsWith(root) && Files.isRegularFile(icon)) icon.toUri().toURL()
                             else null
                         }
@@ -171,10 +171,9 @@ internal data class KcmlPluginMetadata( // @formatter:off
                     jar.getInputStream(candidate).bufferedReader(Charsets.UTF_8).use { reader ->
                         read(
                             candidate.name.removePrefix("META-INF/"), reader, jarUrl(path, candidate.name)
-                        ) { relative ->
-                            val name = "META-INF/$relative"
-                            val entry = jar.getJarEntry(name)
-                            if (entry == null || entry.isDirectory) null else jarUrl(path, name)
+                        ) { resource ->
+                            val entry = jar.getJarEntry(resource)
+                            if (entry == null || entry.isDirectory) null else jarUrl(path, resource)
                         }
                     }
                 } catch (_: Throwable) {
@@ -195,7 +194,7 @@ internal data class KcmlPluginMetadata( // @formatter:off
                 if (relative.any { it == '\\' || it == ':' || it == '\u0000' }) return null
                 if (relative.split('/').any { it.isEmpty() || it == "." || it == ".." }) return null
                 return try {
-                    icon(relative)
+                    icon("META-INF/$relative")
                 } catch (_: Throwable) {
                     null
                 }

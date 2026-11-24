@@ -75,6 +75,25 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
         }
     }
 
+    fun testIconPathsUseMetaInfAsBaseInsteadOfResourceRoot() {
+        val entries = mapOf(
+            "META-INF/example.json" to """{"id":"example","icon":{"light":"example.svg","dark":"example.svg"}}""",
+            "META-INF/example.svg" to "META-INF icon",
+            "example.svg" to "resource root icon",
+            "META-INF/missing.json" to """{"id":"missing","icon":{"light":"root-only.svg","dark":"root-only.svg"}}""",
+            "root-only.svg" to "root-only icon"
+        )
+        for (jar in listOf(false, true)) {
+            val plugins = KcmlPluginMetadata.fromClasspath(listOf(artifact(entries, jar))).associateBy { it.id }
+            val example = plugins.getValue("example")
+            assertEquals("META-INF icon", example.lightIcon!!.readText())
+            assertEquals("META-INF icon", example.darkIcon!!.readText())
+            val missing = plugins.getValue("missing")
+            assertNull(missing.lightIcon)
+            assertNull(missing.darkIcon)
+        }
+    }
+
     fun testInvalidOptionalAuthorsDoNotDiscardMetadata() {
         val entries = linkedMapOf(
             "META-INF/null.json" to """{"id":"null","authors":null}""",
