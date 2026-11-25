@@ -17,11 +17,11 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 import dev.karmakrafts.kcml.api.target.OnlyOn
 
 /** How an IDE handles normal inspection reports overlapping a rule's original source range. */
-@OnlyOn(IDECompileTarget::class)
+@OnlyOn(IdeCompileTarget::class)
 @ExperimentalKcmlApi
 public enum class InspectionMode {
     /** Forward all mapped lowered reports to the whole rule range, suppressing raw Kotlin reports. */

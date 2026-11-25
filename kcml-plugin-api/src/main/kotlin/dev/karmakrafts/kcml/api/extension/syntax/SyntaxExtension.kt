@@ -19,7 +19,7 @@ package dev.karmakrafts.kcml.api.extension.syntax
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.extension.Extension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.psi.KtFile
@@ -93,7 +93,7 @@ public interface SyntaxExtension : Extension {
      * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
      * @return source ranges and the color-scheme attributes to apply to them.
      */
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     public fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> = emptyList()
 
     /**
@@ -120,7 +120,7 @@ public interface SyntaxExtension : Extension {
      * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
      * @return replacement completion candidates, or `null` to retain the host's fallback.
      */
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     public fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? = null
 
     /**
@@ -143,7 +143,7 @@ public interface SyntaxExtension : Extension {
      * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
      * @return custom inspection findings in original source coordinates.
      */
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     public fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> = emptyList()
 
     /**
@@ -177,7 +177,7 @@ public interface SyntaxExtension : Extension {
      * @param frontend pre-FIR syntax context belonging to this extension's owning plugin.
      * @return source ranges and their inspection handling modes.
      */
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     public fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> = emptyList()
 
     /**

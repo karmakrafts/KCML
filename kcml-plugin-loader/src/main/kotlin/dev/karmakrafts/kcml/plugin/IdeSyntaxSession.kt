@@ -23,13 +23,13 @@ import dev.karmakrafts.kcml.api.extension.syntax.GrammarRule
 import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
 import dev.karmakrafts.kcml.api.extension.syntax.Inspection
 import dev.karmakrafts.kcml.api.extension.syntax.InspectionRule
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.com.intellij.lang.PsiBuilder
 import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.psi.KtFile
 
-@OnlyOn(IDECompileTarget::class)
+@OnlyOn(IdeCompileTarget::class)
 @InternalKcmlApi
 @OptIn(ExperimentalKcmlApi::class)
 class IdeSyntaxSession internal constructor(private val state: CompilationState) : AutoCloseable {

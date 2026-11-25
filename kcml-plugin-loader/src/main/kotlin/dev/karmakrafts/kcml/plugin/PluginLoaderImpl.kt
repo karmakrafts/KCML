@@ -30,7 +30,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.api.target.CompileTarget
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.api.target.OnlyOn
@@ -42,7 +42,7 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
-import dev.karmakrafts.kcml.target.IDECompileTargetImpl
+import dev.karmakrafts.kcml.target.IdeCompileTargetImpl
 import dev.karmakrafts.kcml.target.NativeTargetConfiguration
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
@@ -497,7 +497,7 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     @JvmOverloads
     fun loadForIde(
         config: CompilerConfiguration,
@@ -506,7 +506,7 @@ object PluginLoaderImpl : PluginLoader {
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
     ): IdeSyntaxSession = loadForIde(config, pluginPaths, options, classLoaderFactory, null)
 
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     fun loadForIde(
         config: CompilerConfiguration,
         pluginPaths: List<URL>,
@@ -514,7 +514,7 @@ object PluginLoaderImpl : PluginLoader {
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader,
         preparationExecutor: Executor?
     ): IdeSyntaxSession {
-        val state = CompilationState().apply { compileTarget = IDECompileTargetImpl }
+        val state = CompilationState().apply { compileTarget = IdeCompileTargetImpl }
         try {
             withState(state) {
                 setupLogging(config)

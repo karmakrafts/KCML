@@ -17,9 +17,9 @@
 package dev.karmakrafts.kcml.target
 
 import dev.karmakrafts.kcml.api.target.CompileTargetType
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 
-internal object IDECompileTargetImpl : IDECompileTarget {
+internal object IdeCompileTargetImpl : IdeCompileTarget {
     object Type : CompileTargetType {
         // Use a long, prefixed and suffixed CLI alias since this is never supposed to be invoked from CLI
         override val aliases: Set<String> = setOf("___ide___")

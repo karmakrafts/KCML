@@ -24,7 +24,7 @@ import dev.karmakrafts.kcml.api.extension.syntax.Highlighting
 import dev.karmakrafts.kcml.api.extension.syntax.ParsingContext
 import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
-import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.IdeCompileTarget
 import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.com.intellij.lexer.DelegateLexer
@@ -62,7 +62,7 @@ internal class ExampleSyntaxExtension : AbstractExtension(), SyntaxExtension {
         return true
     }
 
-    @OnlyOn(IDECompileTarget::class)
+    @OnlyOn(IdeCompileTarget::class)
     override fun highlight(file: KtFile, frontend: SyntaxFrontend): List<Highlighting> = buildList {
         for (function in PsiTreeUtil.collectElementsOfType(file, KtNamedFunction::class.java)) {
             val keyword = function.funKeyword ?: continue

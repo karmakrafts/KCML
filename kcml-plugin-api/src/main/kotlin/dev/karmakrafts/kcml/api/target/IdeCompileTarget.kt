@@ -19,4 +19,4 @@ package dev.karmakrafts.kcml.api.target
 /**
  * A dummy compile target used by the KCML IDE integration to determine the host properly.
  */
-public interface IDECompileTarget : CompileTarget
+public interface IdeCompileTarget : CompileTarget

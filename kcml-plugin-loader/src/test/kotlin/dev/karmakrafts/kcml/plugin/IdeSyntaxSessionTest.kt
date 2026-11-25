@@ -30,7 +30,7 @@ import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
-import dev.karmakrafts.kcml.target.IDECompileTargetImpl
+import dev.karmakrafts.kcml.target.IdeCompileTargetImpl
 import dev.karmakrafts.kcml.util.kcmlCompileTarget
 import org.jetbrains.kotlin.CoreEnvironmentDeprecation
 import org.jetbrains.kotlin.cli.extensionsStorage
@@ -77,14 +77,14 @@ class IdeSyntaxTestPlugin : CompilerPlugin {
 private class IdeSyntaxTestExtension : AbstractExtension(), SyntaxExtension {
     override fun createLexer(delegate: Lexer, frontend: SyntaxFrontend): Lexer {
         assertEquals("ide_syntax_test", frontend.pluginId)
-        assertSame(IDECompileTargetImpl, frontend.compileTarget)
+        assertSame(IdeCompileTargetImpl, frontend.compileTarget)
         assertTrue(frontend.loader.getPlugin(frontend.pluginId) is IdeSyntaxTestPlugin)
         return delegate
     }
 
     override fun complete(file: KtFile, offset: Int, smart: Boolean, frontend: SyntaxFrontend): List<Completion>? {
         assertEquals("ide_syntax_test", frontend.pluginId)
-        assertSame(IDECompileTargetImpl, frontend.compileTarget)
+        assertSame(IdeCompileTargetImpl, frontend.compileTarget)
         assertTrue(frontend.loader.getPlugin(frontend.pluginId) is IdeSyntaxTestPlugin)
         assertEquals("val value = 0", file.text)
         if (offset == 0) return null
@@ -94,7 +94,7 @@ private class IdeSyntaxTestExtension : AbstractExtension(), SyntaxExtension {
 
     override fun inspectionRules(file: KtFile, frontend: SyntaxFrontend): List<InspectionRule> {
         assertEquals("ide_syntax_test", frontend.pluginId)
-        assertSame(IDECompileTargetImpl, frontend.compileTarget)
+        assertSame(IdeCompileTargetImpl, frontend.compileTarget)
         assertTrue(frontend.loader.getPlugin(frontend.pluginId) is IdeSyntaxTestPlugin)
         assertEquals("val value = 0", file.text)
         val node = file.declarations.single() as KtProperty
@@ -103,7 +103,7 @@ private class IdeSyntaxTestExtension : AbstractExtension(), SyntaxExtension {
 
     override fun inspect(file: KtFile, frontend: SyntaxFrontend): List<Inspection> {
         assertEquals("ide_syntax_test", frontend.pluginId)
-        assertSame(IDECompileTargetImpl, frontend.compileTarget)
+        assertSame(IdeCompileTargetImpl, frontend.compileTarget)
         assertTrue(frontend.loader.getPlugin(frontend.pluginId) is IdeSyntaxTestPlugin)
         assertEquals("val value = 0", file.text)
         val node = file.declarations.single() as KtProperty
