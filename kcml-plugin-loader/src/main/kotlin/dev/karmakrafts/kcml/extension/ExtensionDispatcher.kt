@@ -29,6 +29,11 @@ import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
 import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.JsCompileTarget
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.NativeCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
+import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.frontend.SyntaxFrontendImpl
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
@@ -57,9 +62,16 @@ class ExtensionDispatcher( // @formatter:off
         }
     }
 
+    @OnlyOn(NativeCompileTarget::class)
     val lateNativeExtensions: List<Pair<String, LateNativeExtension>> by gather()
+
+    @OnlyOn(WasmCompileTarget::class)
     val lateWasmExtensions: List<Pair<String, LateWasmExtension>> by gather()
+
+    @OnlyOn(JvmCompileTarget::class)
     val lateJvmExtensions: List<Pair<String, LateJvmExtension>> by gather()
+
+    @OnlyOn(JsCompileTarget::class)
     val lateJsExtensions: List<Pair<String, LateJsExtension>> by gather()
 
     val syntaxAdapter: SyntaxExtensionAdapter? by lazy {
