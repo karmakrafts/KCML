@@ -38,6 +38,7 @@ internal object PluginIdIndex {
         ThreadingAssertions.assertBackgroundThread()
         val roots = ModuleRootManager.getInstance(module)
         val manager = PsiManager.getInstance(module.project)
+
         val production = mutableSetOf<String>()
         val all = mutableSetOf<String>()
         for (type in listOf(JavaResourceRootType.RESOURCE, JavaResourceRootType.TEST_RESOURCE)) {
@@ -55,6 +56,7 @@ internal object PluginIdIndex {
                 }
             }
         }
+
         return Ids(production.toSet(), all.toSet())
     }
 
@@ -64,6 +66,7 @@ internal object PluginIdIndex {
         val project = module.project
         val roots = ModuleRootManager.getInstance(module)
         val scope = GlobalSearchScope.moduleScope(module)
+
         val production = mutableSetOf<String>()
         val all = mutableSetOf<String>()
         for (name in KotlinAnnotationsIndex.getAllKeys(project)) {
@@ -79,6 +82,7 @@ internal object PluginIdIndex {
                 if (!roots.fileIndex.isInTestSourceContent(annotation.containingFile.virtualFile)) production += id
             }
         }
+
         return Ids(production.toSet(), all.toSet())
     }
 

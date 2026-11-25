@@ -37,8 +37,7 @@ internal class KcmlInitializationProgress(private val project: Project) : Dispos
     }
 
     internal class Activity(
-        private val owner: KcmlInitializationProgress,
-        val indicator: ProgressIndicator
+        private val owner: KcmlInitializationProgress, val indicator: ProgressIndicator
     ) : AutoCloseable {
         override fun close() = owner.finish(this)
     }

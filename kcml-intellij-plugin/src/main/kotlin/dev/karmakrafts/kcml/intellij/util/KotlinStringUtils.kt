@@ -33,7 +33,7 @@ import org.jetbrains.kotlin.psi.KtValueArgument
 internal fun KtStringTemplateEntry.literalValue(): String? = when (this) {
     is KtLiteralStringTemplateEntry -> text
     is KtEscapeStringTemplateEntry -> unescapedValue
-    is KtStringTemplateEntryWithExpression -> if ((expression as? KtConstantExpression)?.text == "'${'$'}'") "$" else null
+    is KtStringTemplateEntryWithExpression -> if ((expression as? KtConstantExpression)?.text == "'$'") "$" else null
     else -> null
 }
 

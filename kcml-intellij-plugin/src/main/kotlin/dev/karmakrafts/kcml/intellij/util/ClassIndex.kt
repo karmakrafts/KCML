@@ -173,10 +173,12 @@ internal object ClassIndex {
             if (type is PsiCompiledElement || file?.extension == "class") {
                 val fileName = "${binaryName.substringAfterLast('.')}.class"
                 val classFile = (if (file?.name == fileName) file else file?.parent?.findChild(fileName)) ?: return
-                val compiled = compiledClass(classFile) ?: return
-                if (compiled.binaryName != binaryName) return
-                methods += compiled.methods
-                for (superName in compiled.superNames) {
+                (val compiledBinaryName = binaryName, val superNames, val compiledMethods = methods) = compiledClass(
+                    classFile
+                ) ?: return
+                if (compiledBinaryName != binaryName) return
+                methods += compiledMethods
+                for (superName in superNames) {
                     ProgressManager.checkCanceled()
                     if (superName in visited) continue
                     val superClass = facade.findClass(superName.replace('$', '.'), target.resolveScope) ?: continue
@@ -275,6 +277,7 @@ internal object ClassIndex {
         }
     }
 
+    // TODO: get rid of recursion
     private fun PsiClass.binaryName(): String? {
         ProgressManager.checkCanceled()
         val outer = containingClass ?: return qualifiedName
