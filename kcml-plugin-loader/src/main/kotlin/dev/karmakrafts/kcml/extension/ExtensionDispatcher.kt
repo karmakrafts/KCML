@@ -30,6 +30,7 @@ import dev.karmakrafts.kcml.api.extension.wasm.LateWasmExtension
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.frontend.SyntaxFrontendImpl
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.compiler.plugin.CompilerPluginRegistrar.ExtensionStorage
 import org.jetbrains.kotlin.compiler.plugin.ExperimentalCompilerApi
@@ -67,7 +68,7 @@ class ExtensionDispatcher( // @formatter:off
         }
         if (syntaxExtensions.isEmpty()) null
         else SyntaxExtensionAdapter(syntaxExtensions) { pluginId ->
-            SyntaxFrontendImpl(pluginId, config, loggerFactory, loader)
+            SyntaxFrontendImpl(pluginId, config, loggerFactory, loader, PluginLoaderImpl.getCompileTarget(config))
         }
     }
 

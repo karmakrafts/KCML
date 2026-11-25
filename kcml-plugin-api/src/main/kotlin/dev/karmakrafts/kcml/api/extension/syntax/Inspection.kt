@@ -17,7 +17,8 @@
 package dev.karmakrafts.kcml.api.extension.syntax
 
 import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
-import dev.karmakrafts.kcml.api.target.OnlyInIDE
+import dev.karmakrafts.kcml.api.target.IDECompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.com.intellij.openapi.util.TextRange
 import org.jetbrains.kotlin.com.intellij.psi.PsiElement
 
@@ -33,7 +34,7 @@ import org.jetbrains.kotlin.com.intellij.psi.PsiElement
  * @param severity editor severity, defaulting to [InspectionSeverity.WARNING].
  * @param rangeInElement optional nonempty UTF-16 subrange within [element]'s text; `null` selects all of it.
  */
-@OnlyInIDE
+@OnlyOn(IDECompileTarget::class)
 @ExperimentalKcmlApi
 public data class Inspection(
     public val element: PsiElement,

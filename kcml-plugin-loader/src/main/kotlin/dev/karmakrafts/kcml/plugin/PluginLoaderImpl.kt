@@ -30,9 +30,10 @@ import dev.karmakrafts.kcml.api.plugin.PluginStorage
 import dev.karmakrafts.kcml.api.plugin.PreInitializationContext
 import dev.karmakrafts.kcml.api.plugin.nameOrId
 import dev.karmakrafts.kcml.api.target.CompileTarget
+import dev.karmakrafts.kcml.api.target.IDECompileTarget
 import dev.karmakrafts.kcml.api.target.NativeArchitectureConfiguration
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
-import dev.karmakrafts.kcml.api.target.OnlyInIDE
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.extension.DefaultExtensionRegistry
 import dev.karmakrafts.kcml.extension.ExtensionDispatcher
 import dev.karmakrafts.kcml.extension.SyntaxExtensionAdapter
@@ -41,6 +42,7 @@ import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.ipm.IPMImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.target.CompileTargetRegistryImpl
+import dev.karmakrafts.kcml.target.IDECompileTargetImpl
 import dev.karmakrafts.kcml.target.NativeTargetConfiguration
 import dev.karmakrafts.kcml.util.connectVertices
 import dev.karmakrafts.kcml.util.json
@@ -109,6 +111,7 @@ object PluginLoaderImpl : PluginLoader {
     internal fun getCompileTarget(config: CompilerConfiguration): CompileTarget {
         val state = compilationState.get()
         return state.compileTarget ?: compileTargetRegistry.createTarget(config).let { target ->
+            @Suppress("KCML_TARGET_SPECIFIC_CODE") //
             if (target is NativeCompileTarget) NativeTargetConfiguration.configure(target, config)
             else {
                 require(NativeTargetConfiguration.get(config) == null) { "Native target configuration requires a Native compile target" }
@@ -291,8 +294,7 @@ object PluginLoaderImpl : PluginLoader {
             for (name in classNames) {
                 // Only load/transform bytecode here; constructors and callbacks retain their loader state and order.
                 prepared += CompletableFuture.supplyAsync(
-                    { runCatching { classLoader.loadClass(name) } },
-                    preparationExecutor
+                    { runCatching { classLoader.loadClass(name) } }, preparationExecutor
                 )
             }
             return classNames.mapIndexedNotNull { index, name ->
@@ -495,7 +497,7 @@ object PluginLoaderImpl : PluginLoader {
         }
     }
 
-    @OnlyInIDE
+    @OnlyOn(IDECompileTarget::class)
     @JvmOverloads
     fun loadForIde(
         config: CompilerConfiguration,
@@ -504,7 +506,7 @@ object PluginLoaderImpl : PluginLoader {
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader = ::URLClassLoader
     ): IdeSyntaxSession = loadForIde(config, pluginPaths, options, classLoaderFactory, null)
 
-    @OnlyInIDE
+    @OnlyOn(IDECompileTarget::class)
     fun loadForIde(
         config: CompilerConfiguration,
         pluginPaths: List<URL>,
@@ -512,7 +514,7 @@ object PluginLoaderImpl : PluginLoader {
         classLoaderFactory: (Array<URL>, ClassLoader) -> URLClassLoader,
         preparationExecutor: Executor?
     ): IdeSyntaxSession {
-        val state = CompilationState()
+        val state = CompilationState().apply { compileTarget = IDECompileTargetImpl }
         try {
             withState(state) {
                 setupLogging(config)

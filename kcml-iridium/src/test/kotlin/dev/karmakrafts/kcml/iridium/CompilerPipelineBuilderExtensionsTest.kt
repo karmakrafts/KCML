@@ -92,6 +92,16 @@ class CompilerPipelineBuilderExtensionsTest {
                         assertSame(element.moduleData.session, frontend.session)
                         assertSame(config, frontend.config)
                         frontend.config[marker] shouldBe target.name
+                        assertSame(frontend.compileTarget, frontend.compileTarget)
+                        when (target) {
+                            CompilerTarget.JVM -> assertIs<JvmCompileTarget>(frontend.compileTarget)
+                            CompilerTarget.JS -> assertIs<JsCompileTarget>(frontend.compileTarget)
+                            CompilerTarget.WASM -> assertIs<WasmCompileTarget>(frontend.compileTarget)
+                            CompilerTarget.NATIVE -> {
+                                val compileTarget = assertIs<NativeCompileTarget>(frontend.compileTarget)
+                                assertSame(KonanTarget.LINUX_X64, compileTarget.konanTarget)
+                            }
+                        }
                     }
                 }
                 result irMatches {

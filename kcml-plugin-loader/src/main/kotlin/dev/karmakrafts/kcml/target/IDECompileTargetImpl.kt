@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package dev.karmakrafts.kcml.api.target
+package dev.karmakrafts.kcml.target
 
-/**
- * Marker annotation for elements that should only be referenced in an IDE context.
- */
-@Retention(AnnotationRetention.BINARY)
-@Target(
-    AnnotationTarget.CLASS,
-    AnnotationTarget.FUNCTION,
-    AnnotationTarget.PROPERTY,
-    AnnotationTarget.PROPERTY_GETTER,
-    AnnotationTarget.PROPERTY_SETTER,
-    AnnotationTarget.FIELD,
-    AnnotationTarget.TYPEALIAS,
-    AnnotationTarget.TYPE // For closures only, other type usages are prohibited
-)
-public annotation class OnlyInIDE
+import dev.karmakrafts.kcml.api.target.CompileTargetType
+import dev.karmakrafts.kcml.api.target.IDECompileTarget
+
+internal object IDECompileTargetImpl : IDECompileTarget {
+    object Type : CompileTargetType {
+        // Use a long, prefixed and suffixed CLI alias since this is never supposed to be invoked from CLI
+        override val aliases: Set<String> = setOf("___ide___")
+    }
+
+    override val name: String = "IDE"
+    override val type: CompileTargetType get() = Type
+}

@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.iridium
 
+import dev.karmakrafts.iridium.pipeline.CompilerTarget
 import dev.karmakrafts.iridium.pipeline.defaultPipelineSpec
 import dev.karmakrafts.iridium.runCompilerTest
 import org.jetbrains.kotlin.config.CompilerConfiguration
@@ -34,7 +35,7 @@ class TestFrontendTest {
         }
         compiler shouldNotReport { error() }
         result firMatches {
-            block(TestFirFrontend(element.moduleData.session, config))
+            block(TestFirFrontend(element.moduleData.session, CompilerTarget.JVM, config))
         }
     }
 
@@ -47,7 +48,7 @@ class TestFrontendTest {
         }
         compiler shouldNotReport { error() }
         result firMatches {
-            val frontend = TestFirFrontend(element.moduleData.session, config)
+            val frontend = TestFirFrontend(element.moduleData.session, CompilerTarget.JVM, config)
             assertSame(element.moduleData.session, frontend.session)
             assertSame(config, frontend.config)
             frontend.pluginId shouldBe "iridium"
@@ -69,7 +70,7 @@ class TestFrontendTest {
 
     @Test
     fun `Frontends do not share logging or loader services`() = testFrontend { first ->
-        val second = TestFirFrontend(first.session, first.config)
+        val second = TestFirFrontend(first.session, CompilerTarget.JVM, first.config)
         assertNotSame(first.loggerFactory, second.loggerFactory)
         assertNotSame(first.logger, second.logger)
         assertNotSame(first.loader, second.loader)

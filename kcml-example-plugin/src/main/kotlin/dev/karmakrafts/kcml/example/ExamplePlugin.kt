@@ -49,6 +49,7 @@ class ExamplePlugin : CompilerPlugin {
             register(ExampleJsCompileTarget.Type) { ExampleJsCompileTarget }
             register(ExampleWasmCompileTarget.Type) { ExampleWasmCompileTarget }
             register(ExampleNativeCompileTarget) { config ->
+                @Suppress("KCML_TARGET_SPECIFIC_CODE") // TODO: find a way to avoid this
                 ExampleNativeCompileTarget((nativeFactory(config) as NativeCompileTarget).konanTarget)
             }
         }

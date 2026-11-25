@@ -20,6 +20,7 @@ import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
 import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import org.jetbrains.kotlin.config.CompilerConfiguration
 
 @OptIn(ExperimentalKcmlApi::class)
@@ -27,5 +28,6 @@ internal class SyntaxFrontendImpl( // @formatter:off
     override val pluginId: String,
     override val config: CompilerConfiguration,
     override val loggerFactory: LoggerFactory,
-    override val loader: PluginLoader
+    override val loader: PluginLoader,
+    override val compileTarget: CompileTarget
 ) : SyntaxFrontend // @formatter:on

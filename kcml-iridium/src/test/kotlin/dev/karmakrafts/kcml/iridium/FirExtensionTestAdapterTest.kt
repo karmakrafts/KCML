@@ -16,6 +16,7 @@
 
 package dev.karmakrafts.kcml.iridium
 
+import dev.karmakrafts.iridium.pipeline.CompilerTarget
 import dev.karmakrafts.iridium.pipeline.defaultPipelineSpec
 import dev.karmakrafts.iridium.runCompilerTest
 import dev.karmakrafts.kcml.api.extension.ExtensionDependency
@@ -82,7 +83,7 @@ class FirExtensionTestAdapterTest {
         )
         compiler shouldNotReport { error() }
         result firMatches {
-            val frontend = TestFirFrontend(element.moduleData.session, config)
+            val frontend = TestFirFrontend(element.moduleData.session, CompilerTarget.JVM, config)
             getChild<FirRegularClass> { it.symbol.classId == ClassId.topLevel(FqName("test.Example")) } matches {
                 AdapterContext(
                     frontend,

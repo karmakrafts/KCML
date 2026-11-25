@@ -16,7 +16,14 @@
 
 package dev.karmakrafts.kcml.plugin
 
+import dev.karmakrafts.kcml.api.ExperimentalKcmlApi
+import dev.karmakrafts.kcml.api.InternalKcmlApi
 import dev.karmakrafts.kcml.api.backend.IrBackend
+import dev.karmakrafts.kcml.api.extension.AbstractExtension
+import dev.karmakrafts.kcml.api.extension.FirExtension
+import dev.karmakrafts.kcml.api.extension.syntax.SyntaxExtension
+import dev.karmakrafts.kcml.api.frontend.FirFrontend
+import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.InitializationContext
 import dev.karmakrafts.kcml.api.plugin.Plugin
@@ -30,6 +37,7 @@ import dev.karmakrafts.kcml.api.target.JvmCompileTarget
 import dev.karmakrafts.kcml.api.target.NativeCompileTarget
 import dev.karmakrafts.kcml.api.target.WasmCompileTarget
 import dev.karmakrafts.kcml.backend.create
+import dev.karmakrafts.kcml.extension.FirExtensionAdapter
 import dev.karmakrafts.kcml.hooks.CommonHooks
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.hooks.llvm.NativeTargetHooks
@@ -39,10 +47,18 @@ import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
 import org.jetbrains.kotlin.cli.common.arguments.K2JVMCompilerArguments
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
 import org.jetbrains.kotlin.cli.jvm.K2JVMCompiler
+import org.jetbrains.kotlin.com.intellij.lexer.Lexer
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.fir.FirSession
+import org.jetbrains.kotlin.fir.PrivateSessionConstructor
+import org.jetbrains.kotlin.fir.SessionConfiguration
+import org.jetbrains.kotlin.fir.caches.FirCachesFactory
+import org.jetbrains.kotlin.fir.caches.FirThreadUnsafeCachesFactory
 import org.jetbrains.kotlin.konan.config.konanTarget
 import org.jetbrains.kotlin.konan.target.HostManager
 import org.jetbrains.kotlin.konan.target.KonanTarget
+import org.jetbrains.kotlin.lexer.KotlinLexer
+import org.jetbrains.kotlin.name.FqName
 import org.jetbrains.kotlin.platform.TargetPlatform
 import org.jetbrains.kotlin.platform.js.JsPlatforms
 import org.jetbrains.kotlin.platform.jvm.JvmPlatforms
@@ -102,6 +118,7 @@ private val customKonanTarget: KonanTarget by lazy {
 }
 
 @Plugin("target_wiring_test")
+@OptIn(ExperimentalKcmlApi::class)
 class TargetWiringTestPlugin : CompilerPlugin {
     var creationCount: Int = 0
     lateinit var preInitTarget: CompileTarget
@@ -142,10 +159,18 @@ class TargetWiringTestPlugin : CompilerPlugin {
 
     override fun init(context: InitializationContext) {
         initTarget = context.compileTarget
+        context.extensionRegistry.register(object : AbstractExtension(), SyntaxExtension {
+            override val id: String = "target"
+
+            override fun createLexer(delegate: Lexer, frontend: SyntaxFrontend): Lexer {
+                assertSame(initTarget, frontend.compileTarget)
+                return delegate
+            }
+        })
     }
 }
 
-@OptIn(KCMLHookApi::class, CompilerConfiguration.Internals::class)
+@OptIn(KCMLHookApi::class, CompilerConfiguration.Internals::class, InternalKcmlApi::class, ExperimentalKcmlApi::class)
 class PluginCompileTargetTest {
     private fun withTarget(alias: String, action: (CompilerConfiguration, TargetWiringTestPlugin) -> Unit) {
         val directory = Files.createTempDirectory(Path.of("build"), "plugin-target-")
@@ -177,6 +202,30 @@ class PluginCompileTargetTest {
         return IrBackend.create(
             "target_wiring_test", context, config, loggerFactory, PluginLoaderImpl.logger, PluginLoaderImpl
         )
+    }
+
+    @Test
+    @OptIn(PrivateSessionConstructor::class, SessionConfiguration::class)
+    fun `frontends retain the selected custom target`() = withTarget("custom_jvm") { config, plugin ->
+        val lexer = KotlinLexer()
+        assertSame(lexer, PluginLoaderImpl.syntaxAdapterOrNull!!.createLexer(lexer))
+        val extension = object : AbstractExtension(), FirExtension {
+            override val id: String = "target"
+
+            override fun hasPackage(frontend: FirFrontend, packageFqName: FqName): Boolean {
+                assertSame(plugin.initTarget, frontend.compileTarget)
+                return true
+            }
+        }
+        val session = object : FirSession(FirSession.Kind.Source) {}.apply {
+            register(FirCachesFactory::class, FirThreadUnsafeCachesFactory)
+        }
+        val loggerFactory = MessageCollectorLoggerFactory(PluginLoaderImpl, MessageCollector.NONE)
+        val adapter = FirExtensionAdapter(
+            PluginLoaderImpl, config, loggerFactory, session, listOf("target_wiring_test" to extension)
+        )
+        assertTrue(adapter.hasPackage(FqName("test")))
+        assertEquals(1, plugin.creationCount)
     }
 
     @Test

@@ -21,6 +21,7 @@ import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.frontend.FirFrontendImpl
+import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 import org.jetbrains.kotlin.fir.extensions.ExperimentalTopLevelDeclarationsGenerationApi
@@ -56,12 +57,13 @@ internal class FirExtensionAdapter( // @formatter:off
             config = config,
             loggerFactory = loggerFactory,
             logger = logger,
-            loader = loader
+            loader = loader,
+            compileTarget = PluginLoaderImpl.getCompileTarget(config)
         ) // @formatter:on
     }
 
     override fun generateConstructors(context: MemberGenerationContext): List<FirConstructorSymbol> {
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.generateConstructors(frontend, context)
         }
@@ -71,7 +73,7 @@ internal class FirExtensionAdapter( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirNamedFunctionSymbol> { // @formatter:on
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.generateFunctions(frontend, callableId, context)
         }
@@ -82,7 +84,7 @@ internal class FirExtensionAdapter( // @formatter:off
         name: Name,
         context: NestedClassGenerationContext
     ): FirClassLikeSymbol<*>? { // @formatter:on
-        for ((pluginId, extension) in extensions) {
+        for ([pluginId, extension] in extensions) {
             val frontend = createFrontend(pluginId, session)
             return extension.generateNestedClassLikeDeclaration(frontend, owner, name, context) ?: continue
         }
@@ -93,7 +95,7 @@ internal class FirExtensionAdapter( // @formatter:off
         callableId: CallableId,
         context: MemberGenerationContext?
     ): List<FirPropertySymbol> { // @formatter:on
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.generateProperties(frontend, callableId, context)
         }
@@ -101,7 +103,7 @@ internal class FirExtensionAdapter( // @formatter:off
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun generateTopLevelClassLikeDeclaration(classId: ClassId): FirClassLikeSymbol<*>? {
-        for ((pluginId, extension) in extensions) {
+        for ([pluginId, extension] in extensions) {
             val frontend = createFrontend(pluginId, session)
             return extension.generateTopLevelClassLikeDeclaration(frontend, classId) ?: continue
         }
@@ -112,7 +114,7 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: MemberGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.getCallableNamesForClass(frontend, classSymbol, context)
         }.toSet()
@@ -122,7 +124,7 @@ internal class FirExtensionAdapter( // @formatter:off
         classSymbol: FirClassSymbol<*>,
         context: NestedClassGenerationContext
     ): Set<Name> { // @formatter:on
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.getNestedClassifiersNames(frontend, classSymbol, context)
         }.toSet()
@@ -130,7 +132,7 @@ internal class FirExtensionAdapter( // @formatter:off
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelCallableIds(): Set<CallableId> {
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.getTopLevelCallableIds(frontend)
         }.toSet()
@@ -138,14 +140,14 @@ internal class FirExtensionAdapter( // @formatter:off
 
     @ExperimentalTopLevelDeclarationsGenerationApi
     override fun getTopLevelClassIds(): Set<ClassId> {
-        return extensions.flatMap { (pluginId, extension) ->
+        return extensions.flatMap { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.getTopLevelClassIds(frontend)
         }.toSet()
     }
 
     override fun hasPackage(packageFqName: FqName): Boolean {
-        return extensions.any { (pluginId, extension) ->
+        return extensions.any { [pluginId, extension] ->
             val frontend = createFrontend(pluginId, session)
             extension.hasPackage(frontend, packageFqName)
         }

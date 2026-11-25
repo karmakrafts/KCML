@@ -32,6 +32,7 @@ import dev.karmakrafts.kcml.api.frontend.SyntaxFrontend
 import dev.karmakrafts.kcml.frontend.SyntaxFrontendImpl
 import dev.karmakrafts.kcml.log.MessageCollectorLoggerFactory
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
+import dev.karmakrafts.kcml.target.JvmCompileTargetImpl
 import org.jetbrains.kotlin.CoreEnvironmentDeprecation
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.cli.common.messages.MessageCollector
@@ -117,7 +118,8 @@ class SyntaxExtensionAdapterTest {
         pluginId,
         CompilerConfiguration(),
         MessageCollectorLoggerFactory(PluginLoaderImpl, MessageCollector.NONE),
-        PluginLoaderImpl
+        PluginLoaderImpl,
+        JvmCompileTargetImpl(false)
     )
 
     private fun errorDescriptions(node: ASTNode): List<String> = buildList {

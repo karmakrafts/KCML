@@ -25,6 +25,7 @@ import dev.karmakrafts.kcml.api.plugin.CompilerPlugin
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
 import dev.karmakrafts.kcml.api.plugin.PluginMetadata
 import dev.karmakrafts.kcml.api.plugin.PluginStorage
+import dev.karmakrafts.kcml.api.target.CompileTargetProvider
 
 /**
  * Provides the shared plugin services available to KCML frontend extensions.
@@ -32,7 +33,7 @@ import dev.karmakrafts.kcml.api.plugin.PluginStorage
  * [FirFrontend] provides an active FIR session, while [SyntaxFrontend] supports syntax extensions
  * before FIR and can also be supplied by an IDE adapter.
  */
-public sealed interface Frontend {
+public sealed interface Frontend : CompileTargetProvider {
     /** ID of the plugin to which this frontend context belongs. */
     public val pluginId: String
 

@@ -16,10 +16,12 @@
 
 package dev.karmakrafts.kcml.iridium
 
+import dev.karmakrafts.iridium.pipeline.CompilerTarget
 import dev.karmakrafts.kcml.api.frontend.FirFrontend
 import dev.karmakrafts.kcml.api.log.Logger
 import dev.karmakrafts.kcml.api.log.LoggerFactory
 import dev.karmakrafts.kcml.api.plugin.PluginLoader
+import dev.karmakrafts.kcml.api.target.CompileTarget
 import org.jetbrains.kotlin.config.CompilerConfiguration
 import org.jetbrains.kotlin.fir.FirSession
 
@@ -29,14 +31,19 @@ import org.jetbrains.kotlin.fir.FirSession
  * Logging uses console-backed test loggers, and the plugin loader exposes no loaded plugins.
  *
  * @property session FIR session used by the compilation.
+ * @param compilerTarget Iridium target to expose as a KCML compile target.
  * @property config compiler configuration for the compilation.
  */
 public class TestFirFrontend( // @formatter:off
     override val session: FirSession,
+    private val compilerTarget: CompilerTarget,
     override val config: CompilerConfiguration
 ) : FirFrontend { // @formatter:on
     /** Fixed plugin ID used by the Iridium test integration. */
     override val pluginId: String = "iridium"
+
+    /** Lazily created KCML descriptor for the configured Iridium compiler target. */
+    override val compileTarget: CompileTarget by lazy { compilerTarget.createCompileTarget(config) }
 
     /** Lazily created factory for named console-backed test loggers. */
     override val loggerFactory: LoggerFactory by lazy { TestLoggerFactory() }
