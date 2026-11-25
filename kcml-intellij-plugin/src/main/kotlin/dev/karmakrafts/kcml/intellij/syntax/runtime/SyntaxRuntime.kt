@@ -44,6 +44,8 @@ import dev.karmakrafts.kcml.plugin.IdeSyntaxSession
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.config.CompilerConfiguration
+import org.jetbrains.kotlin.config.MessageCollectorAccess
+import org.jetbrains.kotlin.config.messageCollector
 import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.lexer.KotlinLexer
@@ -59,6 +61,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
+@Suppress("KCML_TARGET_SPECIFIC_CODE") // In IDE-land, we don't really care about compile targets
 @OptIn(InternalKcmlApi::class, ExperimentalKcmlApi::class)
 internal class SyntaxRuntime( // @formatter:off
     configuration: CompilerConfiguration,
@@ -102,8 +105,10 @@ internal class SyntaxRuntime( // @formatter:off
     @Volatile
     private var closed: Boolean = false
 
+    @OptIn(MessageCollectorAccess::class)
     private val session: IdeSyntaxSession = PluginLoaderImpl.loadForIde(
-        configuration, paths, options, ::SyntaxPluginClassLoader, preparationExecutor
+        configuration.copy().apply { messageCollector = IdeMessageCollector() },
+        paths, options, ::SyntaxPluginClassLoader, preparationExecutor
     )
 
     private val loadedExtensionIds: List<String> = session.extensionIds.toList()

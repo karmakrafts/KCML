@@ -106,6 +106,9 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
+import java.util.logging.Handler
+import java.util.logging.LogRecord
+import java.util.logging.Logger
 import kotlin.test.assertFailsWith
 
 @Plugin("ide_fixture")
@@ -115,6 +118,7 @@ class SyntaxFixturePlugin : CompilerPlugin {
     }
 
     override fun init(context: InitializationContext) {
+        context.logger.info("Syntax fixture initialized")
         (System.getProperties()["kcml.syntax.test.loadStarted"] as? CountDownLatch)?.let { started ->
             check(!ApplicationManager.getApplication().isDispatchThread)
             check(!ApplicationManager.getApplication().isReadAccessAllowed)
@@ -161,6 +165,7 @@ class SyntaxFixtureExtension : AbstractExtension(), SyntaxExtension {
     }
 
     override fun lower(file: KtFile, frontend: SyntaxFrontend): KtFile {
+        frontend.logger.info("Syntax fixture lowering")
         (System.getProperties()["kcml.syntax.test.lowerStarted"] as? CountDownLatch)?.let { started ->
             val release = System.getProperties()["kcml.syntax.test.lowerRelease"] as CountDownLatch
             started.countDown()
@@ -267,6 +272,33 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
             assertSame(source, lowered.originalFile)
             assertEquals("fn answer() { val result = magic; val other = unwrap 1 }", source.text)
             assertEmpty(runtime.analyzeIfOpen(source)!!.highlighting)
+        }
+    }
+
+    fun testPluginAndLoaderLoggingReachesIdeOutput() {
+        val messages = ArrayList<String>()
+        val logger = Logger.getLogger("#${SyntaxRuntime::class.java.name}")
+        val handler = object : Handler() {
+            override fun publish(record: LogRecord) {
+                messages += record.message
+            }
+
+            override fun flush() = Unit
+            override fun close() = Unit
+        }
+        logger.addHandler(handler)
+        try {
+            val configuration = configuration()
+            val source = myFixture.configureByText("Logging.kt", "fun answer() = magic") as KtFile
+            SyntaxRuntime(
+                configuration.compilerConfiguration(), listOf(jar.toUri().toURL()), configuration.options
+            ).use { runtime -> runtime.lower(source) }
+            assertTrue(messages.toString(), messages.any { it.contains("[ide_fixture] Syntax fixture initialized") })
+            assertTrue(messages.toString(), messages.any { it.contains("Initialized 1 plugins") })
+            assertTrue(messages.toString(), messages.any { it.contains("[ide_fixture] Syntax fixture lowering") })
+        }
+        finally {
+            logger.removeHandler(handler)
         }
     }
 

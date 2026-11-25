@@ -37,6 +37,7 @@ import org.jetbrains.kotlin.idea.KotlinFileType
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.psi.KtFile
 
+@Suppress("KCML_TARGET_SPECIFIC_CODE") // In IDE-land, we don't really care about compile targets
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxInspections {
     data class Problem( // @formatter:off

@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.analysis.api.diagnostics.KaSeverity
 import org.jetbrains.kotlin.analysis.api.session.analyze
 import org.jetbrains.kotlin.psi.KtFile
 
+@Suppress("KCML_TARGET_SPECIFIC_CODE") // In IDE-land, we don't really care about compile targets
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxAnalysis {
     data class Diagnostic( // @formatter:off

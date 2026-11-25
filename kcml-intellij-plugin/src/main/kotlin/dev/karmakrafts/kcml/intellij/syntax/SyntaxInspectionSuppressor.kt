@@ -25,6 +25,8 @@ import org.jetbrains.kotlin.psi.KtFile
 
 @OptIn(ExperimentalKcmlApi::class)
 internal class SyntaxInspectionSuppressor : InspectionSuppressor {
+    // In IDE-land, we don't really care about compile targets
+    @Suppress("KCML_TARGET_SPECIFIC_CODE")
     override fun isSuppressedFor(element: PsiElement, toolId: String): Boolean {
         val source = element.containingFile as? KtFile ?: return false
         (val inspectionToolIds, val inspectionRules, val desugared) = SyntaxAnalysis.result(source) ?: return false

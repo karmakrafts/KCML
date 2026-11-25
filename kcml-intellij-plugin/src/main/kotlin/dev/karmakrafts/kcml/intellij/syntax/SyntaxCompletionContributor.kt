@@ -61,6 +61,8 @@ internal class SyntaxCompletionContributor : CompletionContributor() {
         return source.project.service<SyntaxExtensionService>().runtime(module)
     }
 
+    // In IDE-land, we don't really care about compile targets
+    @Suppress("KCML_TARGET_SPECIFIC_CODE")
     private fun addCustomCompletions(completions: List<Completion>, result: CompletionResultSet) {
         for ((val lookupString, val insertText, val tailText, val typeText, val element) in completions) {
             result.addElement(

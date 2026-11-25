@@ -33,7 +33,7 @@ internal class SyntaxHighlightInfoFilter : HighlightInfoFilter {
         type.name.startsWith("org.jetbrains.kotlin.idea.") && HighlightVisitor::class.java.isAssignableFrom(type)
 
     // The daemon exposes producer identity only through internal APIs; keep unrelated inspections intact.
-    @Suppress("JetBrainsInternalApiUsage")
+    @Suppress("JetBrainsInternalApiUsage", "KCML_TARGET_SPECIFIC_CODE")
     override fun accept(info: HighlightInfo, file: PsiFile?): Boolean {
         if (file !is KtFile || info.problemGroup === SyntaxProblemGroup) return true
         (val highlighting, val inspectionToolIds, val inspectionRules, val desugared) = SyntaxAnalysis.result(file)

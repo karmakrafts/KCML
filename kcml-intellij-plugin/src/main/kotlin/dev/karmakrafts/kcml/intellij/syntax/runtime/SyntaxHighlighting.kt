@@ -27,7 +27,8 @@ import org.jetbrains.kotlin.idea.base.highlighting.KotlinBeforeResolveHighlighti
 import org.jetbrains.kotlin.psi.KtFile
 import java.util.*
 
-@Suppress("JetBrainsInternalApiUsage")
+// In IDE-land, we don't really care about compile targets
+@Suppress("JetBrainsInternalApiUsage", "KCML_TARGET_SPECIFIC_CODE")
 @OptIn(ExperimentalKcmlApi::class)
 internal object SyntaxHighlighting {
     fun collect(file: KtFile, offsets: SyntaxOffsetMap): List<Highlighting> {

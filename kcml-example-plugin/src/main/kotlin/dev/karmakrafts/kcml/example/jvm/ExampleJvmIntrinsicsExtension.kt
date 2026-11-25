@@ -22,12 +22,15 @@ import dev.karmakrafts.kcml.api.backend.jvm.LateJvmBackend
 import dev.karmakrafts.kcml.api.extension.AbstractExtension
 import dev.karmakrafts.kcml.api.extension.ExtensionId
 import dev.karmakrafts.kcml.api.extension.jvm.JvmIntrinsicsExtension
+import dev.karmakrafts.kcml.api.target.JvmCompileTarget
+import dev.karmakrafts.kcml.api.target.OnlyOn
 import org.jetbrains.kotlin.backend.jvm.codegen.MaterialValue
 import org.jetbrains.kotlin.backend.jvm.codegen.PromisedValue
 import org.jetbrains.kotlin.ir.expressions.IrFunctionAccessExpression
 import org.jetbrains.kotlin.ir.symbols.UnsafeDuringIrConstructionAPI
 import org.jetbrains.org.objectweb.asm.Type
 
+@OnlyOn(JvmCompileTarget::class)
 @OptIn(UnsafeDuringIrConstructionAPI::class)
 @ExtensionId("example_jvm_intrinsics_extension")
 internal class ExampleJvmIntrinsicsExtension : AbstractExtension(), JvmIntrinsicsExtension {
