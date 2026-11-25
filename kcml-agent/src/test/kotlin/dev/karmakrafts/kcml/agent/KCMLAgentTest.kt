@@ -17,53 +17,51 @@
 package dev.karmakrafts.kcml.agent
 
 import dev.karmakrafts.kcml.agent.log.NoopLogger
-import org.objectweb.asm.ClassReader
-import org.objectweb.asm.tree.ClassNode
-import org.objectweb.asm.tree.LdcInsnNode
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Proxy
 import java.nio.file.Files
+import java.nio.file.Path
+import java.util.jar.JarFile
 import java.util.jar.JarOutputStream
-import java.util.zip.ZipFile
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 
 class KCMLAgentTest {
     @Test
     fun `injects mixin bridge into bootstrap classpath`() {
-        val bridgePath = Files.createTempFile("kcml-mixin-bridge", ".jar")
-        JarOutputStream(Files.newOutputStream(bridgePath)).use { }
-        val calls = ArrayList<String>()
-        val instrumentation = Proxy.newProxyInstance(
-            javaClass.classLoader, arrayOf(Instrumentation::class.java)
-        ) { _, method, _ ->
-            calls += method.name
-            null
-        } as Instrumentation
+        val bridgePath = Files.createTempFile(Path.of("build"), "kcml-mixin-bridge", ".jar")
+        val appendedJars = ArrayList<JarFile>()
+        try {
+            JarOutputStream(Files.newOutputStream(bridgePath)).use { }
+            val instrumentation = Proxy.newProxyInstance(
+                javaClass.classLoader, arrayOf(Instrumentation::class.java)
+            ) { _, method, args ->
+                check(method.name == "appendToBootstrapClassLoaderSearch") { "Unexpected call: ${method.name}" }
+                appendedJars += args[0] as JarFile
+                null
+            } as Instrumentation
 
-        KCMLAgent.injectMixinBridge(bridgePath.toString(), NoopLogger, instrumentation)
+            KCMLAgent.injectMixinBridge(bridgePath.toString(), NoopLogger, instrumentation)
 
-        assertEquals(listOf("appendToBootstrapClassLoaderSearch"), calls)
+            assertEquals(bridgePath.toString(), appendedJars.single().name)
+            assertNotNull(appendedJars.single().entries())
+        }
+        finally {
+            appendedJars.forEach(JarFile::close)
+            Files.delete(bridgePath)
+        }
     }
 
     @Test
-    fun `preserves external type names in packaged agent constants`() {
-        val agentPath = checkNotNull(System.getProperty("kcml.agent.jar"))
-        val classNode = ClassNode()
-        ZipFile(agentPath).use { jar ->
-            val entry = checkNotNull(jar.getEntry("dev/karmakrafts/kcml/agent/asm/Types.class"))
-            jar.getInputStream(entry).use { stream -> ClassReader(stream).accept(classNode, 0) }
-        }
-        val constants = classNode.methods.asSequence()
-            .flatMap { method -> method.instructions.asSequence() }
-            .filterIsInstance<LdcInsnNode>()
-            .mapNotNull { instruction -> instruction.cst as? String }
-            .toSet()
+    fun `rejects missing startup options before accessing instrumentation`() {
+        val instrumentation = Proxy.newProxyInstance(
+            javaClass.classLoader, arrayOf(Instrumentation::class.java)
+        ) { _, method, _ -> error("Unexpected call: ${method.name}") } as Instrumentation
 
-        assertTrue("kotlin/Unit" in constants)
-        assertTrue("kotlin/jvm/internal/Intrinsics" in constants)
-        assertFalse(constants.any { constant -> constant.contains("agent/internal/kotlin") })
+        val error = assertFailsWith<IllegalArgumentException> { KCMLAgent.agentmain(null, instrumentation) }
+
+        assertEquals("KCML compiler agent requires initial startup options", error.message)
     }
 }

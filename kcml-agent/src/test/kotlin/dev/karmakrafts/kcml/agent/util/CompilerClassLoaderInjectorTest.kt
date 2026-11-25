@@ -19,8 +19,10 @@ package dev.karmakrafts.kcml.agent.util
 import java.io.IOException
 import java.lang.instrument.Instrumentation
 import java.lang.reflect.Proxy
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -31,7 +33,7 @@ class CompilerClassLoaderInjectorTest {
         javaClass.classLoader, arrayOf(Instrumentation::class.java)
     ) { _, method, args ->
         when (method.name) {
-            "appendToSystemClassLoaderSearch" -> (args[0] as JarFile).use(append)
+            "appendToSystemClassLoaderSearch" -> append(args[0] as JarFile)
             else -> error("Unexpected instrumentation call: ${method.name}")
         }
         null
@@ -60,18 +62,31 @@ class CompilerClassLoaderInjectorTest {
         })
 
         assertFailsWith<IllegalStateException> { injector.accept(ClassLoader.getSystemClassLoader()) }
-        injector.accept(ClassLoader.getSystemClassLoader())
+        repeat(2) { injector.accept(ClassLoader.getSystemClassLoader()) }
 
         assertEquals(2, attempts)
     }
 
     @Test
-    fun `rejects missing plugin loader jar`() {
-        val injector = CompilerClassLoaderInjector(Path.of("build", "missing-loader.jar"), instrumentation {
-            error("Must not inject a missing JAR")
-        })
+    fun `retries injection once a missing plugin loader jar becomes available`() {
+        val directory = Files.createTempDirectory("kcml-loader-test")
+        val path = directory.resolve("loader.jar")
+        try {
+            var injections = 0
+            val injector = CompilerClassLoaderInjector(path, instrumentation { injections++ })
 
-        assertFailsWith<IOException> { injector.accept(ClassLoader.getSystemClassLoader()) }
+            assertFailsWith<IOException> { injector.accept(ClassLoader.getSystemClassLoader()) }
+            assertEquals(0, injections)
+
+            JarOutputStream(Files.newOutputStream(path)).use { }
+            repeat(2) { injector.accept(ClassLoader.getSystemClassLoader()) }
+
+            assertEquals(1, injections)
+        }
+        finally {
+            Files.deleteIfExists(path)
+            Files.delete(directory)
+        }
     }
 
     @Test

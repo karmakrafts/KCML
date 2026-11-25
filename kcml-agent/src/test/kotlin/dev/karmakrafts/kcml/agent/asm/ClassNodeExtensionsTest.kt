@@ -21,7 +21,9 @@ import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -50,14 +52,59 @@ class ClassNodeExtensionsTest {
     @Test
     fun `reports nonmatching class metadata`() {
         val node = ClassNode().apply {
-            visibleAnnotations = mutableListOf()
-            interfaces = mutableListOf()
+            name = "example/Subject"
+            visibleAnnotations = mutableListOf(AnnotationNode(annotationType.descriptor))
+            invisibleAnnotations = mutableListOf(AnnotationNode(annotationType.descriptor))
+            interfaces = mutableListOf(interfaceType.internalName)
             superName = "java/lang/Object"
         }
         val missingType = Type.getObjectType("example/Missing")
 
         assertFalse(node.hasAnnotation(missingType))
+        assertNull(node.findVisibleAnnotation(missingType))
+        assertNull(node.findInvisibleAnnotation(missingType))
         assertFalse(node.implements(missingType))
         assertFalse(node.extends(missingType))
+        assertFailsWith<IllegalArgumentException> { node.getVisibleAnnotation(missingType) }
+        assertFailsWith<IllegalArgumentException> { node.getInvisibleAnnotation(missingType) }
+        assertFailsWith<IllegalStateException> { node.getAnnotation(missingType) }
+    }
+
+    @Test
+    fun `finds invisible annotations and prefers visible annotations for combined lookup`() {
+        val invisible = AnnotationNode(annotationType.descriptor)
+        val visible = AnnotationNode(annotationType.descriptor)
+        val node = ClassNode().apply {
+            invisibleAnnotations = mutableListOf(invisible)
+        }
+
+        assertTrue(node.hasInvisibleAnnotation(annotationType))
+        assertTrue(node.hasAnnotation(annotationType))
+        assertFalse(node.hasVisibleAnnotation(annotationType))
+        assertSame(invisible, node.findInvisibleAnnotation(annotationType))
+        assertSame(invisible, node.getInvisibleAnnotation(annotationType))
+        assertSame(invisible, node.getAnnotation(annotationType))
+
+        node.visibleAnnotations = mutableListOf(visible)
+
+        assertTrue(node.hasVisibleAnnotation(annotationType))
+        assertSame(visible, node.findVisibleAnnotation(annotationType))
+        assertSame(visible, node.getVisibleAnnotation(annotationType))
+        assertSame(visible, node.getAnnotation(annotationType))
+    }
+
+    @Test
+    fun `handles absent and empty annotation lists and a class without a superclass`() {
+        val node = ClassNode()
+        for (annotations in listOf(null, mutableListOf<AnnotationNode>())) {
+            node.visibleAnnotations = annotations
+            node.invisibleAnnotations = annotations
+
+            assertFalse(node.hasAnnotation(annotationType))
+            assertNull(node.findVisibleAnnotation(annotationType))
+            assertNull(node.findInvisibleAnnotation(annotationType))
+        }
+        assertFalse(node.extends(superclassType))
+        assertFalse(node.implements(interfaceType))
     }
 }

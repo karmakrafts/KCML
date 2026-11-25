@@ -16,12 +16,17 @@
 
 package dev.karmakrafts.kcml.agent.asm
 
+import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 class AnnotationNodeExtensionsTest {
+    private enum class Order {
+        BEFORE, AFTER
+    }
+
     @Test
     fun `gets a value when its name and type match`() {
         val node = AnnotationNode("Lexample/Annotation;").apply {
@@ -40,5 +45,29 @@ class AnnotationNodeExtensionsTest {
 
         assertNull(node.getValue<String>("missing"))
         assertNull(node.getValue<Int>("name"))
+    }
+
+    @Test
+    fun `returns null when the annotation has no values`() {
+        assertNull(AnnotationNode("Lexample/Annotation;").getValue<String>("name"))
+    }
+
+    @Test
+    fun `decodes ASM enum values by constant name`() {
+        val node = AnnotationNode("Lexample/Annotation;").apply {
+            visitEnum("order", Type.getDescriptor(Order::class.java), "AFTER")
+        }
+
+        assertEquals(Order.AFTER, node.getValue<Order>("order"))
+        assertNull(node.getValue<String>("order"))
+    }
+
+    @Test
+    fun `returns null for an unknown enum constant`() {
+        val node = AnnotationNode("Lexample/Annotation;").apply {
+            visitEnum("order", Type.getDescriptor(Order::class.java), "UNKNOWN")
+        }
+
+        assertNull(node.getValue<Order>("order"))
     }
 }

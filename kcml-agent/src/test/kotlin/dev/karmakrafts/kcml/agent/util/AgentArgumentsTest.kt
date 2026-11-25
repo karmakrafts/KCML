@@ -18,6 +18,7 @@ package dev.karmakrafts.kcml.agent.util
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class AgentArgumentsTest {
@@ -44,10 +45,10 @@ class AgentArgumentsTest {
             string
         )
 
-        assertEquals(1, arguments[byte])
-        assertEquals(2, arguments[short])
+        assertEquals(1.toByte(), arguments[byte])
+        assertEquals(2.toShort(), arguments[short])
         assertEquals(3, arguments[integer])
-        assertEquals(4, arguments[long])
+        assertEquals(4L, arguments[long])
         assertEquals(5.5f, arguments[float])
         assertEquals(6.5, arguments[double])
         assertEquals(true, arguments[boolean])
@@ -68,7 +69,7 @@ class AgentArgumentsTest {
     }
 
     @Test
-    fun `ignores unknown arguments and returns null for invalid values`() {
+    fun `ignores unknown arguments and returns null for invalid booleans`() {
         val enabled = AgentArguments.Argument.create<Boolean>("enabled")
         val message = AgentArguments.Argument.create<String>("message")
 
@@ -91,6 +92,51 @@ class AgentArgumentsTest {
 
         assertEquals(11000, arguments[port])
         assertEquals("accepted", arguments[message])
+    }
+
+    @Test
+    fun `returns null for absent arguments and rejects required lookup`() {
+        val port = AgentArguments.Argument.create<Int>("port")
+        val arguments = AgentArguments.parse("", port)
+
+        assertNull(arguments.getOrNull(port))
+        assertFailsWith<IllegalArgumentException> { arguments[port] }
+    }
+
+    @Test
+    fun `preserves empty string values`() {
+        val quoted = AgentArguments.Argument.create<String>("quoted")
+        val unquoted = AgentArguments.Argument.create<String>("unquoted")
+        val trailing = AgentArguments.Argument.create<String>("trailing")
+
+        val arguments = AgentArguments.parse("quoted=\"\":unquoted=:trailing=", quoted, unquoted, trailing)
+
+        assertEquals("", arguments[quoted])
+        assertEquals("", arguments[unquoted])
+        assertEquals("", arguments[trailing])
+    }
+
+    @Test
+    fun `preserves escaped backslashes and equals signs in quoted strings`() {
+        val value = AgentArguments.Argument.create<String>("value")
+
+        val arguments = AgentArguments.parse("value=\"before\\\\after=last\"", value)
+
+        assertEquals("before\\after=last", arguments[value])
+    }
+
+    @Test
+    fun `last occurrence of an argument wins`() {
+        val port = AgentArguments.Argument.create<Int>("port")
+
+        val arguments = AgentArguments.parse("port=1:port=11000", port)
+
+        assertEquals(11000, arguments[port])
+    }
+
+    @Test
+    fun `rejects unsupported argument types`() {
+        assertFailsWith<IllegalArgumentException> { AgentArguments.Argument.create<Char>("character") }
     }
 
     @Test

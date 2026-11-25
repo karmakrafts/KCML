@@ -104,7 +104,9 @@ class KCMLAgentMixinTest {
         plugins: List<Path>,
         loadedClasses: Array<Class<*>> = emptyArray(),
         retransformed: MutableList<Class<*>> = ArrayList(),
-        transformerRegistrations: MutableList<Pair<ClassFileTransformer, Boolean>>? = null
+        transformerRegistrations: MutableList<Pair<ClassFileTransformer, Boolean>>? = null,
+        canRetransform: Boolean = true,
+        isModifiable: (Class<*>) -> Boolean = { true }
     ): ClassFileTransformer {
         var transformer: ClassFileTransformer? = null
         val instrumentation = Proxy.newProxyInstance(
@@ -117,9 +119,12 @@ class KCMLAgentMixinTest {
                     transformer = registeredTransformer
                     transformerRegistrations?.add(registeredTransformer to (args[1] as Boolean))
                 }
-                "isRetransformClassesSupported", "isModifiableClass" -> return@newProxyInstance true
+
+                "isRetransformClassesSupported" -> return@newProxyInstance canRetransform
+                "isModifiableClass" -> return@newProxyInstance isModifiable(args[0] as Class<*>)
                 "getAllLoadedClasses" -> return@newProxyInstance loadedClasses
                 "retransformClasses" -> retransformed += (args[0] as Array<*>).filterIsInstance<Class<*>>()
+                else -> error("Unexpected call: ${method.name}")
             }
             null
         } as Instrumentation
@@ -207,5 +212,45 @@ class KCMLAgentMixinTest {
         )
         assertEquals(listOf<Class<*>>(target), retransformed)
         assertEquals(listOf(false, true), transformerRegistrations.map { (_, canRetransform) -> canRetransform })
+    }
+
+    @Test
+    fun `agent skips unmodifiable targets loaded before attachment`() = withDirectory { directory ->
+        val target = KCMLAgentMixinTest::class.java
+        val loader = directory.createJar(
+            "loader.jar", createMixin("example/LoadedMixin", target.name.replace('.', '/'), true)
+        )
+        val retransformed = ArrayList<Class<*>>()
+        startAgent(
+            loader,
+            directory.createBridge(),
+            emptyList(),
+            loadedClasses = arrayOf(target),
+            retransformed = retransformed,
+            isModifiable = { false })
+
+        assertEquals(emptyList(), retransformed)
+    }
+
+    @Test
+    fun `agent applies mixins without retransformation support`() = withDirectory { directory ->
+        val target = KCMLAgentMixinTest::class.java
+        val loader = directory.createJar(
+            "loader.jar",
+            createMixin("example/LoadedMixin", target.name.replace('.', '/'), true),
+            createMixin("example/FutureMixin", "example/FutureTarget", true)
+        )
+        val registrations = ArrayList<Pair<ClassFileTransformer, Boolean>>()
+        val transformer = startAgent(
+            loader,
+            directory.createBridge(),
+            emptyList(),
+            loadedClasses = arrayOf(target),
+            transformerRegistrations = registrations,
+            canRetransform = false,
+            isModifiable = { error("Modifiability must not be queried without retransformation support") })
+
+        assertEquals(listOf(false, false), registrations.map { (_, canRetransform) -> canRetransform })
+        assertMixinApplied(transformer, "example/FutureTarget")
     }
 }

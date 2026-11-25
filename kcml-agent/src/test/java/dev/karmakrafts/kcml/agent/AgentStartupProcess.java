@@ -36,7 +36,7 @@ public final class AgentStartupProcess {
     }
 
     public static void main(final String[] args) throws Throwable {
-        // Arguments are agent options, communication port, and optionally a bridge JAR and its replacement.
+        // Arguments are agent URI, communication port, and optionally a compiler mode or bridge replacement options.
         final boolean compile = args.length == 3 && args[2].startsWith("compile");
         final boolean incompatible = args.length > 3 && !Boolean.parseBoolean(args[5]);
         if (compile) {
@@ -102,18 +102,19 @@ public final class AgentStartupProcess {
             final Path source = directory.resolve("Example.kt");
             Files.writeString(source, "fun answer(): Int = run { 42 }\n");
             for (int invocation = 0; invocation < 2; invocation++) {
+                final Path classes = directory.resolve("classes-" + invocation);
                 final ByteArrayOutputStream output = new ByteArrayOutputStream();
                 final Object compiler = loader.loadClass("org.jetbrains.kotlin.cli.jvm.K2JVMCompiler").getConstructor().newInstance();
-                final Object result = compiler.getClass().getMethod("exec", PrintStream.class, String[].class).invoke(
-                    compiler,
-                    new PrintStream(output),
-                    new String[]{"-no-stdlib", "-no-reflect", "-classpath", System.getProperty("java.class.path"), "-d", directory.resolve(
-                        "classes").toString(), source.toString()});
+                final Object result;
+                try (final PrintStream stream = new PrintStream(output)) {
+                    result = compiler.getClass().getMethod("exec", PrintStream.class, String[].class).invoke(compiler,
+                        stream,
+                        new String[]{"-no-stdlib", "-no-reflect", "-classpath", System.getProperty("java.class.path"), "-d", classes.toString(), source.toString()});
+                }
                 if (!result.toString().equals("OK")) {
                     throw new AssertionError("Compiler invocation " + invocation + " failed: " + output);
                 }
-                try (final URLClassLoader generated = new URLClassLoader(new URL[]{directory.resolve("classes").toUri().toURL()},
-                    loader)) {
+                try (final URLClassLoader generated = new URLClassLoader(new URL[]{classes.toUri().toURL()}, loader)) {
                     final Object answer = generated.loadClass("ExampleKt").getMethod("answer").invoke(null);
                     if (!Integer.valueOf(42).equals(answer)) {
                         throw new AssertionError("Unexpected generated result: " + answer);

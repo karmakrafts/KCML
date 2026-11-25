@@ -51,10 +51,11 @@ class SliceTest {
     fun `resolves boundaries and restricts target lookup to their range`() {
         val start = MethodInsnNode(INVOKEVIRTUAL, "example/Owner", "start", "()V", false)
         val end = MethodInsnNode(INVOKEVIRTUAL, "example/Owner", "end", "()V", false)
+        val inRange = FieldInsnNode(GETFIELD, "example/Owner", "value", "I")
         val instructions = InsnList().apply {
             add(MethodInsnNode(INVOKEVIRTUAL, "example/Owner", "before", "()V", false))
             add(start)
-            add(FieldInsnNode(GETFIELD, "example/Owner", "value", "I"))
+            add(inRange)
             add(end)
             add(FieldInsnNode(GETFIELD, "example/Owner", "value", "I"))
         }
@@ -65,10 +66,7 @@ class SliceTest {
         assertSame(start, slice.resolve(instructions).first)
         assertSame(end, slice.resolve(instructions).second)
         with(slice) {
-            val target = Target(name = "value", opcode = GETFIELD).findWithin(instructions) as FieldInsnNode
-            assertEquals("example/Owner", target.owner)
-            assertEquals("value", target.name)
-            assertEquals("I", target.desc)
+            assertSame(inRange, Target(name = "value", opcode = GETFIELD).findWithin(instructions))
         }
     }
 
@@ -151,5 +149,6 @@ class SliceTest {
             Target(opcode = INVOKEVIRTUAL).findWithin(instructions)
         })
         assertNull(with(Slice()) { Target(name = "missing", opcode = INVOKEVIRTUAL).findWithin(instructions) })
+        assertNull(with(Slice()) { Target().findWithin(InsnList()) })
     }
 }

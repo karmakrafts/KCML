@@ -36,14 +36,15 @@ class MixinComponentsTest {
     }
 
     @Test
-    fun `rejects duplicate factories in each registry`() {
+    fun `rejects duplicate factories without replacing the originals`() {
         val components = MixinComponents(NoopLogger)
         val type = Type.getObjectType("example/Component")
         val factory: (ClassNode) -> MixinComponent = { TestComponent() }
+        val methodComponent = TestComponent()
+        val fieldComponent = TestComponent()
         components.registerComponent(factory)
-        components.registerMethodComponent(type) { _, _, _ -> TestComponent() }
-        components.registerFieldComponent(type) { _, _, _ -> TestComponent() }
-        components.registerInterfaceComponent(type, factory)
+        components.registerMethodComponent(type) { _, _, _ -> methodComponent }
+        components.registerFieldComponent(type) { _, _, _ -> fieldComponent }
 
         assertFailsWith<IllegalArgumentException> { components.registerComponent(factory) }
         assertFailsWith<IllegalArgumentException> {
@@ -52,6 +53,17 @@ class MixinComponentsTest {
         assertFailsWith<IllegalArgumentException> {
             components.registerFieldComponent(type) { _, _, _ -> TestComponent() }
         }
+
+        val mixinClass = ClassNode()
+        val method = MethodNode(Opcodes.ACC_STATIC, "method", "()V", null, null).apply {
+            visitAnnotation(type.descriptor, false)
+        }
+        val field = FieldNode(Opcodes.ACC_STATIC, "field", "I", null, null).apply {
+            visitAnnotation(type.descriptor, false)
+        }
+        assertEquals(1, components.createDefaultComponents(mixinClass).count { it is TestComponent })
+        assertSame(methodComponent, components.tryCreateMethodComponent(type, mixinClass, method))
+        assertSame(fieldComponent, components.tryCreateFieldComponent(type, mixinClass, field))
     }
 
     @Test

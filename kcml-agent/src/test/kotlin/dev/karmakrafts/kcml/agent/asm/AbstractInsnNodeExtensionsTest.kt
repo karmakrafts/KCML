@@ -91,4 +91,22 @@ class AbstractInsnNodeExtensionsTest {
         assertNull(last.shift(instructions, 1))
         assertNull(InsnNode(ICONST_1).shift(instructions, 0))
     }
+
+    @Test
+    fun `shift counts metadata nodes as list positions`() {
+        val first = InsnNode(ICONST_0)
+        val label = LabelNode()
+        val last = InsnNode(RETURN)
+        val instructions = InsnList().apply {
+            add(first)
+            add(label)
+            add(last)
+        }
+
+        assertSame(label, first.shift(instructions, 1))
+        assertSame(first, last.shift(instructions, -2))
+        assertNull(last.shift(instructions, Int.MAX_VALUE))
+        assertNull(first.shift(instructions, Int.MIN_VALUE))
+        assertNull(first.shift(InsnList(), 0))
+    }
 }

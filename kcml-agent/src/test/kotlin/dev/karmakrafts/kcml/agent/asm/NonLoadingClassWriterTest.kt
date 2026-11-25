@@ -22,6 +22,7 @@ import org.objectweb.asm.Label
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.tree.ClassNode
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import java.io.InputStream
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -134,7 +135,7 @@ class NonLoadingClassWriterTest {
         verifyMergedConstructor("test/Child", "test/Base", "test/Base")
     }
 
-    private fun commonSuperClass(writer: NonLoadingClassWriter, first: String, second: String): String {
+    private fun commonSuperClass(writer: NonLoadingClassWriter, first: String?, second: String?): String {
         val method = NonLoadingClassWriter::class.java.getDeclaredMethod(
             "getCommonSuperClass", String::class.java, String::class.java
         ).apply { isAccessible = true }
@@ -170,13 +171,13 @@ class NonLoadingClassWriterTest {
         val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES, loader)
         val cases = listOf(
             Triple("java/util/List", "java/util/ArrayList", "java/util/List"),
-            Triple("java/util/ArrayList", "java/util/List", "java/util/List"),
             Triple("java/util/List", "java/util/Set", "java/lang/Object"),
             Triple("java/lang/String", "java/lang/Integer", "java/lang/Object"),
             Triple("java/util/ArrayList", "java/util/LinkedList", "java/util/AbstractList")
         )
         for ((first, second, expected) in cases) {
             assertEquals(expected, commonSuperClass(writer, first, second), "$first / $second")
+            assertEquals(expected, commonSuperClass(writer, second, first), "$second / $first")
         }
         assertTrue(loader.loadRequests.isEmpty())
     }
@@ -198,7 +199,49 @@ class NonLoadingClassWriterTest {
         )
         for ((first, second, expected) in cases) {
             assertEquals(expected, commonSuperClass(writer, first, second), "$first / $second")
+            assertEquals(expected, commonSuperClass(writer, second, first), "$second / $first")
         }
+        assertTrue(loader.loadRequests.isEmpty())
+    }
+
+    @Test
+    fun `handles identical unknown types and missing type names without loading`() {
+        val loader = ResourceClassLoader(mutableMapOf())
+        val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES, loader)
+
+        assertEquals("unavailable/Same", commonSuperClass(writer, "unavailable/Same", "unavailable/Same"))
+        assertEquals("java/lang/Object", commonSuperClass(writer, null, "java/lang/String"))
+        assertEquals("java/lang/Object", commonSuperClass(writer, "java/lang/String", null))
+        assertTrue(loader.loadRequests.isEmpty())
+    }
+
+    @Test
+    fun `falls back to object when hierarchy resources cannot be read`() {
+        for (failure in listOf(IOException("unreadable"), SecurityException("denied"))) {
+            val loader = object : ClassLoader(null) {
+                override fun getResourceAsStream(name: String): InputStream = throw failure
+
+                override fun loadClass(name: String, resolve: Boolean): Class<*> =
+                    error("Frame computation must not load $name")
+            }
+            val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES, loader)
+
+            assertEquals("java/lang/Object", commonSuperClass(writer, "test/First", "test/Second"))
+        }
+    }
+
+    @Test
+    fun `terminates on cyclic superclass resources without loading`() {
+        val loader = ResourceClassLoader(
+            mutableMapOf(
+                "test/First" to hierarchyClass("test/First", "test/Second"),
+                "test/Second" to hierarchyClass("test/Second", "test/First"),
+                "test/Unrelated" to hierarchyClass("test/Unrelated")
+            )
+        )
+        val writer = NonLoadingClassWriter(ClassWriter.COMPUTE_FRAMES, loader)
+
+        assertEquals("java/lang/Object", commonSuperClass(writer, "test/First", "test/Unrelated"))
         assertTrue(loader.loadRequests.isEmpty())
     }
 }

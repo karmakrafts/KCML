@@ -29,6 +29,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class ThisAwareComponentTest {
@@ -81,22 +82,41 @@ class ThisAwareComponentTest {
     }
 
     @Test
+    fun `does not rewrite methods with a different owner name descriptor or invocation kind`() {
+        val mixinClass = ClassNode().apply { name = "example/Mixin" }
+        val calls = listOf(
+            MethodInsnNode(Opcodes.INVOKEVIRTUAL, "example/Other", "getThis", "()Ljava/lang/Object;", false),
+            MethodInsnNode(Opcodes.INVOKEVIRTUAL, mixinClass.name, "getOther", "()Ljava/lang/Object;", false),
+            MethodInsnNode(Opcodes.INVOKEVIRTUAL, mixinClass.name, "getThis", "()Ljava/lang/String;", false),
+            MethodInsnNode(Opcodes.INVOKESTATIC, mixinClass.name, "getThis", "()Ljava/lang/Object;", false)
+        )
+        for (call in calls) {
+            val targetMethod = MethodNode().apply { instructions.add(call) }
+
+            assertFalse(ThisAwareComponent(mixinClass).apply(createContext(targetMethod)))
+            assertSame(call, targetMethod.instructions.single())
+        }
+    }
+
+    @Test
     fun `rejects getThis calls without a receiver load`() {
         val mixinClass = ClassNode().apply { name = "example/Mixin" }
-        val targetMethod = MethodNode().apply {
-            instructions.add(InsnNode(Opcodes.ACONST_NULL))
-            instructions.add(
-                MethodInsnNode(
-                    Opcodes.INVOKEVIRTUAL, mixinClass.name, "getThis", "()Ljava/lang/Object;", false
+        for (receiver in listOf(InsnNode(Opcodes.ACONST_NULL), VarInsnNode(Opcodes.ILOAD, 0))) {
+            val targetMethod = MethodNode().apply {
+                instructions.add(receiver)
+                instructions.add(
+                    MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL, mixinClass.name, "getThis", "()Ljava/lang/Object;", false
+                    )
                 )
-            )
-            instructions.add(InsnNode(Opcodes.RETURN))
-        }
+                instructions.add(InsnNode(Opcodes.RETURN))
+            }
 
-        val error = assertFailsWith<IllegalStateException> {
-            ThisAwareComponent(mixinClass).apply(createContext(targetMethod))
-        }
+            val error = assertFailsWith<IllegalStateException> {
+                ThisAwareComponent(mixinClass).apply(createContext(targetMethod))
+            }
 
-        assertTrue(error.message.orEmpty().contains("requires the mixin receiver"))
+            assertTrue(error.message.orEmpty().contains("requires the mixin receiver"))
+        }
     }
 }

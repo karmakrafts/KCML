@@ -23,11 +23,11 @@ import dev.karmakrafts.kcml.agent.mixin.source.BuiltinMixinSource
 import dev.karmakrafts.kcml.agent.mixin.source.PluginMixinSource
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.api.mixin.MixinSource
+import org.objectweb.asm.ClassWriter
 import org.objectweb.asm.Opcodes
 import org.objectweb.asm.Type
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.InsnNode
-import org.objectweb.asm.tree.IntInsnNode
 import org.objectweb.asm.tree.LabelNode
 import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.LineNumberNode
@@ -84,17 +84,20 @@ class ConstantTableComponentTest {
         val sources = listOf(BuiltinMixinSource, PluginMixinSource("first"), PluginMixinSource("second"))
         MixinBridge.INSTANCE.setMixinSource(null)
 
-        val values = sources.map { source ->
+        val components = sources.map { source ->
             val method = MethodNode().apply {
                 addConstantCall("value", "getString", Types.string)
                 instructions.add(InsnNode(Opcodes.RETURN))
             }
             val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
             MixinBridge.INSTANCE.mixinSource = source
-            val component = ConstantTableComponent(mixinClass)
+            ConstantTableComponent(mixinClass) to mixinClass
+        }
+        MixinBridge.INSTANCE.setMixinSource(null)
+
+        val values = components.map { (component, mixinClass) ->
             assertTrue(component.apply(createContext(mixinClass)))
-            assertEquals(2, method.instructions.size())
-            method.instructions.filterIsInstance<LdcInsnNode>().single().cst
+            mixinClass.methods.single().instructions.filterIsInstance<LdcInsnNode>().single().cst
         }
 
         assertEquals(listOf("builtin", "first value", "second value"), values)
@@ -128,52 +131,51 @@ class ConstantTableComponentTest {
     }
 
     @Test
-    fun `replaces all supported constant table calls with optimized instructions`() {
-        constantTable[BuiltinMixinSource] = ConcurrentHashMap(
-            mapOf(
-                "string" to "value",
-                "byte" to 1.toByte(),
-                "short" to 2.toShort(),
-                "int" to 3,
-                "long" to 4L,
-                "float" to 5.5F,
-                "double" to 6.5,
-                "boolean" to true
-            )
+    fun `replaces all supported constant table calls with executable values`() {
+        val cases: List<Triple<String, Type, Any>> = listOf(
+            Triple("string", Types.string, "value"),
+            Triple("byte", Type.BYTE_TYPE, Byte.MIN_VALUE),
+            Triple("short", Type.SHORT_TYPE, Short.MIN_VALUE),
+            Triple("int", Type.INT_TYPE, Int.MIN_VALUE),
+            Triple("long", Type.LONG_TYPE, Long.MAX_VALUE),
+            Triple("float", Type.FLOAT_TYPE, -5.5F),
+            Triple("double", Type.DOUBLE_TYPE, 6.5),
+            Triple("boolean", Type.BOOLEAN_TYPE, true)
         )
-        val method = MethodNode().apply {
-            addConstantCall("string", "getString", Types.string)
-            addConstantCall("byte", "getByte", Type.BYTE_TYPE)
-            addConstantCall("short", "getShort", Type.SHORT_TYPE)
-            addConstantCall("int", "getInt", Type.INT_TYPE)
-            addConstantCall("long", "getLong", Type.LONG_TYPE)
-            addConstantCall("float", "getFloat", Type.FLOAT_TYPE)
-            addConstantCall("double", "getDouble", Type.DOUBLE_TYPE)
-            addConstantCall("boolean", "getBoolean", Type.BOOLEAN_TYPE)
-            instructions.add(InsnNode(Opcodes.RETURN))
+        constantTable[BuiltinMixinSource] = ConcurrentHashMap(cases.associate { (name, _, value) -> name to value })
+        val mixinClass = ClassNode().apply {
+            version = Opcodes.V17
+            access = Opcodes.ACC_PUBLIC
+            name = "example/Constants"
+            superName = "java/lang/Object"
+            methods = cases.map { (name, type, _) ->
+                MethodNode(
+                    Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+                    name,
+                    Type.getMethodDescriptor(type),
+                    null,
+                    null
+                ).apply {
+                    addConstantCall(name, "get${name.replaceFirstChar { it.uppercase() }}", type)
+                    instructions.add(InsnNode(type.getOpcode(Opcodes.IRETURN)))
+                }
+            }.toMutableList()
         }
-        val mixinClass = ClassNode().apply { methods = mutableListOf(method) }
+        val component = ConstantTableComponent(mixinClass)
 
-        assertTrue(ConstantTableComponent(mixinClass).apply(createContext(mixinClass)))
+        assertTrue(component.apply(createContext(mixinClass)))
+        assertFalse(component.apply(createContext(mixinClass)))
+        assertTrue(mixinClass.methods.all { method -> method.instructions.none { it is MethodInsnNode } })
 
-        assertEquals(
-            listOf("value", 3, 4L, 5.5F, 6.5, 1),
-            method.instructions.filterIsInstance<LdcInsnNode>().map { instruction -> instruction.cst })
-        assertEquals(
-            listOf(1, 2),
-            method.instructions.filterIsInstance<IntInsnNode>().map { instruction -> instruction.operand })
-        assertEquals(
-            listOf(
-                Opcodes.LDC,
-                Opcodes.BIPUSH,
-                Opcodes.SIPUSH,
-                Opcodes.LDC,
-                Opcodes.LDC,
-                Opcodes.LDC,
-                Opcodes.LDC,
-                Opcodes.LDC,
-                Opcodes.RETURN
-            ), method.instructions.map { instruction -> instruction.opcode })
+        val writer = ClassWriter(ClassWriter.COMPUTE_MAXS)
+        mixinClass.accept(writer)
+        val bytecode = writer.toByteArray()
+        val generatedClass = object : ClassLoader(javaClass.classLoader) {
+            fun define(): Class<*> = defineClass(null, bytecode, 0, bytecode.size)
+        }.define()
+        for ((name, _, expected) in cases) {
+            assertEquals(expected, generatedClass.getMethod(name).invoke(null), name)
+        }
     }
 
     @Test

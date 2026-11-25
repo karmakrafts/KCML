@@ -38,6 +38,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 class MixinLoaderTest {
@@ -246,6 +247,22 @@ class MixinLoaderTest {
     }
 
     @Test
+    fun `restores an enclosing source when component creation fails`() = withDirectory { directory ->
+        val bridge = MixinBridge.INSTANCE
+        val enclosingSource = PluginMixinSource("enclosing")
+        bridge.mixinSource = enclosingSource
+        val loader = MixinLoader(NoopLogger)
+        val failure = IllegalStateException("component failure")
+        loader.components.registerComponent { throw failure }
+        val jar = directory.createJar(
+            "loader.jar", createMixin("example/Broken", Types.Mixin.indirectMixin, "example.Target")
+        )
+
+        assertSame(failure, assertFailsWith<IllegalStateException> { loader.load(listOf(jar), jar) })
+        assertEquals(enclosingSource, bridge.mixinSource)
+    }
+
+    @Test
     fun `rejects ambiguous plugin IDs without leaking a source`() = withDirectory { directory ->
         val plugins = listOf("first", "second").map { id ->
             ClassNode().apply {
@@ -263,5 +280,26 @@ class MixinLoaderTest {
         assertFailsWith<IllegalArgumentException> { MixinLoader(NoopLogger).load(listOf(jar)) }
 
         assertNull(MixinBridge.INSTANCE.mixinSource)
+    }
+
+    @Test
+    fun `rejects missing blank and reserved plugin IDs`() = withDirectory { directory ->
+        for ((index, id) in listOf(null, "", " ", "kcml").withIndex()) {
+            val plugin = ClassNode().apply {
+                version = Opcodes.V17
+                access = Opcodes.ACC_PUBLIC
+                name = "example/Plugin"
+                superName = "java/lang/Object"
+                visibleAnnotations = arrayListOf(AnnotationNode("Ldev/karmakrafts/kcml/api/plugin/Plugin;").apply {
+                    if (id != null) visit("id", id)
+                })
+            }
+            val jar = directory.createJar("invalid-$index.jar", plugin)
+
+            assertFailsWith<IllegalArgumentException>("Plugin ID: $id") {
+                MixinLoader(NoopLogger).load(listOf(jar))
+            }
+            assertNull(MixinBridge.INSTANCE.mixinSource)
+        }
     }
 }

@@ -203,4 +203,27 @@ class TargetTest {
         assertNull(Target(opcode = ALOAD, index = 3).find(instructions))
         assertNull(Target(opcode = ALOAD, index = 2, offset = 1).find(instructions))
     }
+
+    @Test
+    fun `ordinal counts matches while offset counts original instructions`() {
+        val first = VarInsnNode(ALOAD, 1)
+        val metadata = LabelNode()
+        val other = VarInsnNode(ALOAD, 2)
+        val second = VarInsnNode(ALOAD, 1)
+        val instructions = InsnList().apply {
+            add(first)
+            add(metadata)
+            add(other)
+            add(second)
+        }
+        val target = Target(opcode = ALOAD, index = 1)
+
+        assertSame(second, target.copy(ordinal = 1).find(instructions))
+        assertSame(other, target.copy(ordinal = 1, offset = -1).find(instructions))
+        assertSame(metadata, target.copy(offset = 1).find(instructions))
+        assertNull(target.copy(offset = -1).find(instructions))
+        assertNull(target.copy(ordinal = -1).find(instructions))
+        assertNull(target.copy(ordinal = 2).find(instructions))
+        assertNull(target.find(InsnList()))
+    }
 }

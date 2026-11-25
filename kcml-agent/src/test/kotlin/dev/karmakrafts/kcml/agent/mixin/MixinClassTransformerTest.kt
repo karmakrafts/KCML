@@ -42,9 +42,7 @@ class MixinClassTransformerTest {
     }.toByteArray()
 
     private fun withLoader(
-        rewriteAccess: Int? = null,
-        targetName: String = "example/Target",
-        test: (MixinLoader, Path, ByteArray) -> Unit
+        rewriteAccess: Int? = null, targetName: String = "example/Target", test: (MixinLoader, Path, ByteArray) -> Unit
     ) {
         val directory = Files.createTempDirectory(Path.of("build"), "mixin-transformer-test-")
         try {
@@ -132,7 +130,10 @@ class MixinClassTransformerTest {
 
                 assertSame(target, transformer.transform(null, gradleLoader, targetName, null, null, target))
                 assertTrue(injectedLoaders.isEmpty())
-                assertNotSame(target, transformer.transform(null, javaClass.classLoader, targetName, null, null, target))
+                assertNotSame(
+                    target,
+                    transformer.transform(null, javaClass.classLoader, targetName, null, null, target)
+                )
                 assertEquals(listOf(javaClass.classLoader), injectedLoaders)
             }
         }
@@ -231,7 +232,8 @@ class MixinClassTransformerTest {
         val loadTimeTransformer = MixinClassTransformer(NoopLogger, loader, null, retransformable = false)
         val retransformableTransformer = MixinClassTransformer(NoopLogger, loader, null, retransformable = true)
         val loadTimeOutput = loadTimeTransformer.transform(null, null, "example/Target", null, null, target)
-        val initialOutput = retransformableTransformer.transform(null, null, "example/Target", null, null, loadTimeOutput)
+        val initialOutput =
+            retransformableTransformer.transform(null, null, "example/Target", null, null, loadTimeOutput)
         val retransformedOutput = retransformableTransformer.transform(
             null, null, "example/Target", String::class.java, null, loadTimeOutput
         )

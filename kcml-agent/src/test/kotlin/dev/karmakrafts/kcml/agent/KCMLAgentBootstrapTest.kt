@@ -90,7 +90,7 @@ class KCMLAgentBootstrapTest {
 
     @Test
     fun `reports incompatible bridge even when new bridge has a different path`() {
-        assertAgentStartup(true, false)
+        assertAgentStartup(true, replaceBridge = false)
     }
 
     @Test
@@ -100,7 +100,7 @@ class KCMLAgentBootstrapTest {
 
     @Test
     fun `rejects newer ABI even when bridge methods match`() {
-        assertAgentStartup(true, false, currentABI + 1)
+        assertAgentStartup(true, replaceBridge = false, abi = currentABI + 1)
     }
 
     @Test
@@ -110,7 +110,7 @@ class KCMLAgentBootstrapTest {
 
     @Test
     fun `reuses bridge with matching ABI from a different path`() {
-        assertAgentStartup(true, false, currentABI, true)
+        assertAgentStartup(true, replaceBridge = false, abi = currentABI, compatible = true)
     }
 
     private val currentABI: Int
@@ -304,7 +304,7 @@ class KCMLAgentBootstrapTest {
         val property = "kcml.agent.bootstrap.test.${directory.fileName}"
         try {
             val oldAgent = directory.resolve("old.jar")
-            val currentAgent = directory.resolve("current agent.jar")
+            val currentAgent = directory.resolve("current agent #1.jar")
             val nextAgent = directory.resolve("next.jar")
             createAgent(oldAgent, "old", property)
             createAgent(currentAgent, "current", property)
@@ -321,11 +321,13 @@ class KCMLAgentBootstrapTest {
                     }
                     val main = loader.loadClass(entrypoint)
                         .getMethod("agentmain", String::class.java, Instrumentation::class.java)
-                    main.invoke(null, "${currentAgent.toUri()}\ncomm_port=1234", null)
+                    val options = "comm_port=1234\nlogging=false"
+                    main.invoke(null, "${currentAgent.toUri()}\n$options", null)
                     assertEquals("current", System.getProperty(property))
-                    assertEquals("comm_port=1234", System.getProperty("$property.options"))
+                    assertEquals(options, System.getProperty("$property.options"))
                     main.invoke(null, "${nextAgent.toUri()}\ncomm_port=1234", null)
                     assertEquals("next", System.getProperty(property))
+                    assertEquals("comm_port=1234", System.getProperty("$property.options"))
                 }
             }
         }

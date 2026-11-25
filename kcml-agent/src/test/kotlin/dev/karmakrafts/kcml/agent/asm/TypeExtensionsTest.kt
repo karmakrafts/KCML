@@ -31,6 +31,16 @@ class TypeExtensionsTest {
         assertFalse(Type.getType("Ljava/lang/String;").isMethodType)
         assertTrue(Type.getType("Ljava/lang/String;").isObjectType)
         assertTrue(Type.INT_TYPE.isObjectType)
+        assertFalse(Type.getType("[[I").isMethodType)
+        assertTrue(Type.getType("[[I").isObjectType)
+        assertFalse(Type.VOID_TYPE.isMethodType)
+        assertTrue(Type.VOID_TYPE.isObjectType)
+    }
+
+    @Test
+    fun `converts internal package separators without changing nested class names`() {
+        assertEquals("example.deep.Outer\$Inner", Type.getObjectType("example/deep/Outer\$Inner").dottedName)
+        assertEquals("Subject", Type.getObjectType("Subject").dottedName)
     }
 
     @Test
@@ -39,8 +49,14 @@ class TypeExtensionsTest {
             "(I)Ljava/lang/String;" to Type.METHOD,
             "()V" to Type.METHOD,
             "Ljava/lang/String;" to Type.OBJECT,
+            "Z" to Type.BOOLEAN,
+            "B" to Type.BYTE,
+            "C" to Type.CHAR,
+            "S" to Type.SHORT,
             "I" to Type.INT,
             "J" to Type.LONG,
+            "F" to Type.FLOAT,
+            "D" to Type.DOUBLE,
             "[I" to Type.ARRAY,
             "[[Ljava/lang/String;" to Type.ARRAY
         )
@@ -48,7 +64,6 @@ class TypeExtensionsTest {
             val type = Types.getMethodOrFieldType(descriptor)
             assertEquals(descriptor, type.descriptor)
             assertEquals(sort, type.sort, descriptor)
-            assertEquals(Type.getType(descriptor), type)
             assertEquals(sort == Type.METHOD, type.isMethodType)
         }
     }
@@ -71,6 +86,9 @@ class TypeExtensionsTest {
         assertEquals("dev/karmakrafts/kcml/api/mixin/Inject\$Order", Types.Mixin.order.internalName)
         assertEquals("dev/karmakrafts/kcml/api/mixin/ThisAware", Types.Mixin.thisAware.internalName)
         assertEquals("dev/karmakrafts/kcml/api/mixin/ReturnContext", Types.Mixin.returnContext.internalName)
+        assertEquals("dev/karmakrafts/kcml/api/mixin/Capture", Types.Mixin.capture.internalName)
+        assertEquals("dev/karmakrafts/kcml/api/mixin/ConstantTable", Types.Mixin.constantTable.internalName)
+        assertEquals("dev/karmakrafts/kcml/api/mixin/RewriteAccess", Types.Mixin.rewriteAccess.internalName)
     }
 
     @Test

@@ -33,6 +33,7 @@ import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.FieldNode
 import org.objectweb.asm.tree.InsnNode
 import org.objectweb.asm.tree.JumpInsnNode
 import org.objectweb.asm.tree.LabelNode
@@ -131,7 +132,11 @@ class InjectComponentTest {
     private fun createReturnTarget(returnType: Type, parameterType: Type? = null): MethodNode {
         val parameters = parameterType?.let { type -> arrayOf(type) } ?: emptyArray()
         return MethodNode(
-            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "target", Type.getMethodDescriptor(returnType, *parameters), null, null
+            Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
+            "target",
+            Type.getMethodDescriptor(returnType, *parameters),
+            null,
+            null
         ).apply {
             val start = LabelNode()
             val end = LabelNode()
@@ -142,18 +147,23 @@ class InjectComponentTest {
                 instructions.add(InsnNode(Opcodes.ATHROW))
             }
             else {
-                instructions.add(InsnNode(when (returnType.sort) {
-                    Type.LONG -> Opcodes.LCONST_0
-                    Type.FLOAT -> Opcodes.FCONST_0
-                    Type.DOUBLE -> Opcodes.DCONST_0
-                    Type.OBJECT, Type.ARRAY -> Opcodes.ACONST_NULL
-                    else -> Opcodes.ICONST_0
-                }))
+                instructions.add(
+                    InsnNode(
+                        when (returnType.sort) {
+                            Type.LONG -> Opcodes.LCONST_0
+                            Type.FLOAT -> Opcodes.FCONST_0
+                            Type.DOUBLE -> Opcodes.DCONST_0
+                            Type.OBJECT, Type.ARRAY -> Opcodes.ACONST_NULL
+                            else -> Opcodes.ICONST_0
+                        }
+                    )
+                )
                 instructions.add(InsnNode(returnType.getOpcode(Opcodes.IRETURN)))
             }
             instructions.add(end)
             if (parameterType != null) {
-                localVariables = mutableListOf(LocalVariableNode("result", parameterType.descriptor, null, start, end, 0))
+                localVariables =
+                    mutableListOf(LocalVariableNode("result", parameterType.descriptor, null, start, end, 0))
                 maxLocals = parameterType.size
             }
             maxStack = 2
@@ -1071,5 +1081,57 @@ class InjectComponentTest {
         assertFailsWith<IllegalStateException> {
             component.apply(createContext(createTargetMethod(includeCaptured = false)))
         }
+    }
+
+    @Test
+    fun `executes injection before or after the selected instruction`() {
+        val mixinMethod = MethodNode(Opcodes.ACC_STATIC, "inject", "()V", null, null).apply {
+            parameters = mutableListOf()
+            instructions.add(InsnNode(Opcodes.ICONST_2))
+            instructions.add(FieldInsnNode(Opcodes.PUTSTATIC, "example/Target", "result", "I"))
+            instructions.add(InsnNode(Opcodes.RETURN))
+            maxStack = 1
+        }
+        for ((order, expected) in listOf(Order.BEFORE to 1, Order.AFTER to 2)) {
+            val targetMethod = MethodNode(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "target", "()I", null, null).apply {
+                instructions.add(InsnNode(Opcodes.ICONST_1))
+                instructions.add(FieldInsnNode(Opcodes.PUTSTATIC, "example/Target", "result", "I"))
+                instructions.add(FieldInsnNode(Opcodes.GETSTATIC, "example/Target", "result", "I"))
+                instructions.add(InsnNode(Opcodes.IRETURN))
+                maxStack = 1
+            }
+            val context = createContext(targetMethod)
+            context.targetClass.apply {
+                version = Opcodes.V1_8
+                access = Opcodes.ACC_PUBLIC
+                superName = "java/lang/Object"
+                fields.add(FieldNode(Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC, "result", "I", null, null))
+            }
+
+            assertTrue(createComponent(mixinMethod, Opcodes.PUTSTATIC).copy(order = order).apply(context))
+            assertEquals(expected, loadClass(context.targetClass).getMethod("target").invoke(null), order.name)
+        }
+    }
+
+    @Test
+    fun `uses the descriptor to select an overload without modifying other methods`() {
+        val mixinMethod = MethodNode(Opcodes.ACC_STATIC, "inject", "()V", null, null).apply {
+            parameters = mutableListOf()
+            instructions.add(InsnNode(Opcodes.NOP))
+            instructions.add(InsnNode(Opcodes.RETURN))
+        }
+        val otherOverload = createTargetMethod()
+        val selected = MethodNode(Opcodes.ACC_STATIC, "target", "(I)V", null, null).apply {
+            instructions.add(InsnNode(Opcodes.RETURN))
+            maxLocals = 1
+        }
+        val context = createContext(otherOverload).apply { targetClass.methods.add(selected) }
+        val component = createComponent(mixinMethod).copy(descriptor = Type.getMethodType("(I)V"))
+        val originalOtherReturn = otherOverload.instructions[1]
+
+        assertTrue(component.apply(context))
+        assertTrue(selected.instructions.any { it.opcode == Opcodes.NOP })
+        assertSame(originalOtherReturn, otherOverload.instructions[1])
+        assertEquals(1, otherOverload.instructions.count { it.opcode >= 0 })
     }
 }

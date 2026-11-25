@@ -33,7 +33,6 @@ import java.net.InetAddress
 import java.net.ServerSocket
 import java.net.Socket
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -41,7 +40,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 @OptIn(ExperimentalSerializationApi::class)
 class AgentCommClientTest {
@@ -101,24 +99,16 @@ class AgentCommClientTest {
     fun `dispatches incoming messages by type`() = withClient { client, connection ->
         val handshake = S2AHandshake("signature", "loader", "bridge", listOf("plugin"))
         val log = A2SLog("message")
-        val latch = CountDownLatch(2)
-        var receivedHandshake: S2AHandshake? = null
-        var receivedLog: A2SLog? = null
-        client.receive<S2AHandshake> {
-            receivedHandshake = it
-            latch.countDown()
-        }
-        client.receive<A2SLog> {
-            receivedLog = it
-            latch.countDown()
-        }
+        val receivedHandshake = CompletableFuture<S2AHandshake>()
+        val receivedLog = CompletableFuture<A2SLog>()
+        client.receive<S2AHandshake> { receivedHandshake.complete(it) }
+        client.receive<A2SLog> { receivedLog.complete(it) }
 
         connection.send(handshake)
         connection.send(log)
 
-        assertTrue(latch.await(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
-        assertEquals(handshake, receivedHandshake)
-        assertEquals(log, receivedLog)
+        assertEquals(handshake, receivedHandshake.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+        assertEquals(log, receivedLog.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
     }
 
     @Test
@@ -138,6 +128,40 @@ class AgentCommClientTest {
     @Test
     fun `handshake times out when server does not respond`() = withClient { client, _ ->
         assertFailsWith<TimeoutException> { client.handshake(50) }
+    }
+
+    @Test
+    fun `handshake recovers after timeout and ignores late responses`() = withClient { client, connection ->
+        val timedOut = CompletableFuture.supplyAsync { client.handshake(50) }
+        val expiredRequest = connection.receive<A2SHandshake>()
+        val error = assertFailsWith<ExecutionException> {
+            timedOut.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS)
+        }
+        assertIs<TimeoutException>(error.cause)
+
+        val response = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+        val request = connection.receive<A2SHandshake>()
+        val expected = S2AHandshake(request.signature, "loader", "bridge", emptyList())
+        connection.send(expected.copy(signature = expiredRequest.signature, loaderPath = "expired-loader"))
+        connection.send(expected)
+
+        assertEquals(expected, response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+    }
+
+    @Test
+    fun `correlates overlapping handshakes with responses in reverse order`() = withClient { client, connection ->
+        val first = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+        val firstRequest = connection.receive<A2SHandshake>()
+        val second = CompletableFuture.supplyAsync { client.handshake(TIMEOUT_MILLIS.toLong()) }
+        val secondRequest = connection.receive<A2SHandshake>()
+        val firstResponse = S2AHandshake(firstRequest.signature, "first-loader", "first-bridge", emptyList())
+        val secondResponse = S2AHandshake(secondRequest.signature, "second-loader", "second-bridge", emptyList())
+
+        connection.send(secondResponse)
+        connection.send(firstResponse)
+
+        assertEquals(firstResponse, first.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+        assertEquals(secondResponse, second.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
     }
 
     @Test
@@ -167,8 +191,8 @@ class AgentCommClientTest {
             val error = assertFailsWith<ExecutionException> {
                 response.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS)
             }
-            assertTrue(error.cause is IllegalArgumentException, "Unexpected failure: ${error.cause}")
-            assertEquals(expectedError, error.cause?.message)
+            val validationError = assertIs<IllegalArgumentException>(error.cause)
+            assertEquals(expectedError, validationError.message)
         }
     }
 
@@ -194,6 +218,26 @@ class AgentCommClientTest {
 
         assertEquals(message, first.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
         assertEquals(message, second.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+    }
+
+    @Test
+    fun `skips unhandled message types without losing subsequent messages`() = withClient { client, connection ->
+        val received = CompletableFuture<A2SLog>()
+        client.receive<A2SLog> { received.complete(it) }
+        val message = A2SLog("after unhandled packet")
+
+        connection.send(A2SHandshake("unhandled"))
+        connection.send(message)
+
+        assertEquals(message, received.get(TIMEOUT_MILLIS.toLong(), TimeUnit.MILLISECONDS))
+    }
+
+    @Test
+    fun `closing the client closes the connection and rejects further handshakes`() = withClient { client, connection ->
+        client.close()
+
+        assertEquals(-1, connection.read())
+        assertFailsWith<IllegalStateException> { client.handshake(TIMEOUT_MILLIS.toLong()) }
     }
 
     @Test
