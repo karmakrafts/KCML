@@ -58,6 +58,7 @@ class ExamplePlugin : CompilerPlugin {
     override fun init(context: InitializationContext) {
         context.logger.info("Loading example plugin!")
         context.extensionRegistry.apply {
+            // Target-agnostic extensions
             register(ExampleSyntaxExtension())
             register(ExampleFirExtension())
             register(ExampleIrExtension())
