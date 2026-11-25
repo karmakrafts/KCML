@@ -23,6 +23,7 @@ pluginManagement {
         mavenLocal()
         gradlePluginPortal()
         maven("https://central.sonatype.com/repository/maven-snapshots")
+        maven("https://redirector.kotlinlang.org/maven/bootstrap")
     }
 }
 
@@ -32,6 +33,7 @@ pluginManagement {
         mavenCentral()
         mavenLocal()
         maven("https://central.sonatype.com/repository/maven-snapshots")
+        maven("https://redirector.kotlinlang.org/maven/bootstrap")
     }
     versionCatalogs {
         create("libs") {

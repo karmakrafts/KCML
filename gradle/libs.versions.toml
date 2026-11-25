@@ -2,9 +2,9 @@
 
 java = "21"
 
-kotlinBootstrap = "2.4.21" # https://github.com/JetBrains/kotlin/blob/v2.4.10/gradle.properties#L42
-kotlin = "2.5.0-RC" # https://github.com/JetBrains/kotlin/releases
-androidGradle = "9.5.2" # https://developer.android.com/reference/tools/gradle-api
+kotlinBootstrap = "2.5.0-dev-9169" # https://github.com/JetBrains/kotlin/blob/v2.5.0-RC2/gradle.properties#L50
+kotlin = "2.5.0-RC2" # https://github.com/JetBrains/kotlin/releases
+androidGradle = "9.5.3" # https://developer.android.com/reference/tools/gradle-api
 
 kcml = "1.6.0"
 iridium = "1.15.0.112-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags

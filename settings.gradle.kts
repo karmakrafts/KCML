@@ -26,6 +26,7 @@ pluginManagement {
         mavenLocal()
         gradlePluginPortal()
         maven("https://central.sonatype.com/repository/maven-snapshots")
+        maven("https://redirector.kotlinlang.org/maven/bootstrap")
     }
 }
 
@@ -36,7 +37,7 @@ dependencyResolutionManagement {
         mavenCentral()
         mavenLocal()
         maven("https://central.sonatype.com/repository/maven-snapshots")
-        maven("https://repo.spongepowered.org/maven")
+        maven("https://redirector.kotlinlang.org/maven/bootstrap")
     }
 }
 
