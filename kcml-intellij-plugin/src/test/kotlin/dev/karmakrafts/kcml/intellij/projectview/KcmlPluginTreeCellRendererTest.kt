@@ -158,7 +158,13 @@ class KcmlPluginTreeCellRendererTest : LightJavaCodeInsightFixtureTestCase() {
 
     fun testButtonsKeepDefaultColorsAcrossSelection() {
         val renderer = KcmlPluginTreeCellRenderer()
-        val defaultButton = JButton()
+        val defaultButton = JButton().apply {
+            // Match the renderer's painting settings; Aqua buttons are non-opaque by default.
+            isFocusable = false
+            isOpaque = true
+            isContentAreaFilled = true
+            isBorderPainted = true
+        }
         fun backgroundPixel(button: JButton): Int {
             val icon = button.icon
             button.icon = null
