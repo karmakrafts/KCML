@@ -16,11 +16,11 @@
 
 package dev.karmakrafts.kcml.intellij.projectview
 
+import com.intellij.icons.AllIcons
 import com.intellij.ide.BrowserUtil
+import com.intellij.ide.setToolTipText
 import com.intellij.ide.ui.laf.darcula.DarculaUIUtil
 import com.intellij.ide.util.treeView.NodeRenderer
-import com.intellij.icons.AllIcons
-import com.intellij.ide.setToolTipText
 import com.intellij.openapi.util.text.HtmlChunk
 import com.intellij.ui.JBColor
 import com.intellij.ui.RoundedLineBorder
@@ -33,10 +33,10 @@ import java.awt.Component
 import java.awt.Container
 import java.awt.Dimension
 import java.awt.Font
-import java.awt.GridBagLayout
-import java.awt.GridLayout
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.GridBagLayout
+import java.awt.GridLayout
 import java.awt.RenderingHints
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
@@ -51,14 +51,17 @@ import javax.swing.tree.TreeCellRenderer
 import javax.swing.tree.TreePath
 
 internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
-    private val defaultRenderer = NodeRenderer()
-    private val icon = JLabel()
-    private val nameLabel = JLabel()
-    private val authors = JLabel()
-    private val version = JLabel()
-    private val issues = button(AllIcons.Actions.StartDebugger, "Open issue tracker")
-    private val website = button(AllIcons.General.Web, "Open homepage")
-    private val source = button(AllIcons.Actions.ShowCode, "Open source code")
+    private val defaultRenderer: NodeRenderer = NodeRenderer()
+
+    private val icon: JLabel = JLabel()
+    private val nameLabel: JLabel = JLabel()
+    private val authors: JLabel = JLabel()
+    private val version: JLabel = JLabel()
+
+    private val issues: JButton = button(AllIcons.Actions.StartDebugger, "Open issue tracker")
+    private val website: JButton = button(AllIcons.General.Web, "Open homepage")
+    private val source: JButton = button(AllIcons.Actions.ShowCode, "Open source code")
+
     private val actions = JPanel(GridBagLayout()).apply {
         isOpaque = false
         border = JBUI.Borders.empty(0, 6, 0, 8)
@@ -87,6 +90,7 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
             add(source)
         })
     }
+
     private val text = JPanel().apply {
         layout = BoxLayout(this, BoxLayout.Y_AXIS)
         isOpaque = false
@@ -94,6 +98,7 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
         add(authors)
         add(version)
     }
+
     private val entry = JPanel(BorderLayout(JBUI.scale(10), 0)).apply {
         border = JBUI.Borders.empty(6, 12)
         add(icon, BorderLayout.WEST)
@@ -101,9 +106,15 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
         add(actions, BorderLayout.EAST)
     }
 
-    override fun getTreeCellRendererComponent(
-        tree: JTree, value: Any?, selected: Boolean, expanded: Boolean, leaf: Boolean, row: Int, hasFocus: Boolean
-    ): Component {
+    override fun getTreeCellRendererComponent( // @formatter:off
+        tree: JTree,
+        value: Any?,
+        selected: Boolean,
+        expanded: Boolean,
+        leaf: Boolean,
+        row: Int,
+        hasFocus: Boolean
+    ): Component { // @formatter:on
         val node = TreeUtil.getUserObject(value) as? KcmlPluginNode
             ?: return defaultRenderer.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus)
         val presentation = node.presentation
@@ -122,7 +133,7 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
         version.foreground = if (selected) nameLabel.foreground else UIUtil.getContextHelpForeground()
         authors.foreground = version.foreground
         entry.background = if (selected) UIUtil.getTreeSelectionBackground(hasFocus) else tree.background
-        entry.toolTipText = presentation.tooltip
+        presentation.tooltip?.let(HtmlChunk::text)?.let(entry::setToolTipText)
         return entry
     }
 
@@ -133,7 +144,8 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
             override fun mousePressed(event: MouseEvent) {
                 pressedTarget = if (SwingUtilities.isLeftMouseButton(event)) {
                     buttonAt(tree, event)
-                } else null
+                }
+                else null
             }
 
             override fun mouseReleased(event: MouseEvent) {
@@ -154,16 +166,23 @@ internal class KcmlPluginTreeCellRenderer : TreeCellRenderer {
         })
     }
 
+    @Suppress("UnstableApiUsage")
     private fun buttonAt(tree: JTree, event: MouseEvent): Pair<TreePath, JButton>? {
         val path = tree.getClosestPathForLocation(event.x, event.y) ?: return null
         if (TreeUtil.getUserObject(path.lastPathComponent) !is KcmlPluginNode) return null
         val bounds = if (tree.ui is CustomBoundsTreeUI) {
             (tree.ui as CustomBoundsTreeUI).getActualPathBounds(tree, path)
-        } else tree.getPathBounds(path)
+        }
+        else tree.getPathBounds(path)
         if (bounds == null || !bounds.contains(event.point)) return null
         val cell = getTreeCellRendererComponent(
-            tree, path.lastPathComponent, tree.isPathSelected(path), tree.isExpanded(path), true,
-            tree.getRowForPath(path), tree.hasFocus()
+            tree,
+            path.lastPathComponent,
+            tree.isPathSelected(path),
+            tree.isExpanded(path),
+            true,
+            tree.getRowForPath(path),
+            tree.hasFocus()
         )
         cell.setBounds(0, 0, bounds.width, bounds.height)
         fun layout(component: Component) {

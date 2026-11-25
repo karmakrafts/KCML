@@ -24,9 +24,11 @@ import com.intellij.ide.util.treeView.AbstractTreeNode
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 
-internal class KcmlConfiguredPluginModuleNode(
-    project: Project, module: KcmlModulePlugins, private val plugins: List<KcmlPluginMetadata>, settings: ViewSettings
-) : ProjectViewNode<KcmlModulePlugins>(project, module, settings) {
+internal class KcmlConfiguredPluginModuleNode( // @formatter:off
+    project: Project, module: KcmlModulePlugins,
+    private val plugins: List<KcmlPluginMetadata>,
+    settings: ViewSettings
+) : ProjectViewNode<KcmlModulePlugins>(project, module, settings) { // @formatter:on
     override fun contains(file: VirtualFile): Boolean = false
 
     override fun update(presentation: PresentationData) {

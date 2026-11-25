@@ -30,9 +30,9 @@ internal data class KcmlModulePlugins(val name: String, val paths: List<Path>) {
             val configured = modules.sortedBy(Module::getName).mapNotNull { module ->
                 SyntaxConfiguration.fromModule(module)?.let { module to it }
             }
-            return configured.groupBy { (module, _) ->
+            return configured.groupBy { [module, _] ->
                 ExternalSystemModulePropertyManager.getInstance(module).getLinkedProjectPath() ?: module
-            }.map { (key, configurations) ->
+            }.map { [key, configurations] ->
                 val name = if (key is String) {
                     modules.filter {
                         val properties = ExternalSystemModulePropertyManager.getInstance(it)

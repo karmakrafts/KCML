@@ -25,9 +25,11 @@ import com.intellij.openapi.module.Module
 import com.intellij.openapi.vfs.VirtualFile
 import dev.karmakrafts.kcml.intellij.syntax.SyntaxConfiguration
 
-internal class KcmlPluginModuleNode(
-    module: Module, private val configuration: SyntaxConfiguration, settings: ViewSettings
-) : ProjectViewNode<Module>(module.project, module, settings) {
+internal class KcmlPluginModuleNode( // @formatter:off
+    module: Module,
+    private val configuration: SyntaxConfiguration,
+    settings: ViewSettings
+) : ProjectViewNode<Module>(module.project, module, settings) { // @formatter:on
     override fun contains(file: VirtualFile): Boolean = false
 
     override fun update(presentation: PresentationData) {

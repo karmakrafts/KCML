@@ -27,11 +27,11 @@ import com.intellij.ui.JBColor
 import dev.karmakrafts.kcml.intellij.icon.Icons
 import javax.swing.Icon
 
-internal class KcmlPluginNode(
+internal class KcmlPluginNode( // @formatter:off
     project: Project,
     metadata: KcmlPluginMetadata,
     settings: ViewSettings
-) : ProjectViewNode<KcmlPluginMetadata>(project, metadata, settings) {
+) : ProjectViewNode<KcmlPluginMetadata>(project, metadata, settings) { // @formatter:on
     override fun contains(file: VirtualFile): Boolean = file.url == value.configUrl.toExternalForm()
 
     override fun update(presentation: PresentationData) {

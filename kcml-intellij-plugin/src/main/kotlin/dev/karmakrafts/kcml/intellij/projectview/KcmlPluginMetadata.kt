@@ -110,8 +110,7 @@ internal data class KcmlPluginMetadata( // @formatter:off
             (element as? JsonArray).orEmpty().filter {
                 val name = (it as? JsonObject)?.get("name") as? JsonPrimitive
                 name != null && name.isString && name.content.isNotBlank()
-            }
-        )
+            })
     }
 
     companion object {
