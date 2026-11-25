@@ -56,8 +56,7 @@ internal object PluginClassScanner {
                 futures += CompletableFuture.supplyAsync({
                     ArrayList<String>().also { scanEntry(classpath, it) }
                 }, executor)
-            }
-            catch (error: Throwable) {
+            } catch (error: Throwable) {
                 submitFailure = error
                 break
             }
@@ -66,8 +65,7 @@ internal object PluginClassScanner {
         for (future in futures) {
             try {
                 candidates += future.join()
-            }
-            catch (error: Throwable) {
+            } catch (error: Throwable) {
                 if (failure == null) failure = if (error is CompletionException) error.cause ?: error else error
             }
         }

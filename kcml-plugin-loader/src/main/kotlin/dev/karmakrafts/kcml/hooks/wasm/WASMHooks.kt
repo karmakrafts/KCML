@@ -23,10 +23,10 @@ import dev.karmakrafts.kcml.api.extension.wasm.WasmCodeGenerationExtension
 import dev.karmakrafts.kcml.api.mixin.MixinBridge
 import dev.karmakrafts.kcml.api.target.OnlyOn
 import dev.karmakrafts.kcml.api.target.WasmCompileTarget
-import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
-import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.backend.wasm.LateWasmBackendImpl
 import dev.karmakrafts.kcml.backend.wasm.WasmCodeGeneratorImpl
+import dev.karmakrafts.kcml.hacks.DiscouragedKcmlApi
+import dev.karmakrafts.kcml.hacks.ReflectionUtils
 import dev.karmakrafts.kcml.hooks.KCMLHookApi
 import dev.karmakrafts.kcml.plugin.PluginLoaderImpl
 import org.jetbrains.kotlin.backend.wasm.WasmBackendContext

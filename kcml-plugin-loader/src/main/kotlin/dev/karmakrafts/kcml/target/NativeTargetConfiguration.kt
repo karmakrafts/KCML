@@ -50,7 +50,8 @@ internal class NativeTargetConfiguration(
             val descriptorPath = configuration.kcmlNativeTarget ?: return null
             val payload = Path(descriptorPath).readText(Charsets.UTF_8)
             val descriptor = NativeTargetDescriptor.json.decodeFromString<NativeTargetDescriptor>(payload)
-            val targetName = descriptor.name.also { require(it.isNotBlank()) { "Native target name must not be blank" } }
+            val targetName =
+                descriptor.name.also { require(it.isNotBlank()) { "Native target name must not be blank" } }
             // Set up target family
             val (name, exeSuffix, dynamicPrefix, dynamicSuffix, staticPrefix, staticSuffix) = descriptor.family
             require(name.isNotBlank())

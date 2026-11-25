@@ -30,11 +30,9 @@ import kotlin.jvm.internal.DefaultConstructorMarker
 internal object CustomKonanTargetFactory {
     val constructor: Constructor<out KonanTarget> by lazy {
         SyntheticDelegateClass(
-            "dev.karmakrafts.kcml.target.internal.CustomKonanTarget",
-            KonanTarget::class.java.getDeclaredConstructor(
+            "dev.karmakrafts.kcml.target.internal.CustomKonanTarget", KonanTarget::class.java.getDeclaredConstructor(
                 String::class.java, Family::class.java, Architecture::class.java, DefaultConstructorMarker::class.java
-            ),
-            trailingNullParameters = 1
+            ), trailingNullParameters = 1
         ).constructor
     }
 }

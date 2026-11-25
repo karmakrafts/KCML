@@ -64,10 +64,9 @@ class SyntaxExtensionAdapter( // @formatter:off
         extension.inspect(file, frontends.getValue(pluginId))
     }
 
-    fun inspectionRules(file: KtFile): List<InspectionRule> =
-        extensions.asReversed().flatMap { [pluginId, extension] ->
-            extension.inspectionRules(file, frontends.getValue(pluginId))
-        }
+    fun inspectionRules(file: KtFile): List<InspectionRule> = extensions.asReversed().flatMap { [pluginId, extension] ->
+        extension.inspectionRules(file, frontends.getValue(pluginId))
+    }
 
     fun parse(builder: PsiBuilder, rule: GrammarRule, parseKotlin: (GrammarRule) -> Boolean): Boolean {
         if (builder.eof()) return false
