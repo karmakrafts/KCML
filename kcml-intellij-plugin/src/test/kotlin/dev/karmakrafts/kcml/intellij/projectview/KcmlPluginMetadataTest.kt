@@ -48,7 +48,8 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
     fun testDirectoryAndJarMetadataAndThemeResources() {
         val entries = linkedMapOf(
             "META-INF/zeta.json" to """{"id":"zeta","name":"Zeta","version":"2.0"}""", "META-INF/alpha.json" to """{
-                "id":"alpha","name":"Alpha Plugin","version":"1.0",
+                "id":"alpha","name":"Alpha Plugin","version":"1.0","issue_tracker_url":"https://example.com/issues",
+                "scm_url":"https://example.com/source",
                 "authors":[{"name":"Karma Krafts","url":"https://karmakrafts.dev"},{"name":"Contributor"}],
                 "icon":{"light":"icons/light #1.svg","dark":"icons/dark.svg"}
             }""", "META-INF/icons/light #1.svg" to "light icon", "META-INF/icons/dark.svg" to "dark icon"
@@ -59,6 +60,10 @@ class KcmlPluginMetadataTest : LightPlatformTestCase() {
             val alpha = plugins.first()
             assertEquals("Alpha Plugin", alpha.name)
             assertEquals("1.0", alpha.version)
+            assertEquals("https://example.com/issues", alpha.issueTrackerUrl)
+            assertNull(plugins.last().issueTrackerUrl)
+            assertEquals("https://example.com/source", alpha.scmUrl)
+            assertNull(plugins.last().scmUrl)
             assertEquals(
                 listOf(
                     KcmlPluginMetadata.Author("Karma Krafts", "https://karmakrafts.dev"),

@@ -35,12 +35,14 @@ internal class KcmlToolWindowFactory : ToolWindowFactory, DumbAware {
     override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
         val disposable = Disposer.newDisposable("KCML tree")
         val model = StructureTreeModel(KcmlPluginTreeStructure(project), disposable)
+        val renderer = KcmlPluginTreeCellRenderer()
         val tree = Tree(AsyncTreeModel(model, disposable)).apply {
-            cellRenderer = KcmlPluginTreeCellRenderer()
+            cellRenderer = renderer
             rowHeight = 0
             isRootVisible = false
             showsRootHandles = true
         }
+        renderer.installActions(tree)
         TreeUtil.installActions(tree)
         TreeSpeedSearch.installOn(tree)
         project.service<KcmlPluginTreeUpdater>().addListener(disposable) { model.invalidateAsync() }

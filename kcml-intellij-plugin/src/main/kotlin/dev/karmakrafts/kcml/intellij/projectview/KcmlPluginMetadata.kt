@@ -52,6 +52,14 @@ internal data class KcmlPluginMetadata( // @formatter:off
     @Serializable(with = OptionalAuthorsSerializer::class)
     val authors: List<Author> = emptyList(),
 
+    @SerialName("issue_tracker_url")
+    @Serializable(with = OptionalStringSerializer::class)
+    val issueTrackerUrl: String? = null,
+
+    @SerialName("scm_url")
+    @Serializable(with = OptionalStringSerializer::class)
+    val scmUrl: String? = null,
+
     @Serializable(with = OptionalIconSerializer::class)
     private val icon: Icon? = null
 ) { // @formatter:on

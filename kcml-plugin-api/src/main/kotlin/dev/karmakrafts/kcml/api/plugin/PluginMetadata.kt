@@ -44,6 +44,12 @@ public interface PluginMetadata {
     /** Optional URL where users can report problems with this plugin. */
     public val issueTrackerUrl: String?
 
+    /** Optional URL where users can find the source code for this plugin. */
+    public val scmUrl: String?
+
+    /** Optional icon for this plugin. */
+    public val icon: PluginIcon?
+
     /** Plugin availability, version, and load-order requirements, including optional dependencies. */
     public val dependencies: List<PluginDependency>
 }

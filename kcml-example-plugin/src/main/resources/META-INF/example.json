@@ -2,7 +2,8 @@
     "id": "example",
     "name": "Example Plugin",
     "version": "1.0.0",
-    "issue_tracker_url": "https://git.karmakrafts.dev/kk/kcml/-/work_items",
+    "scm_url": "https://github.com/karmakrafts/KCML",
+    "issue_tracker_url": "https://github.com/karmakrafts/KCML/issues",
     "authors": [
         {
             "name": "Karma Krafts",

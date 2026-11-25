@@ -30,5 +30,7 @@ data class SerializablePluginMetadata(
     override val version: Version? = null,
     override val authors: List<SerializablePluginAuthor> = emptyList(),
     @SerialName("issue_tracker_url") override val issueTrackerUrl: String? = null,
+    @SerialName("scm_url") override val scmUrl: String? = null,
+    override val icon: SerializablePluginIcon? = null,
     override val dependencies: List<SerializablePluginDependency> = emptyList()
 ) : PluginMetadata
