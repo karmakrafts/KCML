@@ -47,6 +47,7 @@ import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.KtImportDirective
 import org.jetbrains.kotlin.psi.KtLambdaExpression
 import org.jetbrains.kotlin.psi.KtNameReferenceExpression
+import org.jetbrains.kotlin.psi.KtParameter
 import org.jetbrains.kotlin.psi.KtProperty
 import org.jetbrains.kotlin.psi.KtPsiUtil
 import org.jetbrains.kotlin.psi.KtQualifiedExpression
@@ -198,6 +199,7 @@ internal object OnlyOnUsage {
         while (current != null) {
             val constraints = when (current) {
                 is KtLambdaExpression -> lambdaContext(current)
+                is KtParameter if current.isFunctionTypeParameter -> emptyList()
                 is KtDeclaration -> {
                     val symbol = current.symbol as? KaAnnotated
                     buildList {

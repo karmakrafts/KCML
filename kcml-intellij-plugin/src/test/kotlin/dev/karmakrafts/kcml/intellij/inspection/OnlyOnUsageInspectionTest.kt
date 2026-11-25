@@ -200,6 +200,27 @@ class OnlyOnUsageInspectionTest : InspectionFixtureTestCase(
     """
     )
 
+    fun testFunctionTypeParameterContexts() = check(
+        """
+        @OnlyOn(JvmCompileTarget::class) class JvmValue
+        fun unguarded(
+            named: (value: <warning descr="$WARNING">JvmValue</warning>) -> Unit,
+            unnamed: (<warning descr="$WARNING">JvmValue</warning>) -> Unit,
+            nested: (callback: (value: <warning descr="$WARNING">JvmValue</warning>) -> Unit) -> Unit
+        ) = Unit
+        @OnlyOn(JvmCompileTarget::class)
+        fun matching(named: (value: JvmValue) -> Unit, unnamed: (JvmValue) -> Unit) = Unit
+        @OnlyOn(JsCompileTarget::class)
+        class Mismatched {
+            fun use(
+                named: (value: <error descr="$ERROR">JvmValue</error>) -> Unit,
+                unnamed: (<error descr="$ERROR">JvmValue</error>) -> Unit,
+                nested: (callback: (value: <error descr="$ERROR">JvmValue</error>) -> Unit) -> Unit
+            ) = Unit
+        }
+    """
+    )
+
     fun testSuppressionIsIndependent() = check(
         """
         @Suppress("KCML_TARGET_SPECIFIC_CODE")
