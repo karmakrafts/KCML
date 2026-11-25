@@ -961,6 +961,17 @@ class SyntaxRuntimeTest : LightJavaCodeInsightFixtureTestCase() {
         })
     }
 
+    fun testExampleSyntaxSuppressesErrorsWithoutPrecomputedAnalysis() {
+        val exampleJar = Path.of(System.getProperty("kcml.test.examplePlugin"))
+        loadRuntime(configuration().copy(paths = listOf(exampleJar), options = emptyList()), project.service())
+        val source = myFixture.configureByText("Valid.kt", "fn answer() { val result = magic }") as KtFile
+        assertNull(SyntaxAnalysis.cachedResult(source))
+        val highlights = myFixture.doHighlighting()
+        assertTrue(
+            "Valid extension syntax must not produce Kotlin errors on first highlighting: $highlights",
+            highlights.none { it.severity == HighlightSeverity.ERROR })
+    }
+
     // Producer assertions need the daemon's internal origin queries, just like the production filter.
     @Suppress("JetBrainsInternalApiUsage")
     fun testExamplePluginDiagnosticsFromImportedFacet() {

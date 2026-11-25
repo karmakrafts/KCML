@@ -20,12 +20,12 @@ import com.intellij.codeInsight.completion.CompletionType
 import com.intellij.codeInsight.lookup.Lookup
 import com.intellij.codeInsight.lookup.LookupElement
 import com.intellij.openapi.command.WriteCommandAction
-import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.ModuleRootModificationUtil
 import com.intellij.openapi.vfs.newvfs.impl.VfsRootAccess
 import com.intellij.psi.JavaPsiFacade
 import com.intellij.psi.search.GlobalSearchScope
+import com.intellij.testFramework.IdeaTestUtil
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase
 import dev.karmakrafts.kcml.intellij.testutil.completionPresentation
@@ -41,7 +41,7 @@ class InjectCompletionTest : LightJavaCodeInsightFixtureTestCase() {
     companion object {
         private val DESCRIPTOR = object : LightProjectDescriptor() {
             override fun getSdk(): Sdk =
-                JavaSdk.getInstance().createJdk("Inject completion JDK", System.getProperty("java.home"), false)
+                IdeaTestUtil.getMockJdk21()
         }
     }
 

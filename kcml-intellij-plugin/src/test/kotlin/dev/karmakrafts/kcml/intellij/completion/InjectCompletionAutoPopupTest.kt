@@ -17,8 +17,8 @@
 package dev.karmakrafts.kcml.intellij.completion
 
 import com.intellij.codeInsight.lookup.Lookup
-import com.intellij.openapi.projectRoots.JavaSdk
 import com.intellij.openapi.projectRoots.Sdk
+import com.intellij.testFramework.IdeaTestUtil
 import com.intellij.testFramework.LightProjectDescriptor
 import com.intellij.testFramework.runInEdtAndWait
 import dev.karmakrafts.kcml.intellij.testutil.CompletionAutoPopupFixtureTestCase
@@ -32,7 +32,7 @@ class InjectCompletionAutoPopupTest : CompletionAutoPopupFixtureTestCase(
     companion object {
         private val DESCRIPTOR = object : LightProjectDescriptor() {
             override fun getSdk(): Sdk =
-                JavaSdk.getInstance().createJdk("Inject popup JDK", System.getProperty("java.home"), false)
+                IdeaTestUtil.getMockJdk21()
         }
     }
 

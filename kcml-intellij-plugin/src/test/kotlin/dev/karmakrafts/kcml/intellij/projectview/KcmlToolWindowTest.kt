@@ -589,6 +589,7 @@ class KcmlToolWindowTest : LightJavaCodeInsightFixtureTestCase() {
                 if (tree.model.getChildCount(module) != 1) return null
                 return TreeUtil.getUserObject(tree.model.getChild(module, 0)) as? KcmlPluginNode
             }
+            PlatformTestUtil.waitForPromise(TreeUtil.promiseExpandAll(tree))
             PlatformTestUtil.waitWithEventsDispatching("Empty plugins category", {
                 categoryNode<KcmlConfiguredPluginsNode>(tree)?.let { tree.model.getChildCount(it) == 0 } == true
             }, 5)
