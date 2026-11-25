@@ -20,6 +20,5 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 public data class NativeArchitectureDescriptor(
-    public val name: String,
-    public val bitness: Int
+    public val name: String, public val bitness: Int
 )
