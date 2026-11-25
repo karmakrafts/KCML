@@ -23,17 +23,17 @@ import org.objectweb.asm.tree.ClassNode
 import java.io.IOException
 
 internal class NonLoadingClassWriter(
-    flags: Int,
-    private val loader: ClassLoader? = null,
-    classNode: ClassNode? = null
+    flags: Int, private val loader: ClassLoader? = null, classNode: ClassNode? = null
 ) : ClassWriter(flags) {
     private data class Header(val superName: String?, val interfaces: List<String>, val isInterface: Boolean)
 
     private val headers = mutableMapOf<String, Header?>().apply {
         if (classNode != null) {
-            put(classNode.name, Header(
-                classNode.superName, classNode.interfaces.toList(), classNode.access and Opcodes.ACC_INTERFACE != 0
-            ))
+            put(
+                classNode.name, Header(
+                    classNode.superName, classNode.interfaces.toList(), classNode.access and Opcodes.ACC_INTERFACE != 0
+                )
+            )
         }
     }
 
@@ -68,7 +68,11 @@ internal class NonLoadingClassWriter(
         else -> null
     }
 
-    private fun isAssignableFrom(target: String, source: String, visited: MutableSet<String> = mutableSetOf()): Boolean {
+    private fun isAssignableFrom(
+        target: String,
+        source: String,
+        visited: MutableSet<String> = mutableSetOf()
+    ): Boolean {
         if (target == source || target == Types.any.internalName) return true
         if (!visited.add(source)) return false
         if (source.startsWith('[')) {
@@ -80,8 +84,13 @@ internal class NonLoadingClassWriter(
         }
         if (target.startsWith('[')) return false
         val sourceHeader = header(source) ?: return false
-        return sourceHeader.superName?.let { isAssignableFrom(target, it, visited) } == true ||
-            sourceHeader.interfaces.any { isAssignableFrom(target, it, visited) }
+        return sourceHeader.superName?.let {
+            isAssignableFrom(
+                target,
+                it,
+                visited
+            )
+        } == true || sourceHeader.interfaces.any { isAssignableFrom(target, it, visited) }
     }
 
     private fun commonSuperClass(type1: String, type2: String): String {

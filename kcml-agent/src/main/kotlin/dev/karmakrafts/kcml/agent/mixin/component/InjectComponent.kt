@@ -320,11 +320,13 @@ internal data class InjectComponent( // @formatter:off
         val targetReturnType = Type.getReturnType(targetMethod.desc)
         val wrapperType = primitiveWrappers[targetReturnType]
         val isVoid = targetReturnType == Type.VOID_TYPE
-        check(when {
-            isVoid -> returnContextType == Types.unit
-            wrapperType != null -> returnContextType == wrapperType || returnContextType == targetReturnType
-            else -> returnContextType.sort == Type.OBJECT || returnContextType.sort == Type.ARRAY
-        }) {
+        check(
+            when {
+                isVoid -> returnContextType == Types.unit
+                wrapperType != null -> returnContextType == wrapperType || returnContextType == targetReturnType
+                else -> returnContextType.sort == Type.OBJECT || returnContextType.sort == Type.ARRAY
+            }
+        ) {
             "ReturnContext<${returnContextType.className}> is incompatible with target method ${targetMethod.name}${targetMethod.desc}"
         }
         val returnOpcode = targetReturnType.getOpcode(Opcodes.IRETURN)
@@ -338,13 +340,15 @@ internal data class InjectComponent( // @formatter:off
             removeReturnContextReceiver(receiver, returnContextIndices)
             if (wrapperType != null) {
                 insertBefore(call, TypeInsnNode(Opcodes.CHECKCAST, wrapperType.internalName))
-                insertBefore(call, MethodInsnNode(
-                    Opcodes.INVOKEVIRTUAL,
-                    wrapperType.internalName,
-                    "${targetReturnType.className}Value",
-                    "()${targetReturnType.descriptor}",
-                    false
-                ))
+                insertBefore(
+                    call, MethodInsnNode(
+                        Opcodes.INVOKEVIRTUAL,
+                        wrapperType.internalName,
+                        "${targetReturnType.className}Value",
+                        "()${targetReturnType.descriptor}",
+                        false
+                    )
+                )
             }
             set(call, InsnNode(returnOpcode))
         }

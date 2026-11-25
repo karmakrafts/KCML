@@ -22,5 +22,6 @@ internal interface MixinComponent {
     val dependencies: List<KClass<out MixinComponent>>
     val retransformable: Boolean
         get() = true
+
     fun apply(context: ComponentContext): Boolean
 }
