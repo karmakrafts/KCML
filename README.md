@@ -1,11 +1,6 @@
 # ↺ KCML
 
 [![](https://git.karmakrafts.dev/kk/kcml/badges/master/pipeline.svg)](https://git.karmakrafts.dev/kk/kcml/-/pipelines)
-[![](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo.maven.apache.org%2Fmaven2%2Fdev%2Fkarmakrafts%2Fkcml%2Fkcml-plugin-api%2Fmaven-metadata.xml
-)](https://git.karmakrafts.dev/kk/kcml/-/packages)
-[![](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fcentral.sonatype.com%2Frepository%2Fmaven-snapshots%2Fdev%2Fkarmakrafts%2Fkcml%2Fkcml-plugin-api%2Fmaven-metadata.xml
-)](https://git.karmakrafts.dev/kk/kcml/-/packages)
-[![](https://img.shields.io/badge/2.5.0--RC-blue?logo=kotlin&label=kotlin)](https://kotlinlang.org/)
 [![](https://img.shields.io/badge/documentation-black?logo=kotlin)](https://docs.karmakrafts.dev/kcml-plugin-api)
 
 ![](https://img.shields.io/badge/-JVM-blue?logo=kotlin&labelColor=black)
@@ -14,6 +9,11 @@
 ![](https://img.shields.io/badge/-JS-gold?logo=kotlin&labelColor=black)
 ![](https://img.shields.io/badge/-WASM/JS-orange?logo=kotlin&labelColor=black)
 ![](https://img.shields.io/badge/-WASM/WASI-purple?logo=kotlin&labelColor=black)
+
+| Release | Kotlin | Gradle   | IntelliJ   |
+|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------------|------------|
+| [![](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Frepo.maven.apache.org%2Fmaven2%2Fdev%2Fkarmakrafts%2Fkcml%2Fkcml-plugin-api%2Fmaven-metadata.xml)](https://git.karmakrafts.dev/kk/kcml/-/packages) | [![](https://img.shields.io/badge/2.5.0--RC2-blue?logo=kotlin&label=kotlin)](https://kotlinlang.org/) | [![](https://img.shields.io/badge/9.9.2-blue?logo=gradle&label=gradle)](https://gradle.org/)  | [![](https://img.shields.io/badge/2.20.1/2026.3.0.1-blue?logo=intellij-idea&label=intellij)](https://www.jetbrains.com/opensource/intellij-platform/)  |
+| [![](https://img.shields.io/maven-metadata/v?metadataUrl=https%3A%2F%2Fcentral.sonatype.com%2Frepository%2Fmaven-snapshots%2Fdev%2Fkarmakrafts%2Fkcml%2Fkcml-plugin-api%2Fmaven-metadata.xml)](https://git.karmakrafts.dev/kk/kcml/-/packages) | [![](https://img.shields.io/badge/2.5.0--RC2-blue?logo=kotlin&label=kotlin)](https://kotlinlang.org/) | [![](https://img.shields.io/badge/9.9.2-blue?logo=gradle&label=gradle)](https://gradle.org/) | [![](https://img.shields.io/badge/2.20.1/2026.3.0.1-blue?logo=intellij-idea&label=intellij)](https://www.jetbrains.com/opensource/intellij-platform/)  |
 
 The Kotlin Compiler Meta Loader project allows multiple Kotlin compiler plugins to interoperate  
 and provides a stable API for FIR, IR and backend processing.  
