@@ -7,10 +7,10 @@ kotlin = "2.5.0-RC2" # https://github.com/JetBrains/kotlin/releases
 androidGradle = "9.5.3" # https://developer.android.com/reference/tools/gradle-api
 
 kcml = "1.6.0"
-iridium = "1.15.0.114-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
+iridium = "1.15.0.116-SNAPSHOT" # https://github.com/karmakrafts/Iridium/tags
 kotlinx-serialization = "1.13.0" # https://github.com/Kotlin/kotlinx.serialization/releases
 dokka = "2.3.0" # https://github.com/Kotlin/dokka/releases"
-karmaConventions = "1.23.0.327-SNAPSHOT" # https://github.com/karmakrafts/karma-conventions/tags
+karmaConventions = "1.23.0.329-SNAPSHOT" # https://github.com/karmakrafts/karma-conventions/tags
 autoService = "1.1.1" # https://github.com/google/auto/releases
 semver = "3.1.0" # https://github.com/z4kn4fein/kotlin-semver/releases
 ow2asm = "9.11.1" # https://gitlab.ow2.org/asm/asm/-/tags
@@ -29,9 +29,7 @@ intelliJNativeDebugging = "263.7307.200" # https://plugins.jetbrains.com/plugin/
 
 [libraries]
 
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlinBootstrap" }
 kotlin-reflect = { module = "org.jetbrains.kotlin:kotlin-reflect", version.ref = "kotlinBootstrap" }
-
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
 kotlin-native-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-native-compiler-embeddable", version.ref = "kotlin" }
